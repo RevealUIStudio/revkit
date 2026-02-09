@@ -1,0 +1,22 @@
+# Logs
+scripts/logs/
+*.log
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Secrets (SSH keys are NOT stored here, only config templates)
+*.pem
+*.key
+id_ed25519*
+!*.pub
+
+# PowerShell artifacts
+*.pssproj
+*.pssproj.user
+
+# Editor
+.vscode/
+*.swp
+*~

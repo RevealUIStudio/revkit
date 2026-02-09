@@ -1,0 +1,10 @@
+# Force LF line endings for shell scripts (sourced by WSL bash)
+*.sh text eol=lf
+
+# PowerShell scripts use CRLF (Windows native)
+*.ps1 text eol=crlf
+*.psd1 text eol=crlf
+*.psm1 text eol=crlf
+
+# Config files use LF (consumed by WSL/Unix tools)
+wsl/config/* text eol=lf

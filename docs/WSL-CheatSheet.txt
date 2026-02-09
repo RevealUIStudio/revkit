@@ -1,0 +1,88 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                    WSL DEVELOPMENT ENVIRONMENT                       ║
+║                         QUICK CHEAT SHEET                            ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ 🚀 ESSENTIAL COMMANDS (PowerShell)                                   │
+├──────────────────────────────────────────────────────────────────────┤
+│ wsls              Start WSL (clean, no warnings)                     │
+│ wslr              Restart WSL completely                             │
+│ wslstat           Check all status (WSL, dev drive, systemd)         │
+│ wslmount          Mount dev drive manually                           │
+│ wslhelp           Open full reference guide                          │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ 📂 KEY PATHS                                                         │
+├──────────────────────────────────────────────────────────────────────┤
+│ Windows Scripts:    C:\Scripts\                                      │
+│ PowerShell Profile: ~\Documents\WindowsPowerShell\...profile.ps1    │
+│ Dev Drive (WSL):    /mnt/wsl-dev                                     │
+│ Projects (WSL):     ~/projects                                       │
+│ WSL Config:         /etc/wsl.conf                                    │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ 🐧 INSIDE WSL - CHECK STATUS                                         │
+├──────────────────────────────────────────────────────────────────────┤
+│ df -h /mnt/wsl-dev                  Check dev drive space            │
+│ mount | grep wsl-dev                Verify dev drive mounted         │
+│ systemctl --user is-system-running  Check systemd status            │
+│ loginctl user-status $USER          Detailed session info           │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ 🔧 TROUBLESHOOTING                                                   │
+├──────────────────────────────────────────────────────────────────────┤
+│ Problem: WSL won't start                                             │
+│ Fix:     wslr                                                        │
+│                                                                       │
+│ Problem: Dev drive not showing                                       │
+│ Fix:     wsl --unmount \\.\PHYSICALDRIVE1                            │
+│          wslmount                                                     │
+│                                                                       │
+│ Problem: Systemd warning appears                                     │
+│ Fix:     Use 'wsls' instead of 'wsl -d Ubuntu'                       │
+│          (Warning is false positive - systemd works fine)            │
+│                                                                       │
+│ Problem: Functions not working                                       │
+│ Fix:     . $PROFILE    (reload PowerShell profile)                   │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ ⚡ QUICK ACTIONS                                                     │
+├──────────────────────────────────────────────────────────────────────┤
+│ Full Reset:                                                          │
+│   wsl --shutdown                                                     │
+│   wsl --unmount \\.\PHYSICALDRIVE1                                   │
+│   wslmount                                                           │
+│   wsls                                                               │
+│                                                                       │
+│ Check Everything:                                                    │
+│   wslstat                                                            │
+│                                                                       │
+│ Mount Only:                                                          │
+│   wslmount                                                           │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ 💡 PRO TIPS                                                          │
+├──────────────────────────────────────────────────────────────────────┤
+│ • Dev drive auto-mounts at Windows startup (Scheduled Task)         │
+│ • Always use 'wsls' instead of 'wsl -d Ubuntu' to avoid warnings    │
+│ • 'wslr' handles everything - shutdown, mount, restart               │
+│ • Dev drive is 916GB ext4 optimized for development                 │
+│ • Systemd timeout set to 30s in /etc/wsl.conf                       │
+│ • PowerShell profile loads automatically in new windows             │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ 📖 MORE HELP                                                         │
+├──────────────────────────────────────────────────────────────────────┤
+│ wslhelp                  Open full markdown reference                │
+│ Get-Help Start-WSL       PowerShell function help                    │
+│ wsl --help               WSL command help                            │
+└──────────────────────────────────────────────────────────────────────┘
+
+Last Updated: 2026-02-07
