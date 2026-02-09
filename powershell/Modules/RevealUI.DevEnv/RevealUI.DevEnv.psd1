@@ -15,6 +15,7 @@
         'Get-WSLMounts'
         'Find-RevealUIDrive'
         'Show-WSLHelp'
+        'Get-Secret'
     )
 
     AliasesToExport   = @(
@@ -24,6 +25,7 @@
         'wslmount'
         'wslmounts'
         'wslhelp'
+        'secret'
     )
 
     PrivateData = @{

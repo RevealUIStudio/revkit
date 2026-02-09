@@ -8,6 +8,9 @@ Thumbs.db
 
 # Secrets
 secrets/
+
+# Passage store (its own git repo)
+passage-store/
 *.pem
 *.key
 id_ed25519*
