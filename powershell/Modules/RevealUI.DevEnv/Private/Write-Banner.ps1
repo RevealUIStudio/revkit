@@ -9,6 +9,8 @@ function Write-Banner {
     Write-Host " | " -NoNewline
     Write-Host "wslmount" -ForegroundColor Yellow -NoNewline
     Write-Host " | " -NoNewline
+    Write-Host "secret" -ForegroundColor Yellow -NoNewline
+    Write-Host " | " -NoNewline
     Write-Host "wslhelp" -ForegroundColor Yellow
     Write-Host "Type " -NoNewline
     Write-Host "wslhelp" -ForegroundColor Cyan -NoNewline

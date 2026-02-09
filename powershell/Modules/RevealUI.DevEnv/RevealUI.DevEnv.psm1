@@ -18,9 +18,10 @@ Set-Alias -Name wslstat   -Value Get-WSLStatus
 Set-Alias -Name wslmount  -Value Mount-WSLDev
 Set-Alias -Name wslmounts -Value Get-WSLMounts
 Set-Alias -Name wslhelp   -Value Show-WSLHelp
+Set-Alias -Name secret    -Value Get-Secret
 
 Export-ModuleMember -Function $Public.BaseName
-Export-ModuleMember -Alias wsls, wslr, wslstat, wslmount, wslmounts, wslhelp
+Export-ModuleMember -Alias wsls, wslr, wslstat, wslmount, wslmounts, wslhelp, secret
 
 # Startup banner
 Write-Banner
