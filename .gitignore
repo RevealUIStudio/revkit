@@ -6,7 +6,8 @@ scripts/logs/
 Thumbs.db
 .DS_Store
 
-# Secrets (SSH keys are NOT stored here, only config templates)
+# Secrets
+secrets/
 *.pem
 *.key
 id_ed25519*
