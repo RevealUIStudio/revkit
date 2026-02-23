@@ -1,4 +1,10 @@
+#Requires -Version 7.0
+#Requires -PSEdition Core
+
 # RevealUI.DevEnv - Portable development environment module
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
 $Public  = @(Get-ChildItem -Path "$PSScriptRoot\Public\*.ps1" -ErrorAction SilentlyContinue)
 $Private = @(Get-ChildItem -Path "$PSScriptRoot\Private\*.ps1" -ErrorAction SilentlyContinue)
@@ -18,10 +24,11 @@ Set-Alias -Name wslstat   -Value Get-WSLStatus
 Set-Alias -Name wslmount  -Value Mount-WSLDev
 Set-Alias -Name wslmounts -Value Get-WSLMounts
 Set-Alias -Name wslhelp   -Value Show-WSLHelp
+Set-Alias -Name wslsync   -Value Sync-RevealUIToWindows
 Set-Alias -Name secret    -Value Get-Secret
 
 Export-ModuleMember -Function $Public.BaseName
-Export-ModuleMember -Alias wsls, wslr, wslstat, wslmount, wslmounts, wslhelp, secret
+Export-ModuleMember -Alias wsls, wslr, wslstat, wslmount, wslmounts, wslhelp, wslsync, secret
 
 # Startup banner
 Write-Banner
