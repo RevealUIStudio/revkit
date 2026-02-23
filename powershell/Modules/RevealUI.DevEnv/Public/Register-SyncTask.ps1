@@ -76,8 +76,8 @@ if ($r) {
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>pwsh.exe</Command>
-      <Arguments>-NonInteractive -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand $encoded</Arguments>
+      <Command>conhost.exe</Command>
+      <Arguments>--headless pwsh.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded</Arguments>
     </Exec>
   </Actions>
 </Task>
@@ -110,7 +110,7 @@ if ($r) {
     Write-Host ''
     Write-DevLog "Verification:" -Source 'TaskReg'
     Write-Host "  Schedule: Every 15 minutes (indefinite)"
-    Write-Host "  Engine:   pwsh.exe (PowerShell 7)"
+    Write-Host "  Engine:   conhost --headless pwsh.exe (PS7, no window)"
     Write-Host "  Command:  Sync-RevealUIToWindows -TriggerSource scheduled"
     Write-Host ''
 }
