@@ -69,7 +69,7 @@ $revealRoot = $env:REVEALUI_ROOT
 if (-not $revealRoot -or -not (Test-Path "$revealRoot\powershell\Modules\RevealUI.DevEnv\RevealUI.DevEnv.psd1" -ErrorAction SilentlyContinue)) {
     # Drive letter may have changed -- scan for our marker
     $revealRoot = Get-Volume | Where-Object { $_.DriveLetter } |
-                  ForEach-Object { "$($_.DriveLetter):\.revealui" } |
+                  ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
                   Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv\RevealUI.DevEnv.psd1" -ErrorAction SilentlyContinue } |
                   Select-Object -First 1
     if ($revealRoot) {

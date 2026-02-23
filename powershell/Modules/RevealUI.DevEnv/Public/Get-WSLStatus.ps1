@@ -1,4 +1,13 @@
+#Requires -Version 7.0
+#Requires -PSEdition Core
+
 function Get-WSLStatus {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [string]$Distribution = 'Ubuntu'
+    )
+
     Write-Host "`n=== WSL Status ===" -ForegroundColor Cyan
     wsl.exe --list --verbose
 
@@ -6,10 +15,26 @@ function Get-WSLStatus {
     wsl.exe --status
 
     Write-Host "`n=== Dev Drive Status ===" -ForegroundColor Cyan
-    wsl.exe -d Ubuntu -e /usr/local/bin/wsl-status.sh
+    $devMountRaw = wsl.exe -d $Distribution -e bash -c "mountpoint -q /mnt/wsl-dev && echo MOUNTED || echo NOT_MOUNTED" 2>&1
+    $devMounted = $devMountRaw -match 'MOUNTED' -and $devMountRaw -notmatch 'NOT_MOUNTED'
+
+    if ($devMounted) {
+        Write-Host '  /mnt/wsl-dev: MOUNTED' -ForegroundColor Green
+        wsl.exe -d $Distribution -e bash -c "df -h /mnt/wsl-dev | tail -1"
+    } else {
+        Write-Host '  /mnt/wsl-dev: NOT MOUNTED' -ForegroundColor Yellow
+    }
 
     Write-Host "`n=== Systemd Status ===" -ForegroundColor Cyan
-    wsl.exe -d Ubuntu -e systemctl --user is-system-running
+    $systemdRaw = wsl.exe -d $Distribution -e systemctl --user is-system-running 2>&1
+    Write-Host "  $systemdRaw"
 
-    Write-Host ""
+    Write-Host ''
+
+    # Return structured object for pipeline use
+    [PSCustomObject]@{
+        Distribution  = $Distribution
+        DevMounted    = $devMounted
+        SystemdStatus = ($systemdRaw -join '').Trim()
+    }
 }

@@ -1,3 +1,6 @@
+#Requires -Version 7.0
+#Requires -PSEdition Core
+
 function Find-RevealUIDrive {
     [CmdletBinding()]
     [OutputType([string])]
@@ -14,7 +17,7 @@ function Find-RevealUIDrive {
 
     # Layer 2: Scan available drives for .revealui folder with our marker
     $found = Get-Volume | Where-Object { $_.DriveLetter } |
-             ForEach-Object { "$($_.DriveLetter):\.revealui" } |
+             ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
              Where-Object { Test-Path (Join-Path $_ $marker) -ErrorAction SilentlyContinue } |
              Select-Object -First 1
 
