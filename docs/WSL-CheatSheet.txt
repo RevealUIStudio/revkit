@@ -8,8 +8,8 @@
 ├──────────────────────────────────────────────────────────────────────┤
 │ wsls              Start WSL (clean, no warnings)                     │
 │ wslr              Restart WSL completely                             │
-│ wslstat           Check all status (WSL, dev drive, systemd)         │
-│ wslmount          Mount dev drive manually                           │
+│ wslstat           Check all status (WSL, Studio drive, systemd)         │
+│ wslmount          Mount Studio drive manually                           │
 │ wslhelp           Open full reference guide                          │
 └──────────────────────────────────────────────────────────────────────┘
 
@@ -18,7 +18,7 @@
 ├──────────────────────────────────────────────────────────────────────┤
 │ Windows Scripts:    C:\Scripts\                                      │
 │ PowerShell Profile: ~\Documents\WindowsPowerShell\...profile.ps1    │
-│ Dev Drive (WSL):    /mnt/wsl-dev                                     │
+│ Studio Drive (WSL):    /mnt/studio                                     │
 │ Projects (WSL):     ~/projects                                       │
 │ WSL Config:         /etc/wsl.conf                                    │
 └──────────────────────────────────────────────────────────────────────┘
@@ -26,8 +26,8 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │ 🐧 INSIDE WSL - CHECK STATUS                                         │
 ├──────────────────────────────────────────────────────────────────────┤
-│ df -h /mnt/wsl-dev                  Check dev drive space            │
-│ mount | grep wsl-dev                Verify dev drive mounted         │
+│ df -h /mnt/studio                  Check Studio drive space            │
+│ mount | grep studio                Verify Studio drive mounted         │
 │ systemctl --user is-system-running  Check systemd status            │
 │ loginctl user-status $USER          Detailed session info           │
 └──────────────────────────────────────────────────────────────────────┘
@@ -38,7 +38,7 @@
 │ Problem: WSL won't start                                             │
 │ Fix:     wslr                                                        │
 │                                                                       │
-│ Problem: Dev drive not showing                                       │
+│ Problem: Studio drive not showing                                       │
 │ Fix:     wsl --unmount \\.\PHYSICALDRIVE1                            │
 │          wslmount                                                     │
 │                                                                       │
@@ -69,10 +69,10 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │ 💡 PRO TIPS                                                          │
 ├──────────────────────────────────────────────────────────────────────┤
-│ • Dev drive auto-mounts at Windows startup (Scheduled Task)         │
+│ • Studio drive auto-mounts at Windows startup (Scheduled Task)         │
 │ • Always use 'wsls' instead of 'wsl -d Ubuntu' to avoid warnings    │
 │ • 'wslr' handles everything - shutdown, mount, restart               │
-│ • Dev drive is 916GB ext4 optimized for development                 │
+│ • Studio drive is 916GB ext4 optimized for development                 │
 │ • Systemd timeout set to 30s in /etc/wsl.conf                       │
 │ • PowerShell profile loads automatically in new windows             │
 └──────────────────────────────────────────────────────────────────────┘
@@ -85,4 +85,4 @@
 │ wsl --help               WSL command help                            │
 └──────────────────────────────────────────────────────────────────────┘
 
-Last Updated: 2026-02-07
+Last Updated: 2026-02-27

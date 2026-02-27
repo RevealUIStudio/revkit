@@ -1,5 +1,5 @@
 # RevealUI base environment setup
-# Discovers REVEALUI_ROOT and checks dev drive mount status
+# Discovers REVEALUI_ROOT and checks Studio drive mount status
 
 _find_revealui_root() {
     # Check env var first
@@ -23,11 +23,18 @@ _find_revealui_root() {
 }
 
 export REVEALUI_ROOT="$(_find_revealui_root)"
-export REVEALUI_WSL_DEV="/mnt/wsl-dev"
+export REVEALUI_STUDIO="/mnt/studio"
 
-# Dev drive mount check
-if [ -d "$REVEALUI_WSL_DEV" ] && mountpoint -q "$REVEALUI_WSL_DEV" 2>/dev/null; then
-    export REVEALUI_DEV_MOUNTED=1
+# Studio drive mount check
+if [ -d "$REVEALUI_STUDIO" ] && mountpoint -q "$REVEALUI_STUDIO" 2>/dev/null; then
+    export REVEALUI_STUDIO_MOUNTED=1
 else
-    unset REVEALUI_DEV_MOUNTED
+    unset REVEALUI_STUDIO_MOUNTED
+fi
+
+# Tier detection
+if [ -n "$REVEALUI_STUDIO_MOUNTED" ]; then
+    export DEVKIT_TIER="T1"
+else
+    export DEVKIT_TIER="T0"
 fi

@@ -6,19 +6,18 @@
 |---------|-------------|
 | `wsls` | Start WSL (no warnings) |
 | `Restart-WSL` | Shutdown and restart WSL |
-| `Get-WSLStatus` | Check WSL and dev drive status |
-| `Mount-WSLDev` | Run the dev drive mount script |
+| `Get-WSLStatus` | Check WSL and Studio drive status |
+| `Mount-WSLDev` | Run the Studio drive mount script |
 | `Get-WSLMounts` | Show all WSL mounted drives |
 
 ## 📁 File Locations
 
 | Item | Path |
 |------|------|
-| Mount Script | `C:\Scripts\mount-wsl-dev.ps1` |
-| Start WSL Script | `C:\Scripts\Start-WSL.ps1` |
+| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.DevEnv\` |
 | PowerShell Profile | `C:\Users\joshu\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
-| Dev Drive Mount | `/mnt/wsl-dev` (inside WSL) |
+| Studio Drive Mount | `/mnt/studio` (inside WSL) |
 
 ## 🔧 Manual Operations
 
@@ -34,7 +33,7 @@ wsl -d Ubuntu          # Direct start (may show warnings)
 Restart-WSL            # Helper function
 # OR manually:
 wsl --shutdown
-C:\Scripts\mount-wsl-dev.ps1
+Mount-WSLDev
 wsls
 ```
 
@@ -54,11 +53,11 @@ wsl --unmount \\.\PHYSICALDRIVE1       # Manual unmount
 
 ## 🐧 Inside WSL Commands
 
-### Check Dev Drive
+### Check Studio Drive
 ```bash
-df -h /mnt/wsl-dev                 # Check dev drive space
-ls -la /mnt/wsl-dev                # List dev drive contents
-mount | grep wsl-dev               # Verify mount
+df -h /mnt/studio                 # Check Studio drive space
+ls -la /mnt/studio                # List Studio drive contents
+mount | grep studio               # Verify mount
 ```
 
 ### Check Systemd Status
@@ -71,7 +70,7 @@ journalctl --user -xe              # User session logs
 ### Navigate to Projects
 ```bash
 cd ~/projects          # Your main projects directory
-cd /mnt/wsl-dev       # Dev drive root
+cd /mnt/studio       # Studio drive root
 ```
 
 ## ⚙️ Configuration Files
@@ -100,7 +99,7 @@ wsl --shutdown
 wsl --unregister Ubuntu  # ⚠️ DESTRUCTIVE - backup first!
 ```
 
-### Dev Drive Not Mounted
+### Studio Drive Not Mounted
 ```powershell
 wsl --unmount \\.\PHYSICALDRIVE1
 Mount-WSLDev
@@ -123,9 +122,9 @@ Mount-WSLDev
 
 ## 💡 Tips
 
-- **Scheduled Task**: `mount-wsl-dev.ps1` runs automatically at Windows startup
+- **Scheduled Task**: `WSL-Mount-DevDrive` runs Mount-WSLDev at logon, USB insertion, and every 30min
 - **Profile Functions**: Loaded automatically in every PowerShell session
-- **Dev Drive**: 916GB ext4 drive optimized for development
+- **Studio Drive**: 916GB ext4 drive optimized for development
 - **Systemd Warning**: False positive - systemd starts successfully after ~3 seconds
 - **PowerShell Profile**: Reload with `. $PROFILE` after editing
 
@@ -133,7 +132,7 @@ Mount-WSLDev
 
 - WSL Issues: `wsl --help`
 - PowerShell Profile: `Get-Help about_Profiles`
-- This Reference: `C:\Scripts\WSL-QuickReference.md`
+- This Reference: `wslhelp` or `Show-WSLHelp`
 
 ---
-*Last Updated: 2026-02-07*
+*Last Updated: 2026-02-27*

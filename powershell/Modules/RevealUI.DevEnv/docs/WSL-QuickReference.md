@@ -6,8 +6,8 @@
 |---------|-------|-------------|
 | `Start-WSL` | `wsls` | Start WSL (filtered output) |
 | `Restart-WSL` | `wslr` | Shutdown and restart WSL |
-| `Get-WSLStatus` | `wslstat` | Check WSL and dev drive status |
-| `Mount-WSLDev` | `wslmount` | Mount dev SSD to WSL |
+| `Get-WSLStatus` | `wslstat` | Check WSL and Studio drive status |
+| `Mount-WSLDev` | `wslmount` | Mount Studio SSD to WSL |
 | `Get-WSLMounts` | `wslmounts` | Show all WSL mounted drives |
 | `Sync-RevealUIToWindows` | `wslsync` | Mirror WSL project to Windows |
 | `Get-Secret` | `secret` | Retrieve secrets via passage |
@@ -26,11 +26,11 @@
 
 | Item | Path |
 |------|------|
-| Module | `E:\professional\.revealui\powershell\Modules\RevealUI.DevEnv\` |
+| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.DevEnv\` |
 | Logs | `<module>\logs\` |
 | PowerShell Profile | `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
-| Dev Drive Mount | `/mnt/wsl-dev` (inside WSL) |
+| Studio Drive Mount | `/mnt/studio` (inside WSL) |
 
 ## Manual Operations
 
@@ -74,11 +74,11 @@ wslsync                             # Alias
 
 ## Inside WSL Commands
 
-### Check Dev Drive
+### Check Studio Drive
 ```bash
-df -h /mnt/wsl-dev                 # Check dev drive space
-ls -la /mnt/wsl-dev                # List dev drive contents
-mount | grep wsl-dev               # Verify mount
+df -h /mnt/studio                 # Check Studio drive space
+ls -la /mnt/studio                # List Studio drive contents
+mount | grep studio               # Verify mount
 ```
 
 ### Check Systemd Status
@@ -91,7 +91,7 @@ journalctl --user -xe              # User session logs
 ### Navigate to Projects
 ```bash
 cd ~/projects          # Your main projects directory
-cd /mnt/wsl-dev       # Dev drive root
+cd /mnt/studio       # Studio drive root
 ```
 
 ## Configuration Files
@@ -120,7 +120,7 @@ wsl --shutdown
 wsl --unregister Ubuntu  # DESTRUCTIVE - backup first!
 ```
 
-### Dev Drive Not Mounted
+### Studio Drive Not Mounted
 ```powershell
 wsl --unmount \\.\PHYSICALDRIVE1
 Mount-WSLDev
@@ -145,7 +145,7 @@ Mount-WSLDev
 
 - **Scheduled Tasks**: `Register-DevMountTask` and `Register-SyncTask` use pwsh.exe (PS7)
 - **Module Loading**: Loaded automatically in every pwsh session via profile stub
-- **Dev Drive**: 916GB ext4 drive optimized for development
+- **Studio Drive**: 916GB ext4 drive optimized for development
 - **Systemd Warning**: False positive - systemd starts successfully after ~3 seconds
 - **PowerShell Profile**: Reload with `. $PROFILE` after editing
 
@@ -156,4 +156,4 @@ Mount-WSLDev
 - This Reference: `Show-WSLHelp` or `wslhelp`
 
 ---
-*Last Updated: 2026-02-23*
+*Last Updated: 2026-02-27*

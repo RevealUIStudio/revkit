@@ -4,7 +4,7 @@
 function Unregister-DevMountTask {
     <#
     .SYNOPSIS
-        Removes the WSL dev drive auto-mount scheduled task.
+        Removes the WSL Studio drive auto-mount scheduled task.
     #>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     [OutputType([void])]
