@@ -1,0 +1,6 @@
+[wsl2]
+memory=12GB
+processors=8
+swap=4GB
+networkingMode=mirrored
+kernelCommandLine = systemd.firstboot=0
