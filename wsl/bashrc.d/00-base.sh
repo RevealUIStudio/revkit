@@ -7,8 +7,14 @@ _find_revealui_root() {
         echo "$REVEALUI_ROOT"
         return
     fi
-    # Scan /mnt/?/.revealui for our marker
-    for candidate in /mnt/?/.revealui; do
+    # Primary: C: drive (always available)
+    local primary="/mnt/c/Users/joshu/.revealui"
+    if [ -f "$primary/wsl/bashrc.d/00-base.sh" ]; then
+        echo "$primary"
+        return
+    fi
+    # Fallback: scan single-letter drive mounts (portable SSD)
+    for candidate in /mnt/?/.revealui /mnt/?/professional/.revealui; do
         if [ -f "$candidate/wsl/bashrc.d/00-base.sh" ]; then
             echo "$candidate"
             return
