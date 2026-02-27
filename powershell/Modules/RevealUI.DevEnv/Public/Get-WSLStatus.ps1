@@ -14,6 +14,11 @@ function Get-WSLStatus {
     Write-Host "`n=== WSL Version ===" -ForegroundColor Cyan
     wsl.exe --status
 
+    Write-Host "`n=== DevKit Tier ===" -ForegroundColor Cyan
+    $tierRaw = wsl.exe -d $Distribution -e bash -c 'echo "${DEVKIT_TIER:-unknown}"' 2>&1
+    $tier = ($tierRaw -join '').Trim()
+    Write-Host "  Tier: $tier"
+
     Write-Host "`n=== Studio Drive Status ===" -ForegroundColor Cyan
     $devMountRaw = wsl.exe -d $Distribution -e bash -c "mountpoint -q /mnt/studio && echo MOUNTED || echo NOT_MOUNTED" 2>&1
     $devMounted = $devMountRaw -match 'MOUNTED' -and $devMountRaw -notmatch 'NOT_MOUNTED'
@@ -34,6 +39,7 @@ function Get-WSLStatus {
     # Return structured object for pipeline use
     [PSCustomObject]@{
         Distribution  = $Distribution
+        Tier          = $tier
         DevMounted    = $devMounted
         SystemdStatus = ($systemdRaw -join '').Trim()
     }

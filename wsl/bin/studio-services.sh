@@ -55,6 +55,7 @@ Commands:
   pull           Pull latest images
   psql [args]    Connect to Postgres via psql
   redis-cli      Connect to Redis via redis-cli
+  validate       Run environment health checks
   help           Show this help message
 EOF
 }
@@ -141,6 +142,7 @@ case "$command" in
     pull)      cmd_pull ;;
     psql)      cmd_psql "$@" ;;
     redis-cli) cmd_redis_cli "$@" ;;
+    validate)  exec /usr/local/bin/studio-validate.sh "$@" ;;
     help|-h|--help) usage ;;
     *)         die "Unknown command: $command. Run 'studio help' for usage." ;;
 esac
