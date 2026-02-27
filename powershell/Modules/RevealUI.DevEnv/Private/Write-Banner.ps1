@@ -6,7 +6,17 @@ function Write-Banner {
     [OutputType([void])]
     param()
 
-    Write-Host "`nRevealUI DevEnv v1.0.0" -ForegroundColor Green
+    # Detect environment
+    $wslDistro = (wsl --list --quiet 2>$null | Select-Object -First 1) -replace '\x00',''
+    $eDrive = if (Test-Path "E:\") { "E: mounted" } else { "E: disconnected" }
+    $eDriveColor = if (Test-Path "E:\") { "Green" } else { "Yellow" }
+
+    Write-Host "`nRevealUI Workbench " -ForegroundColor Green -NoNewline
+    Write-Host "(preview)" -ForegroundColor DarkGray
+    Write-Host "WSL: " -NoNewline
+    Write-Host "$wslDistro" -ForegroundColor Cyan -NoNewline
+    Write-Host " · " -NoNewline
+    Write-Host "$eDrive" -ForegroundColor $eDriveColor
     Write-Host 'Commands: ' -NoNewline
     Write-Host 'wsls' -ForegroundColor Yellow -NoNewline
     Write-Host ' | ' -NoNewline
@@ -21,7 +31,5 @@ function Write-Banner {
     Write-Host 'secret' -ForegroundColor Yellow -NoNewline
     Write-Host ' | ' -NoNewline
     Write-Host 'wslhelp' -ForegroundColor Yellow
-    Write-Host 'Type ' -NoNewline
-    Write-Host 'wslhelp' -ForegroundColor Cyan -NoNewline
-    Write-Host " for full reference`n"
+    Write-Host ""
 }
