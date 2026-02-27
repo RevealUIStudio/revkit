@@ -1,7 +1,8 @@
 #!/bin/bash
 # RevealUI WSL Bootstrap
 # Run ONCE inside an interactive WSL session:
-#   bash /mnt/e/.revealui/bootstrap-wsl.sh
+#   bash /mnt/c/Users/joshu/.revealui/bootstrap-wsl.sh
+#   (or from portable SSD: bash /mnt/<drive>/.revealui/bootstrap-wsl.sh)
 
 set -euo pipefail
 
@@ -43,27 +44,43 @@ fi
 
 # --- Step 3: Add hook to .bashrc ---
 echo "[3/5] Adding RevealUI hook to ~/.bashrc..."
-MARKER="# --- RevealUI portable dev environment ---"
+MARKER="# --- RevealUI environment mode ---"
 if grep -qF "$MARKER" ~/.bashrc 2>/dev/null; then
     echo "  Hook already present in ~/.bashrc, skipping"
 else
     cat >> ~/.bashrc << 'HOOK'
 
-# --- RevealUI portable dev environment ---
-# Source all config fragments from the portable SSD
-_revealui_root=""
-for _candidate in /mnt/?/.revealui; do
-    if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
-        _revealui_root="$_candidate"
-        break
+# --- RevealUI environment mode ---
+# Guard: only detect and print once per terminal session.
+if [ -z "$REVEALUI_MODE" ]; then
+    _revealui_root=""
+    # Primary: C: drive (always available)
+    if [ -f "/mnt/c/Users/joshu/.revealui/wsl/bashrc.d/00-base.sh" ]; then
+        _revealui_root="/mnt/c/Users/joshu/.revealui"
+    else
+        # Fallback: scan known portable SSD locations
+        for _candidate in /mnt/?/.revealui /mnt/?/professional/.revealui; do
+            if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
+                _revealui_root="$_candidate"
+                break
+            fi
+        done
     fi
-done
-if [ -n "$_revealui_root" ]; then
-    for _f in "$_revealui_root"/wsl/bashrc.d/*.sh; do
-        [ -r "$_f" ] && . "$_f"
-    done
+
+    if [ -n "$_revealui_root" ]; then
+        export REVEALUI_MODE="portable"
+        export REVEALUI_SSD_PATH="$_revealui_root"
+        for _f in "$_revealui_root"/wsl/bashrc.d/*.sh; do
+            [ -r "$_f" ] && . "$_f"
+        done
+        echo -e "\033[1;36m● RevealUI: portable mode\033[0m (at $_revealui_root)"
+    else
+        export REVEALUI_MODE="local"
+        unset REVEALUI_SSD_PATH
+        echo -e "\033[0;37m● RevealUI: local mode\033[0m"
+    fi
+    unset _revealui_root _candidate _f
 fi
-unset _revealui_root _candidate _f
 # --- end RevealUI ---
 HOOK
     echo "  Hook appended to ~/.bashrc"

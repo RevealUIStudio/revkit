@@ -67,11 +67,17 @@ if ((Test-Path $profilePath) -and -not $Force) {
 
 $revealRoot = $env:REVEALUI_ROOT
 if (-not $revealRoot -or -not (Test-Path "$revealRoot\powershell\Modules\RevealUI.DevEnv\RevealUI.DevEnv.psd1" -ErrorAction SilentlyContinue)) {
-    # Drive letter may have changed -- scan for our marker
-    $revealRoot = Get-Volume | Where-Object { $_.DriveLetter } |
-                  ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
-                  Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv\RevealUI.DevEnv.psd1" -ErrorAction SilentlyContinue } |
-                  Select-Object -First 1
+    # Primary: user home (C: drive, always available)
+    $homeRoot = Join-Path $env:USERPROFILE ".revealui"
+    if (Test-Path "$homeRoot\powershell\Modules\RevealUI.DevEnv\RevealUI.DevEnv.psd1" -ErrorAction SilentlyContinue) {
+        $revealRoot = $homeRoot
+    } else {
+        # Fallback: scan drives for our marker (portable SSD)
+        $revealRoot = Get-Volume | Where-Object { $_.DriveLetter } |
+                      ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
+                      Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv\RevealUI.DevEnv.psd1" -ErrorAction SilentlyContinue } |
+                      Select-Object -First 1
+    }
     if ($revealRoot) {
         $env:REVEALUI_ROOT = $revealRoot
         [System.Environment]::SetEnvironmentVariable('REVEALUI_ROOT', $revealRoot, 'User')
@@ -119,6 +125,6 @@ Write-Host "  2. You should see 'WSL Helpers Loaded!'"
 Write-Host "  3. Run: wslstat"
 Write-Host ""
 Write-Host "For WSL-side setup, run inside WSL:" -ForegroundColor Cyan
-Write-Host "  bash /mnt/e/.revealui/bootstrap-wsl.sh" -ForegroundColor White
-Write-Host "  (replace 'e' with your actual drive letter if different)" -ForegroundColor Gray
+Write-Host "  bash /mnt/c/Users/joshu/.revealui/bootstrap-wsl.sh" -ForegroundColor White
+Write-Host "  (or from portable SSD: bash /mnt/<drive>/.revealui/bootstrap-wsl.sh)" -ForegroundColor Gray
 Write-Host ""
