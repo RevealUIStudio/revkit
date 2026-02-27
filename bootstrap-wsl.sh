@@ -12,7 +12,7 @@ echo "Source: $SCRIPT_DIR"
 echo ""
 
 # --- Step 1: Install helper scripts to /usr/local/bin ---
-echo "[1/4] Installing helper scripts to /usr/local/bin..."
+echo "[1/5] Installing helper scripts to /usr/local/bin..."
 for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
     [ -f "$script" ] || continue
     name=$(basename "$script")
@@ -23,7 +23,7 @@ for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
 done
 
 # --- Step 2: Set up sudoers for passwordless mount ---
-echo "[2/4] Configuring sudoers for passwordless mount..."
+echo "[2/5] Configuring sudoers for passwordless mount..."
 SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
@@ -42,7 +42,7 @@ else
 fi
 
 # --- Step 3: Add hook to .bashrc ---
-echo "[3/4] Adding RevealUI hook to ~/.bashrc..."
+echo "[3/5] Adding RevealUI hook to ~/.bashrc..."
 MARKER="# --- RevealUI portable dev environment ---"
 if grep -qF "$MARKER" ~/.bashrc 2>/dev/null; then
     echo "  Hook already present in ~/.bashrc, skipping"
@@ -70,7 +70,7 @@ HOOK
 fi
 
 # --- Step 4: Link git and SSH configs ---
-echo "[4/4] Linking git and SSH configs..."
+echo "[4/5] Linking git and SSH configs..."
 CONFIGS_DIR="$SCRIPT_DIR/wsl/config"
 
 if [ -f "$CONFIGS_DIR/gitconfig" ]; then
@@ -98,8 +98,18 @@ if [ -f "$CONFIGS_DIR/ssh-config" ]; then
     fi
 fi
 
+# --- Step 5: Run boot optimization ---
+echo "[5/5] Running boot optimization..."
+BOOT_SCRIPT="$SCRIPT_DIR/wsl/setup-wsl-boot.sh"
+if [ -f "$BOOT_SCRIPT" ]; then
+    sudo bash "$BOOT_SCRIPT"
+else
+    echo "  WARNING: $BOOT_SCRIPT not found, skipping" >&2
+fi
+
 echo ""
 echo "=== WSL Bootstrap Complete ==="
 echo ""
 echo "Restart your shell or run: source ~/.bashrc"
+echo "Then restart WSL from Windows: wsl --shutdown"
 echo ""
