@@ -3,7 +3,7 @@
 
 _find_revealui_root() {
     # Check env var first
-    if [ -n "$REVEALUI_ROOT" ] && [ -d "$REVEALUI_ROOT/wsl" ]; then
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "${REVEALUI_ROOT:-}/wsl" ]; then
         echo "$REVEALUI_ROOT"
         return
     fi
@@ -33,7 +33,7 @@ else
 fi
 
 # Tier detection
-if [ -n "$REVEALUI_STUDIO_MOUNTED" ]; then
+if [ -n "${REVEALUI_STUDIO_MOUNTED:-}" ]; then
     export DEVKIT_TIER="T1"
 else
     export DEVKIT_TIER="T0"
