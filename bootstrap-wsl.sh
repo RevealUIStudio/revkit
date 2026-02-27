@@ -13,7 +13,7 @@ echo "Source: $SCRIPT_DIR"
 echo ""
 
 # --- Step 1: Install helper scripts to /usr/local/bin ---
-echo "[1/5] Installing helper scripts to /usr/local/bin..."
+echo "[1/6] Installing helper scripts to /usr/local/bin..."
 for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
     [ -f "$script" ] || continue
     name=$(basename "$script")
@@ -24,7 +24,7 @@ for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
 done
 
 # --- Step 2: Set up sudoers for passwordless mount ---
-echo "[2/5] Configuring sudoers for passwordless mount..."
+echo "[2/6] Configuring sudoers for passwordless mount..."
 SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
@@ -43,7 +43,7 @@ else
 fi
 
 # --- Step 3: Add hook to .bashrc ---
-echo "[3/5] Adding RevealUI hook to ~/.bashrc..."
+echo "[3/6] Adding RevealUI hook to ~/.bashrc..."
 MARKER="# --- RevealUI environment mode ---"
 if grep -qF "$MARKER" ~/.bashrc 2>/dev/null; then
     echo "  Hook already present in ~/.bashrc, skipping"
@@ -87,7 +87,7 @@ HOOK
 fi
 
 # --- Step 4: Link git and SSH configs ---
-echo "[4/5] Linking git and SSH configs..."
+echo "[4/6] Linking git and SSH configs..."
 CONFIGS_DIR="$SCRIPT_DIR/wsl/config"
 
 if [ -f "$CONFIGS_DIR/gitconfig" ]; then
@@ -116,12 +116,25 @@ if [ -f "$CONFIGS_DIR/ssh-config" ]; then
 fi
 
 # --- Step 5: Run boot optimization ---
-echo "[5/5] Running boot optimization..."
+echo "[5/6] Running boot optimization..."
 BOOT_SCRIPT="$SCRIPT_DIR/wsl/setup-wsl-boot.sh"
 if [ -f "$BOOT_SCRIPT" ]; then
     sudo bash "$BOOT_SCRIPT"
 else
     echo "  WARNING: $BOOT_SCRIPT not found, skipping" >&2
+fi
+
+# --- Step 6: Initialize Studio directories ---
+if mountpoint -q /mnt/studio 2>/dev/null; then
+    echo "[6/6] Initializing Studio directories..."
+    mkdir -p /mnt/studio/databases/postgres
+    mkdir -p /mnt/studio/databases/redis
+    mkdir -p /mnt/studio/databases/supabase
+    mkdir -p /mnt/studio/models
+    mkdir -p /mnt/studio/cache
+    echo "  Studio directories initialized"
+else
+    echo "[6/6] Studio drive not mounted, skipping directory init"
 fi
 
 echo ""
