@@ -1,10 +1,10 @@
 #!/bin/bash
-# mount-dev-drive.sh — Mounts the RevealUI dev drive by filesystem label
+# mount-studio-drive.sh — Mounts the Studio infrastructure drive by filesystem label
 # Called by Windows mount script after wsl --mount --bare
 set -euo pipefail
 
-MOUNT_POINT="/mnt/wsl-dev"
-DRIVE_LABEL="WSL-Dev"
+MOUNT_POINT="/mnt/studio"
+DRIVE_LABEL="Studio"
 
 # Already mounted?
 if mountpoint -q "$MOUNT_POINT" 2>/dev/null; then

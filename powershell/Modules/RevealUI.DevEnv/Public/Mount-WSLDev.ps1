@@ -4,11 +4,13 @@
 function Mount-WSLDev {
     <#
     .SYNOPSIS
-        Finds the dev SSD by serial number, attaches it to WSL, and mounts at /mnt/wsl-dev.
+        Finds the Studio SSD by serial number, attaches it to WSL, and mounts at /mnt/studio.
     .DESCRIPTION
         All mount logic is inline — no external script dependency. When run without elevation,
         self-elevates via pwsh.exe with module discovery. Includes WSL readiness polling,
         retry loop for wsl --mount, and block device wait.
+    .ALIASES
+        Mount-Studio
     #>
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([void])]
@@ -20,7 +22,7 @@ function Mount-WSLDev {
     )
 
     $logDir = Get-ModuleLogPath
-    $logFile = Join-Path $logDir 'mount-wsl-dev.log'
+    $logFile = Join-Path $logDir 'mount-studio.log'
     $DevDriveSerial = 'WXB2A91FA77H'
 
     # --- Self-elevation if not admin ---
@@ -28,17 +30,17 @@ function Mount-WSLDev {
         if (-not $PSCmdlet.ShouldProcess('Mount-WSLDev', 'Elevate to administrator')) {
             return
         }
-        Write-DevLog 'Elevating to mount dev drive...' -Level WARN -Source 'Mount' -LogFile $logFile
+        Write-DevLog 'Elevating to mount Studio drive...' -Level WARN -Source 'Mount' -LogFile $logFile
         $cmd = "Mount-WSLDev -SkipWait -TriggerSource $TriggerSource"
         Invoke-Elevated -Command $cmd -Wait
 
         # Verify from non-elevated session
         Write-DevLog 'Checking mount status...' -Source 'Mount' -LogFile $logFile
-        $status = wsl.exe -d Ubuntu -e bash -c "mountpoint -q /mnt/wsl-dev && echo 'YOURMOUNT_YES' || echo 'YOURMOUNT_NO'" 2>&1
+        $status = wsl.exe -d Ubuntu -e bash -c "mountpoint -q /mnt/studio && echo 'YOURMOUNT_YES' || echo 'YOURMOUNT_NO'" 2>&1
         if ($status -match 'YOURMOUNT_YES') {
-            Write-DevLog 'Dev drive: MOUNTED' -Source 'Mount' -LogFile $logFile
+            Write-DevLog 'Studio drive: MOUNTED' -Source 'Mount' -LogFile $logFile
         } else {
-            Write-DevLog 'Dev drive: NOT MOUNTED' -Level ERROR -Source 'Mount' -LogFile $logFile
+            Write-DevLog 'Studio drive: NOT MOUNTED' -Level ERROR -Source 'Mount' -LogFile $logFile
         }
         return
     }
@@ -52,9 +54,9 @@ function Mount-WSLDev {
     }
 
     # --- Check if already mounted ---
-    $mountCheck = (wsl.exe -d Ubuntu -e bash -c "mountpoint -q /mnt/wsl-dev && echo YOURMOUNT_YES || echo YOURMOUNT_NO" 2>&1) -join ' '
+    $mountCheck = (wsl.exe -d Ubuntu -e bash -c "mountpoint -q /mnt/studio && echo YOURMOUNT_YES || echo YOURMOUNT_NO" 2>&1) -join ' '
     if ($mountCheck -match 'YOURMOUNT_YES') {
-        Write-DevLog 'Dev drive already mounted at /mnt/wsl-dev' -Source 'Mount' -LogFile $logFile
+        Write-DevLog 'Studio drive already mounted at /mnt/studio' -Source 'Mount' -LogFile $logFile
         return
     }
 
@@ -81,16 +83,16 @@ function Mount-WSLDev {
         }
     }
 
-    # --- Find the dev drive by serial number ---
+    # --- Find the Studio drive by serial number ---
     $devDisk = Get-Disk | Where-Object { $_.SerialNumber -match $DevDriveSerial }
 
     if (-not $devDisk) {
-        Write-DevLog "Dev drive not found (serial: $DevDriveSerial). Is it plugged in?" -Level WARN -Source 'Mount' -LogFile $logFile
+        Write-DevLog "Studio drive not found (serial: $DevDriveSerial). Is it plugged in?" -Level WARN -Source 'Mount' -LogFile $logFile
         return  # Not an error — drive simply not connected
     }
 
     $driveNumber = $devDisk.Number
-    Write-DevLog "Found dev drive at PHYSICALDRIVE$driveNumber (Status: $($devDisk.OperationalStatus))" -Source 'Mount' -LogFile $logFile
+    Write-DevLog "Found Studio drive at PHYSICALDRIVE$driveNumber (Status: $($devDisk.OperationalStatus))" -Source 'Mount' -LogFile $logFile
 
     if (-not $PSCmdlet.ShouldProcess("PHYSICALDRIVE$driveNumber", 'Attach and mount to WSL')) {
         return
@@ -123,7 +125,7 @@ function Mount-WSLDev {
     }
 
     if (-not $attached) {
-        Write-DevLog "Failed to attach dev drive after $maxRetries attempts" -Level ERROR -Source 'Mount' -LogFile $logFile
+        Write-DevLog "Failed to attach Studio drive after $maxRetries attempts" -Level ERROR -Source 'Mount' -LogFile $logFile
         $err = [System.Management.Automation.ErrorRecord]::new(
             [System.Exception]::new("Failed to attach PHYSICALDRIVE$driveNumber after $maxRetries attempts"),
             'AttachFailed', [System.Management.Automation.ErrorCategory]::ResourceUnavailable, $null)
@@ -135,7 +137,7 @@ function Mount-WSLDev {
     $deviceReady = $false
     for ($i = 1; $i -le 10; $i++) {
         Start-Sleep -Seconds 1
-        $blkCheck = wsl.exe -d Ubuntu -e bash -c "blkid -L WSL-Dev 2>/dev/null && echo FOUND || echo NOTFOUND" 2>&1
+        $blkCheck = wsl.exe -d Ubuntu -e bash -c "blkid -L Studio 2>/dev/null && echo FOUND || echo NOTFOUND" 2>&1
         if ($blkCheck -match 'FOUND') {
             $deviceReady = $true
             Write-DevLog "Block device detected after ${i}s" -Source 'Mount' -LogFile $logFile
@@ -148,8 +150,8 @@ function Mount-WSLDev {
     }
 
     # --- Mount the partition inside WSL ---
-    Write-DevLog 'Mounting partition inside WSL at /mnt/wsl-dev...' -Source 'Mount' -LogFile $logFile
-    $wslResult = wsl.exe -d Ubuntu -e sudo /usr/local/bin/mount-dev-drive.sh 2>&1
+    Write-DevLog 'Mounting partition inside WSL at /mnt/studio...' -Source 'Mount' -LogFile $logFile
+    $wslResult = wsl.exe -d Ubuntu -e sudo /usr/local/bin/mount-studio-drive.sh 2>&1
 
     if ($LASTEXITCODE -ne 0) {
         Write-DevLog "WSL mount helper failed (exit $LASTEXITCODE): $wslResult" -Level ERROR -Source 'Mount' -LogFile $logFile
@@ -160,13 +162,13 @@ function Mount-WSLDev {
     }
 
     # --- Verify ---
-    $verify = (wsl.exe -d Ubuntu -e bash -c "mountpoint -q /mnt/wsl-dev && echo SUCCESS || echo FAILED" 2>&1) -join ' '
+    $verify = (wsl.exe -d Ubuntu -e bash -c "mountpoint -q /mnt/studio && echo SUCCESS || echo FAILED" 2>&1) -join ' '
     if ($verify -match 'SUCCESS') {
-        Write-DevLog 'WSL dev drive mounted successfully at /mnt/wsl-dev' -Source 'Mount' -LogFile $logFile
+        Write-DevLog 'WSL Studio drive mounted successfully at /mnt/studio' -Source 'Mount' -LogFile $logFile
     } else {
         Write-DevLog 'Mount verification failed' -Level ERROR -Source 'Mount' -LogFile $logFile
         $err = [System.Management.Automation.ErrorRecord]::new(
-            [System.Exception]::new('Mount verification failed — /mnt/wsl-dev not mounted'),
+            [System.Exception]::new('Mount verification failed — /mnt/studio not mounted'),
             'VerifyFailed', [System.Management.Automation.ErrorCategory]::InvalidResult, $null)
         $PSCmdlet.ThrowTerminatingError($err)
     }

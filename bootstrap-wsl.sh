@@ -29,7 +29,7 @@ SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
 # RevealUI - passwordless mount operations
-$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-dev-drive.sh
+$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-studio-drive.sh
 $CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/mount
 $CURRENT_USER ALL=(ALL) NOPASSWD: /bin/mount
 EOF
