@@ -20,6 +20,9 @@ id_ed25519*
 *.pssproj
 *.pssproj.user
 
+# Docker runtime env
+wsl/docker/.env
+
 # Editor
 .vscode/
 *.swp
