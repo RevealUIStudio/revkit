@@ -19,6 +19,7 @@
         'Show-WSLHelp'
         'Get-Secret'
         'Sync-RevealUIToWindows'
+        'Sync-AllRepos'
         'Register-DevMountTask'
         'Register-SyncTask'
         'Unregister-DevMountTask'
@@ -33,6 +34,7 @@
         'wslmounts'
         'wslhelp'
         'wslsync'
+        'syncall'
         'secret'
     )
 
