@@ -54,10 +54,13 @@ function Sync-AllRepos {
                 $results.Add([PSCustomObject]@{ Drive = 'C:'; Repo = $repo.Name; Status = 'SKIP (not cloned)'; Branch = '-' })
             } else {
                 $branch = git -C $cFullPath rev-parse --abbrev-ref HEAD 2>&1
-                $dirty = git -C $cFullPath status --porcelain 2>&1
-                if ($dirty) {
-                    $results.Add([PSCustomObject]@{ Drive = 'C:'; Repo = $repo.Name; Status = "DIRTY ($(@($dirty).Count) changes)"; Branch = $branch })
-                    Write-DevLog "C: $($repo.Name): skipped (dirty)" -Level WARN -Source 'SyncAll' -LogFile $logFile
+                # Only skip for tracked-file modifications (staged/unstaged).
+                # Untracked files (??) don't conflict with pull --ff-only.
+                $allChanges = @(git -C $cFullPath status --porcelain 2>&1)
+                $trackedDirty = @($allChanges | Where-Object { $_ -notmatch '^\?\?' })
+                if ($trackedDirty.Count -gt 0) {
+                    $results.Add([PSCustomObject]@{ Drive = 'C:'; Repo = $repo.Name; Status = "DIRTY ($($trackedDirty.Count) changes)"; Branch = $branch })
+                    Write-DevLog "C: $($repo.Name): skipped (dirty — $($trackedDirty.Count) tracked changes)" -Level WARN -Source 'SyncAll' -LogFile $logFile
                 } else {
                     git -C $cFullPath fetch origin --quiet 2>&1 | Out-Null
                     $pullOutput = git -C $cFullPath pull --ff-only 2>&1
