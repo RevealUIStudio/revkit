@@ -4,10 +4,11 @@
 function Register-SyncTask {
     <#
     .SYNOPSIS
-        Registers a Task Scheduler task to sync RevealUI from WSL to Windows.
+        Registers a Task Scheduler task to sync all repos every 30 minutes.
     .DESCRIPTION
-        Creates a scheduled task that runs Sync-RevealUIToWindows every 15 minutes
+        Creates a scheduled task that runs Sync-AllRepos -Target all every 30 minutes
         via pwsh.exe with inline module discovery. Requires elevation.
+        Replaces the old RevealUI-only 15-minute task.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([void])]
@@ -19,18 +20,26 @@ function Register-SyncTask {
         return
     }
 
-    $taskName = 'RevealUI-WSL-Sync'
+    $taskName = 'RevealUI-Repo-Sync'
     $taskPath = '\RevealUI\'
+    $oldTaskName = 'RevealUI-WSL-Sync'
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
-    # Inline module discovery + Sync command
+    # Unregister old task if present
+    $oldTask = Get-ScheduledTask -TaskName $oldTaskName -TaskPath $taskPath -ErrorAction SilentlyContinue
+    if ($oldTask) {
+        Unregister-ScheduledTask -TaskName $oldTaskName -TaskPath $taskPath -Confirm:$false
+        Write-DevLog "Unregistered old task '$taskPath$oldTaskName'" -Source 'TaskReg'
+    }
+
+    # Inline module discovery + Sync-AllRepos
     $command = @'
 $r = Get-Volume | Where-Object DriveLetter | ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
   Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv" } | Select-Object -First 1
 if ($r) {
   $env:PSModulePath = (Join-Path $r 'powershell\Modules') + ';' + $env:PSModulePath
   Import-Module RevealUI.DevEnv
-  Sync-RevealUIToWindows -TriggerSource scheduled
+  Sync-AllRepos -Target all -TriggerSource scheduled
 } else { Write-Error 'RevealUI.DevEnv module not found on any drive' }
 '@
 
@@ -41,13 +50,13 @@ if ($r) {
 <?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>Syncs RevealUI from WSL to Windows every 15 minutes for read-only access by Windows apps.</Description>
+    <Description>Syncs all registered repos (C: and E:) with GitHub every 30 minutes.</Description>
     <Author>$currentUser</Author>
   </RegistrationInfo>
   <Triggers>
     <TimeTrigger>
       <Repetition>
-        <Interval>PT15M</Interval>
+        <Interval>PT30M</Interval>
         <StopAtDurationEnd>false</StopAtDurationEnd>
       </Repetition>
       <StartBoundary>2026-01-01T00:00:00</StartBoundary>
@@ -71,7 +80,7 @@ if ($r) {
     <AllowStartOnDemand>true</AllowStartOnDemand>
     <Enabled>true</Enabled>
     <Hidden>false</Hidden>
-    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
+    <ExecutionTimeLimit>PT10M</ExecutionTimeLimit>
     <WakeToRun>false</WakeToRun>
   </Settings>
   <Actions Context="Author">
@@ -109,8 +118,8 @@ if ($r) {
 
     Write-Host ''
     Write-DevLog "Verification:" -Source 'TaskReg'
-    Write-Host "  Schedule: Every 15 minutes (indefinite)"
+    Write-Host "  Schedule: Every 30 minutes (indefinite)"
     Write-Host "  Engine:   conhost --headless pwsh.exe (PS7, no window)"
-    Write-Host "  Command:  Sync-RevealUIToWindows -TriggerSource scheduled"
+    Write-Host "  Command:  Sync-AllRepos -Target all -TriggerSource scheduled"
     Write-Host ''
 }

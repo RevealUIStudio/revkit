@@ -4,109 +4,55 @@
 function Sync-RevealUIToWindows {
     <#
     .SYNOPSIS
-        Mirrors RevealUI from WSL to Windows for read-only access by Windows apps.
+        Syncs RevealUI on Windows (C: drive) with GitHub via git pull --ff-only.
     .DESCRIPTION
-        Uses robocopy to mirror the RevealUI monorepo from WSL Ubuntu ext4 to a
-        Windows NTFS path. Excludes build artifacts, node_modules, and other
-        non-essential directories. Supports dry-run mode and structured logging.
+        Fetches from origin and fast-forward merges. Skips if the working tree is
+        dirty or if fast-forward is not possible. Replaces the old robocopy-based
+        mirror approach — C: is now a full git clone, not a read-only copy.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([void])]
     param(
-        [switch]$DryRun,
-
-        [ValidateSet('manual', 'scheduled', 'startup')]
+        [ValidateSet('manual', 'scheduled')]
         [string]$TriggerSource = 'manual',
 
-        [string]$WslDistro = 'Ubuntu',
-
-        [string]$Source = '\\wsl.localhost\Ubuntu\home\joshua-v-dev\projects\RevealUI',
-
-        [string]$Destination = 'C:\Users\joshu\projects\RevealUI'
+        [string]$RepoPath = 'C:\Users\joshu\projects\RevealUI'
     )
 
     $logDir = Get-ModuleLogPath
     $logFile = Join-Path $logDir 'sync-revealui.log'
 
-    $ExcludeDirs = @(
-        'node_modules', '.next', 'dist', '.turbo', '.git', '.pgdata',
-        '.nix-store', '.direnv', '.claude', '.husky', 'coverage',
-        '.vitest', '.playwright'
-    )
-
-    $ExcludeFiles = @(
-        'pnpm-lock.yaml', '*.lock'
-    )
-
     Write-DevLog "Starting RevealUI sync ($TriggerSource)" -Source 'Sync' -LogFile $logFile
 
-    # Check WSL availability
-    $wslCheck = wsl.exe -d $WslDistro -e echo READY 2>&1
-    if ($wslCheck -notmatch 'READY') {
-        Write-DevLog 'WSL not available. Skipping sync.' -Level WARN -Source 'Sync' -LogFile $logFile
+    if (-not (Test-Path (Join-Path $RepoPath '.git'))) {
+        Write-DevLog "Not a git repo: $RepoPath" -Level ERROR -Source 'Sync' -LogFile $logFile
         return
     }
 
-    if (-not (Test-Path $Source)) {
-        $err = [System.Management.Automation.ErrorRecord]::new(
-            [System.IO.DirectoryNotFoundException]::new("Source not found: $Source"),
-            'SourceNotFound', [System.Management.Automation.ErrorCategory]::ObjectNotFound, $Source)
-        $PSCmdlet.ThrowTerminatingError($err)
-    }
-
-    $destParent = Split-Path $Destination -Parent
-    if (-not (Test-Path $destParent)) {
-        New-Item -ItemType Directory -Path $destParent -Force | Out-Null
-    }
-
-    $robocopyArgs = @(
-        $Source, $Destination
-        '/MIR', '/COPY:DT', '/DCOPY:T', '/MT:8'
-        '/R:2', '/W:3', '/NP', '/NDL', '/NFL', '/NJH', '/NJS'
-        "/LOG+:$logFile"
-    )
-
-    foreach ($dir in $ExcludeDirs) {
-        $robocopyArgs += '/XD'
-        $robocopyArgs += $dir
-    }
-
-    foreach ($file in $ExcludeFiles) {
-        $robocopyArgs += '/XF'
-        $robocopyArgs += $file
-    }
-
-    if ($DryRun) {
-        $robocopyArgs += '/L'
-        Write-DevLog 'DRY RUN mode - no files will be copied' -Level INFO -Source 'Sync' -LogFile $logFile
-    }
-
-    if (-not $PSCmdlet.ShouldProcess("$Source -> $Destination", 'Robocopy mirror')) {
+    # Check for uncommitted changes
+    $dirty = git -C $RepoPath status --porcelain 2>&1
+    if ($dirty) {
+        Write-DevLog "Skipping RevealUI: uncommitted changes" -Level WARN -Source 'Sync' -LogFile $logFile
+        Write-Warning "Skipping RevealUI sync — uncommitted changes in $RepoPath"
         return
     }
 
-    $startTime = Get-Date
-    Write-DevLog "Syncing: $Source -> $Destination" -Source 'Sync' -LogFile $logFile
+    if (-not $PSCmdlet.ShouldProcess($RepoPath, 'git pull --ff-only')) {
+        return
+    }
 
-    & robocopy @robocopyArgs
+    git -C $RepoPath fetch origin main --quiet 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-DevLog "Fetch failed for RevealUI" -Level ERROR -Source 'Sync' -LogFile $logFile
+        return
+    }
 
-    $exitCode = $LASTEXITCODE
-    $secs = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
-
-    if ($exitCode -le 7) {
-        $status = switch ($exitCode) {
-            0 { 'Already in sync' }
-            1 { 'Files copied' }
-            2 { 'Extras cleaned' }
-            3 { 'Files copied + extras cleaned' }
-            default { "Completed with code $exitCode" }
-        }
-        Write-DevLog "Sync complete: $status (${secs}s)" -Source 'Sync' -LogFile $logFile
+    $pullOutput = git -C $RepoPath pull --ff-only origin main 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $sha = git -C $RepoPath rev-parse --short HEAD
+        Write-DevLog "RevealUI synced to $sha" -Source 'Sync' -LogFile $logFile
     } else {
-        Write-DevLog "Sync FAILED with exit code $exitCode (${secs}s)" -Level ERROR -Source 'Sync' -LogFile $logFile
-        $err = [System.Management.Automation.ErrorRecord]::new(
-            [System.Exception]::new("Robocopy failed with exit code $exitCode"),
-            'RobocopyFailed', [System.Management.Automation.ErrorCategory]::InvalidResult, $null)
-        $PSCmdlet.ThrowTerminatingError($err)
+        Write-DevLog "Pull --ff-only failed: $pullOutput" -Level WARN -Source 'Sync' -LogFile $logFile
+        Write-Warning "RevealUI sync failed (not fast-forwardable)"
     }
 }
