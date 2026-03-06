@@ -30,12 +30,12 @@ CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
 # RevealUI - passwordless mount operations
 $CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-studio-drive.sh
-$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/mount
-$CURRENT_USER ALL=(ALL) NOPASSWD: /bin/mount
 EOF
 sudo chmod 0440 "$SUDOERS_FILE"
 if sudo visudo -cf "$SUDOERS_FILE" > /dev/null 2>&1; then
     echo "  Sudoers validated"
+    echo "  NOTE: If upgrading an existing install, run: sudo visudo -f $SUDOERS_FILE"
+    echo "        and remove any NOPASSWD lines for /usr/bin/mount and /bin/mount"
 else
     echo "  ERROR: Sudoers syntax error, removing" >&2
     sudo rm "$SUDOERS_FILE"

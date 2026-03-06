@@ -23,7 +23,21 @@ function Mount-WSLDev {
 
     $logDir = Get-ModuleLogPath
     $logFile = Join-Path $logDir 'mount-studio.log'
-    $DevDriveSerial = 'WXB2A91FA77H'
+
+    # Load local-config.ps1 (gitignored) for hardware-specific values
+    $localConfig = Join-Path $PSScriptRoot '..' 'local-config.ps1'
+    if (Test-Path $localConfig) {
+        . (Resolve-Path $localConfig)
+    }
+    if (-not $DevDriveSerial) {
+        $err = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new(
+                'DevDriveSerial is not set. Create powershell/Modules/RevealUI.DevEnv/local-config.ps1 from local-config.example.ps1 and set $DevDriveSerial to your SSD serial number.'),
+            'SerialNotConfigured',
+            [System.Management.Automation.ErrorCategory]::InvalidOperation,
+            $null)
+        $PSCmdlet.ThrowTerminatingError($err)
+    }
 
     # --- Self-elevation if not admin ---
     if (-not (Test-IsAdmin)) {
