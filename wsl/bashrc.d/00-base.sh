@@ -4,40 +4,39 @@
 
 _find_revealui_root() {
     # Check env var first
-    if [ -n "" ] && [ -d "/wsl" ]; then
-        echo ""
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "${REVEALUI_ROOT:-}/wsl" ]; then
+        echo "$REVEALUI_ROOT"
         return
     fi
     # Primary: any Windows user's .revealui under /mnt/c/Users/* (works for any account name)
-    local candidate
     for candidate in /mnt/c/Users/*/.revealui; do
-        if [ -f "/wsl/bashrc.d/00-base.sh" ]; then
-            echo ""
+        if [ -f "$candidate/wsl/bashrc.d/00-base.sh" ]; then
+            echo "$candidate"
             return
         fi
     done
     # Fallback: scan known SSD locations
     for candidate in /mnt/e/professional/.revealui /mnt/e/.revealui /mnt/d/.revealui; do
-        if [ -f "/wsl/bashrc.d/00-base.sh" ]; then
-            echo ""
+        if [ -f "$candidate/wsl/bashrc.d/00-base.sh" ]; then
+            echo "$candidate"
             return
         fi
     done
 }
 
-REVEALUI_ROOT=""
+REVEALUI_ROOT="$(_find_revealui_root)"
 export REVEALUI_ROOT
 export REVEALUI_STUDIO="/mnt/studio"
 
 # Studio drive mount check
-if [ -d "" ] && mountpoint -q "" 2>/dev/null; then
+if [ -d "$REVEALUI_STUDIO" ] && mountpoint -q "$REVEALUI_STUDIO" 2>/dev/null; then
     export REVEALUI_STUDIO_MOUNTED=1
 else
     unset REVEALUI_STUDIO_MOUNTED
 fi
 
 # Tier detection
-if [ -n "" ]; then
+if [ -n "${REVEALUI_STUDIO_MOUNTED:-}" ]; then
     export DEVKIT_TIER="T1"
 else
     export DEVKIT_TIER="T0"
