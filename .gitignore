@@ -1,20 +1,26 @@
+# Personal config (contains real identity/credentials)
+config.toml
+
+# Rendered output
+output/
+
 # Logs
 scripts/logs/
 *.log
 
-# OS junk
-Thumbs.db
+# OS
 .DS_Store
+Thumbs.db
 
 # Secrets
 secrets/
-
-# Passage store (its own git repo)
-passage-store/
 *.pem
 *.key
 id_ed25519*
 !*.pub
+
+# Passage store (its own git repo)
+passage-store/
 
 # PowerShell artifacts
 *.pssproj
@@ -24,6 +30,8 @@ id_ed25519*
 wsl/docker/.env
 
 # Editor
-.vscode/
 *.swp
+*.swo
 *~
+.idea/
+.vscode/

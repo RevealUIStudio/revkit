@@ -1,0 +1,34 @@
+# RevealUI DevKit — Solo Developer Profile (T0)
+# ================================================
+# Minimal laptop-only setup. No external drive, no Docker services,
+# no Ollama. Just Nix + RevVault on a modest machine.
+
+[identity]
+username = "your-username"
+windows_user = "your-username"
+git_name = "Your Name"
+git_email = "you@example.com"
+github_org = "your-org"
+
+[hardware]
+wsl_memory = "8GB"
+wsl_processors = "4"
+wsl_swap = "2GB"
+
+[infrastructure]
+studio_mount = ""
+postgres_port = "5432"
+redis_port = ""
+ollama_port = ""
+chrome_devtools_port = "9222"
+
+[features]
+docker = false
+nix = true
+revvault = true
+tailscale = false
+ollama = false
+
+[project]
+project_dir = "~/projects/RevealUI"
+project_name = "RevealUI"
