@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: studio-postgres
+    restart: unless-stopped
+    ports:
+      - "{{POSTGRES_PORT}}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-studio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in wsl/docker/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-studio}
+    volumes:
+      - ${STUDIO_DATA:-{{STUDIO_MOUNT}}/databases}/postgres:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  redis:
+    image: redis:7-alpine
+    container_name: studio-redis
+    restart: unless-stopped
+    ports:
+      - "{{REDIS_PORT}}:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ${STUDIO_DATA:-{{STUDIO_MOUNT}}/databases}/redis:/data
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  ollama:
+    image: ollama/ollama:latest
+    container_name: studio-ollama
+    profiles: ["ai"]
+    ports:
+      - "{{OLLAMA_PORT}}:11434"
+    volumes:
+      - ${STUDIO_DATA:-{{STUDIO_MOUNT}}/models}:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    environment:
+      OLLAMA_HOST: 127.0.0.1
