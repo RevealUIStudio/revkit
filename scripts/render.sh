@@ -263,7 +263,7 @@ render_file() {
 
   mv -f "$tmp_dest" "$dest"
 
-  [[ "$VERBOSE" == "true" ]] && _info "Rendered: $src -> $dest"
+  [[ "$VERBOSE" == "true" ]] && _info "Rendered: $src -> $dest" || true
 }
 
 # ---------------------------------------------------------------------------
@@ -447,8 +447,8 @@ main() {
   _info "Config:    $CONFIG_FILE"
   _info "Templates: $TEMPLATE_DIR"
   _info "Output:    $OUTPUT_DIR"
-  [[ "$DRY_RUN" == "true" ]] && _info "Mode:      dry-run"
-  [[ -n "$DIFF_DIR" ]]       && _info "Diff:      $DIFF_DIR"
+  [[ "$DRY_RUN" == "true" ]] && _info "Mode:      dry-run" || true
+  [[ -n "$DIFF_DIR" ]]       && _info "Diff:      $DIFF_DIR" || true
   _info "---"
 
   # Parse config
