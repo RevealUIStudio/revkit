@@ -28,10 +28,8 @@ echo "[2/6] Configuring sudoers for passwordless mount..."
 SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
-# RevealUI - passwordless mount operations
+# RevealUI - passwordless mount operations (restricted to mount helper only)
 $CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-studio-drive.sh
-$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/mount
-$CURRENT_USER ALL=(ALL) NOPASSWD: /bin/mount
 EOF
 sudo chmod 0440 "$SUDOERS_FILE"
 if sudo visudo -cf "$SUDOERS_FILE" > /dev/null 2>&1; then

@@ -11,6 +11,21 @@ fi
 passenv() {
     local varname="$1"
     local path="$2"
+
+    # Validate variable name: alphanumeric + underscore only, must start with letter/underscore
+    if [[ ! "$varname" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        echo "passenv: invalid variable name: $varname" >&2
+        return 1
+    fi
+
+    # Block dangerous variables
+    case "$varname" in
+        PATH|LD_PRELOAD|LD_LIBRARY_PATH|HOME|SHELL|USER|LOGNAME|IFS)
+            echo "passenv: refusing to override protected variable: $varname" >&2
+            return 1
+            ;;
+    esac
+
     if [ -z "$PASSAGE_DIR" ]; then
         echo "WARN: PASSAGE_DIR not set" >&2
         return 1
@@ -38,7 +53,15 @@ passenv-file() {
     while IFS= read -r line; do
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
         [[ "$line" =~ ^[[:space:]]*$ ]] && continue
-        if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)= ]]; then
+            local _pf_varname="${BASH_REMATCH[1]}"
+            # Block dangerous variables
+            case "$_pf_varname" in
+                PATH|LD_PRELOAD|LD_LIBRARY_PATH|HOME|SHELL|USER|LOGNAME|IFS)
+                    echo "passenv-file: refusing to override protected variable: $_pf_varname" >&2
+                    continue
+                    ;;
+            esac
             export "$line"
         fi
     done <<< "$content"
