@@ -17,7 +17,7 @@
 │ 📂 KEY PATHS                                                         │
 ├──────────────────────────────────────────────────────────────────────┤
 │ Windows Scripts:    C:\Scripts\                                      │
-│ PowerShell Profile: ~\Documents\WindowsPowerShell\...profile.ps1    │
+│ PowerShell Profile: ~\Documents\PowerShell\...profile.ps1           │
 │ Studio Drive (WSL):    /mnt/studio                                     │
 │ Projects (WSL):     ~/projects                                       │
 │ WSL Config:         /etc/wsl.conf                                    │
