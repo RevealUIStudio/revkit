@@ -2,6 +2,19 @@
 
 Multi-agent coordination for Claude Code sessions, powered by a shared workboard file.
 
+## Status (2026-04-23)
+
+**This file-based workboard is an *alternative* coordination mode, not the suite's default.**
+
+The authoritative RevealUI Suite setup has moved to **RPC-only coordination via the RevDev daemon** — see `~/suite/.claude/rules/hooks-architecture.md` in the suite workspace. In that model there is no `.claude/workboard.md`, no lock file, and no file-based "Active Sessions" table; coordination flows through the daemon's Unix socket, and `isDaemonAlive()` is a fast `fs.statSync` on the socket with no ping.
+
+The templates and hooks documented below still ship with revkit for two legitimate use cases:
+
+1. **Lightweight bootstrap** — a project that doesn't run the RevDev daemon (and doesn't need its memory/RPC features) can still get cross-session conflict prevention and a handoff history from a file-based workboard.
+2. **Offline / minimal-dep setup** — no Rust toolchain, no socket, no daemon process. Just Node + a markdown file.
+
+If you're bootstrapping a RevealUI Suite product, skip the workboard hooks and wire the RevDev daemon instead. If you're bootstrapping a greenfield or one-off project and want a minimal multi-agent coordination layer, read on.
+
 ## What the Workboard Is
 
 The workboard is a Markdown file (`<project>/.claude/workboard.md`) that tracks which Claude Code agents are active, what each is working on, and which files each has touched. It serves three purposes:
