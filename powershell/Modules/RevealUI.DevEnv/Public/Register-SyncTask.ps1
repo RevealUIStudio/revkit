@@ -33,9 +33,11 @@ function Register-SyncTask {
     }
 
     # Inline module discovery + Sync-AllRepos
-    # Direct path check first (fast, no CIM dependency), then dynamic volume scan as fallback
+    # Direct path check first (fast, no CIM dependency), then dynamic volume scan as fallback.
+    # $env:USERPROFILE expands at task-run time in the registered user's context, so the
+    # task auto-discovers .revealui under whichever Windows account scheduled it.
     $command = @'
-$knownPaths = @('C:\Users\joshu\.revealui', 'E:\.revealui', 'E:\professional\.revealui')
+$knownPaths = @((Join-Path $env:USERPROFILE '.revealui'), 'E:\.revealui', 'E:\professional\.revealui')
 $r = $knownPaths | Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv" } | Select-Object -First 1
 if (-not $r) {
   $r = Get-Volume | Where-Object DriveLetter | ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |

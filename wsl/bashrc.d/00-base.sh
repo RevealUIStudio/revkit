@@ -7,12 +7,14 @@ _find_revealui_root() {
         echo "$REVEALUI_ROOT"
         return
     fi
-    # Primary: C: drive (always available)
-    local primary="/mnt/c/Users/joshu/.revealui"
-    if [ -f "$primary/wsl/bashrc.d/00-base.sh" ]; then
-        echo "$primary"
-        return
-    fi
+    # Primary: any Windows user's .revealui under /mnt/c/Users/* (works for any account name)
+    local candidate
+    for candidate in /mnt/c/Users/*/.revealui; do
+        if [ -f "$candidate/wsl/bashrc.d/00-base.sh" ]; then
+            echo "$candidate"
+            return
+        fi
+    done
     # Fallback: scan single-letter drive mounts (portable SSD)
     for candidate in /mnt/?/.revealui /mnt/?/professional/.revealui; do
         if [ -f "$candidate/wsl/bashrc.d/00-base.sh" ]; then
