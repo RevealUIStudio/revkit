@@ -19,7 +19,7 @@ jobs:
     name: bash -n (all .sh)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Syntax-check every shell script
         run: |
           set -euo pipefail
@@ -38,7 +38,7 @@ jobs:
     name: PowerShell parse (all .ps1/.psm1/.psd1)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Parse every PowerShell file
         shell: pwsh
         run: |
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ludeeus/action-shellcheck@2.0.0
         with:
           severity: warning
@@ -77,7 +77,7 @@ jobs:
     name: GAP-116 anti-regression — no hardcoded "joshu"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Grep for hardcoded "joshu" in scripted files
         run: |
           set -euo pipefail
@@ -104,7 +104,7 @@ jobs:
     name: Gitleaks (full history)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
@@ -115,7 +115,7 @@ jobs:
     name: tests/test-render.sh
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run render tests
         run: bash tests/test-render.sh
       # NOTE: tests/test-secrets.sh deliberately not wired — pre-existing bugs
