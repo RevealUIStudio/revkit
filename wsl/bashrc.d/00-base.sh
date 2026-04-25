@@ -25,7 +25,8 @@ _find_revealui_root() {
     done
 }
 
-export REVEALUI_ROOT="$(_find_revealui_root)"
+REVEALUI_ROOT="$(_find_revealui_root)"
+export REVEALUI_ROOT
 export REVEALUI_STUDIO="/mnt/studio"
 
 # Studio drive mount check

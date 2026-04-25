@@ -22,7 +22,8 @@ _find_revealui_root() {
         fi
     done
 }
-export REVEALUI_ROOT="$(_find_revealui_root)"
+REVEALUI_ROOT="$(_find_revealui_root)"
+export REVEALUI_ROOT
 export REVEALUI_STUDIO="{{STUDIO_MOUNT}}"
 # Studio drive mount check
 if [ -d "$REVEALUI_STUDIO" ] && mountpoint -q "$REVEALUI_STUDIO" 2>/dev/null; then
