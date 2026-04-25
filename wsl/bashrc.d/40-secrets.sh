@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Passage (age-encrypted password store) configuration
 # Requires: age, passage installed via nix
 

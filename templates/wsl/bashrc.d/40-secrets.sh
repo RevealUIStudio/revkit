@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # RevVault (age-encrypted secret store) configuration
 if [ -n "$REVEALUI_ROOT" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
     export REVVAULT_STORE="$REVEALUI_ROOT/passage-store"

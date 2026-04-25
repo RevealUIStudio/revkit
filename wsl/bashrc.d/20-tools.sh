@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Tool initialization: direnv, nvm, bun, go, pulumi, pip
 
 # Zig / user bin

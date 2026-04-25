@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Chrome DevTools Bridge — forwards from Windows host to WSL
 WIN_IP=$(ip route show | grep -i default | awk '{ print $3}')
 if [ -n "$WIN_IP" ] && ! pgrep -f "socat TCP-LISTEN:{{CHROME_DEVTOOLS_PORT}}" > /dev/null 2>&1; then

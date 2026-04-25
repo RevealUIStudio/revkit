@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # RevealUI base environment setup
 # Discovers REVEALUI_ROOT and checks Studio drive mount status
 

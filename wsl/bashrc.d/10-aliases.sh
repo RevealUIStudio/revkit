@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # RevealUI project aliases and shortcuts
 
 # Quick project navigation

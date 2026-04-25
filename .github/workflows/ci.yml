@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -81,18 +82,19 @@ jobs:
         run: |
           set -euo pipefail
           # Acceptance test from gaps/GAP-116.yml — must be 0.
-          # Docs (.md) are exempt: examples may use literal "joshu".
-          hits=$(grep -rn 'joshu\b' \
-            --include='*.sh' --include='*.ps1' \
-            --include='*.psm1' --include='*.psd1' . || true)
+          # Limited to scripted file types so this workflow file (which has
+          # to mention the literal patterns to scan for them) doesn't
+          # match itself.
+          includes=(--include='*.sh' --include='*.ps1' --include='*.psm1' --include='*.psd1')
+          hits=$(grep -rn 'joshu\b' "${includes[@]}" . || true)
           if [ -n "$hits" ]; then
-            echo "::error::Hardcoded \"joshu\" found in scripted files. See GAP-116."
+            echo "::error::Hardcoded user-account name found in scripted files. See GAP-116."
             echo "$hits"
             exit 1
           fi
-          mnt_hits=$(grep -rn '/mnt/c/Users/joshu' . | grep -v '\.md' || true)
+          mnt_hits=$(grep -rn '/mnt/c/Users/joshu' "${includes[@]}" . || true)
           if [ -n "$mnt_hits" ]; then
-            echo "::error::Hardcoded /mnt/c/Users/joshu found in non-docs. See GAP-116."
+            echo "::error::Hardcoded /mnt/c/Users path found in scripted files. See GAP-116."
             echo "$mnt_hits"
             exit 1
           fi

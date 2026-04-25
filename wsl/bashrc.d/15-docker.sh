@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Studio Docker infrastructure helpers
 
 # Main CLI — delegates to studio-services.sh

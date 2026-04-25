@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # RevealUI base environment setup
 _find_revealui_root() {
     if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "${REVEALUI_ROOT:-}/wsl" ]; then
