@@ -54,7 +54,29 @@ DISABLE_SERVICES=(
     snapd.autoimport.service
 )
 
-WINDOWS_HOME="/mnt/c/Users/joshu"
+# Detect Windows home — prefer $WINDOWS_HOME env override, then user with .revealui/, else first non-system /mnt/c/Users/* dir
+if [ -z "${WINDOWS_HOME:-}" ]; then
+    for _hd in /mnt/c/Users/*/.revealui; do
+        [ -d "$_hd" ] || continue
+        WINDOWS_HOME="$(dirname "$_hd")"
+        break
+    done
+fi
+if [ -z "${WINDOWS_HOME:-}" ]; then
+    for _hd in /mnt/c/Users/*/; do
+        _name="$(basename "$_hd")"
+        case "$_name" in
+            Public|Default*|"All Users"|"") continue ;;
+        esac
+        WINDOWS_HOME="${_hd%/}"
+        break
+    done
+fi
+if [ -z "${WINDOWS_HOME:-}" ] || [ ! -d "$WINDOWS_HOME" ]; then
+    echo "ERROR: Could not detect Windows user home in /mnt/c/Users/" >&2
+    echo "       Set WINDOWS_HOME explicitly (e.g. WINDOWS_HOME=/mnt/c/Users/<your-user>)." >&2
+    exit 1
+fi
 DROPIN_DIR="/etc/systemd/system/user@.service.d"
 
 # ============================================================

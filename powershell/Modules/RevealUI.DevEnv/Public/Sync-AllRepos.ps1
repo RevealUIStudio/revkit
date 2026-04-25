@@ -23,7 +23,7 @@ function Sync-AllRepos {
     $logDir = Get-ModuleLogPath
     $logFile = Join-Path $logDir 'sync-all.log'
 
-    $cBase = 'C:\Users\joshu'
+    $cBase = $env:USERPROFILE
     $eBase = 'E:\repos'
 
     # Repo registry — hardcoded for now, config.toml later

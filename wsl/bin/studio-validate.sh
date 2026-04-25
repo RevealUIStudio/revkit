@@ -19,8 +19,20 @@ done
 
 # Source base env if DEVKIT_TIER not set (direct invocation outside shell)
 if [ -z "${DEVKIT_TIER:-}" ]; then
-    _base="${REVEALUI_ROOT:-/mnt/c/Users/joshu/.revealui}/wsl/bashrc.d/00-base.sh"
-    if [ -f "$_base" ]; then
+    _base=""
+    # Explicit override wins
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/wsl/bashrc.d/00-base.sh" ]; then
+        _base="${REVEALUI_ROOT}/wsl/bashrc.d/00-base.sh"
+    else
+        # Discover via the same paths bashrc.d/00-base.sh searches
+        for _candidate in /mnt/c/Users/*/.revealui /mnt/?/.revealui /mnt/?/professional/.revealui; do
+            if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
+                _base="$_candidate/wsl/bashrc.d/00-base.sh"
+                break
+            fi
+        done
+    fi
+    if [ -n "$_base" ] && [ -f "$_base" ]; then
         # shellcheck source=/dev/null
         source "$_base"
     fi

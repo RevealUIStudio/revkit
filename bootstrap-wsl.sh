@@ -1,8 +1,9 @@
 #!/bin/bash
 # RevealUI WSL Bootstrap
 # Run ONCE inside an interactive WSL session:
-#   bash /mnt/c/Users/joshu/.revealui/bootstrap-wsl.sh
+#   bash /mnt/c/Users/<your-windows-user>/.revealui/bootstrap-wsl.sh
 #   (or from portable SSD: bash /mnt/<drive>/.revealui/bootstrap-wsl.sh)
+#   (or set REVEALUI_ROOT explicitly: REVEALUI_ROOT=/path/to/.revealui bash .../bootstrap-wsl.sh)
 
 set -euo pipefail
 
@@ -62,17 +63,26 @@ else
 # Guard: only detect and print once per terminal session.
 if [ -z "$REVEALUI_MODE" ]; then
     _revealui_root=""
-    # Primary: C: drive (always available)
-    if [ -f "/mnt/c/Users/joshu/.revealui/wsl/bashrc.d/00-base.sh" ]; then
-        _revealui_root="/mnt/c/Users/joshu/.revealui"
+    # Explicit override wins
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/wsl/bashrc.d/00-base.sh" ]; then
+        _revealui_root="$REVEALUI_ROOT"
     else
-        # Fallback: scan known portable SSD locations
-        for _candidate in /mnt/?/.revealui /mnt/?/professional/.revealui; do
+        # Primary: any Windows user's .revealui under /mnt/c/Users/* (works for any account name)
+        for _candidate in /mnt/c/Users/*/.revealui; do
             if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
                 _revealui_root="$_candidate"
                 break
             fi
         done
+        # Fallback: scan known portable SSD locations
+        if [ -z "$_revealui_root" ]; then
+            for _candidate in /mnt/?/.revealui /mnt/?/professional/.revealui; do
+                if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
+                    _revealui_root="$_candidate"
+                    break
+                fi
+            done
+        fi
     fi
 
     if [ -n "$_revealui_root" ]; then
