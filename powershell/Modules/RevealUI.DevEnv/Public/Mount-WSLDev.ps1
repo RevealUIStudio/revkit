@@ -150,8 +150,12 @@ function Mount-WSLDev {
     }
 
     # --- Mount the partition inside WSL ---
+    # Always pass --mount-only so the NOPASSWD sudoers rule matches; the rule
+    # is pinned to this exact arg list (see revkit/bootstrap-wsl.sh + GAP-119).
+    # First-time marker setup is `sudo mount-studio-drive.sh --init` (manual,
+    # interactive sudo) and is documented in revkit/docs/tier-capabilities.md.
     Write-DevLog 'Mounting partition inside WSL at /mnt/studio...' -Source 'Mount' -LogFile $logFile
-    $wslResult = wsl.exe -d Ubuntu -e sudo /usr/local/bin/mount-studio-drive.sh 2>&1
+    $wslResult = wsl.exe -d Ubuntu -e sudo /usr/local/bin/mount-studio-drive.sh --mount-only 2>&1
 
     if ($LASTEXITCODE -ne 0) {
         Write-DevLog "WSL mount helper failed (exit $LASTEXITCODE): $wslResult" -Level ERROR -Source 'Mount' -LogFile $logFile
