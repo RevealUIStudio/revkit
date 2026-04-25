@@ -24,16 +24,26 @@ for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
 done
 
 # --- Step 2: Set up sudoers for passwordless mount ---
+# The NOPASSWD rule pins to the exact `--mount-only` argument so any future
+# expansion of mount-studio-drive.sh's argument surface (new flags, alternate
+# mount points) is automatically rejected by sudoers until this rule is
+# updated. The `--init` mode (one-time marker setup) intentionally requires
+# interactive sudo and is NOT covered here.
+#
+# To add a new arg to mount-studio-drive.sh, update the NOPASSWD rule below
+# AND every caller to pass the new arg list verbatim. See the script's
+# own header comment for context (GAP-119, 2026-04-24).
 echo "[2/6] Configuring sudoers for passwordless mount..."
 SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
-# RevealUI - passwordless mount operations (restricted to mount helper only)
-$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-studio-drive.sh
+# RevealUI - passwordless mount operations (restricted to mount helper +
+# pinned to --mount-only argument; --init still requires interactive sudo).
+$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-studio-drive.sh --mount-only
 EOF
 sudo chmod 0440 "$SUDOERS_FILE"
 if sudo visudo -cf "$SUDOERS_FILE" > /dev/null 2>&1; then
-    echo "  Sudoers validated"
+    echo "  Sudoers validated (NOPASSWD pinned to --mount-only)"
 else
     echo "  ERROR: Sudoers syntax error, removing" >&2
     sudo rm "$SUDOERS_FILE"
