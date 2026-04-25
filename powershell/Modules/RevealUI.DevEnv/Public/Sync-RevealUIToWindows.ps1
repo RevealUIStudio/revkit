@@ -16,7 +16,7 @@ function Sync-RevealUIToWindows {
         [ValidateSet('manual', 'scheduled')]
         [string]$TriggerSource = 'manual',
 
-        [string]$RepoPath = 'C:\Users\joshu\projects\RevealUI'
+        [string]$RepoPath = (Join-Path $env:USERPROFILE 'projects\RevealUI')
     )
 
     $logDir = Get-ModuleLogPath

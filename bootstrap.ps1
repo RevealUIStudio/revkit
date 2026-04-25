@@ -125,6 +125,10 @@ Write-Host "  2. You should see 'WSL Helpers Loaded!'"
 Write-Host "  3. Run: wslstat"
 Write-Host ""
 Write-Host "For WSL-side setup, run inside WSL:" -ForegroundColor Cyan
-Write-Host "  bash /mnt/c/Users/joshu/.revealui/bootstrap-wsl.sh" -ForegroundColor White
+# Convert Windows path to /mnt/<drive>/<rest>
+$revealRootDrive = $revealRoot.Substring(0, 1).ToLower()
+$revealRootRest  = $revealRoot.Substring(2) -replace '\\', '/'
+$revealRootWsl   = "/mnt/$revealRootDrive$revealRootRest"
+Write-Host "  bash $revealRootWsl/bootstrap-wsl.sh" -ForegroundColor White
 Write-Host "  (or from portable SSD: bash /mnt/<drive>/.revealui/bootstrap-wsl.sh)" -ForegroundColor Gray
 Write-Host ""
