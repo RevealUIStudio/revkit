@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Studio Docker infrastructure helpers
 studio() {
     local script="/usr/local/bin/studio-services.sh"

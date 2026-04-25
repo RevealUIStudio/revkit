@@ -20,9 +20,12 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 
 readonly VERSION="1.0.0"
-readonly SCRIPT_NAME="$(basename "$0")"
-readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-readonly DEFAULT_TEMPLATE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/templates"
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR
+DEFAULT_TEMPLATE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/templates"
+readonly DEFAULT_TEMPLATE_DIR
 
 # Ordered list of known placeholders and their TOML key + section mappings.
 # Format: PLACEHOLDER_NAME=section.key
@@ -278,6 +281,7 @@ walk_templates() {
   local tmpl_dir="$1"
   local out_dir="$2"
   local file_count=0
+  # shellcheck disable=SC2034  # tracked for future skip-reporting wire-up
   local skip_count=0
 
   # Verify template directory is not empty

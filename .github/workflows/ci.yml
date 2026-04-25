@@ -1,0 +1,127 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parse-shell:
+    name: bash -n (all .sh)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check every shell script
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r f; do
+            if ! out=$(bash -n "$f" 2>&1); then
+              echo "::error file=$f::$out"
+              fail=1
+            else
+              echo "ok  $f"
+            fi
+          done < <(git ls-files '*.sh')
+          exit "$fail"
+
+  parse-powershell:
+    name: PowerShell parse (all .ps1/.psm1/.psd1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse every PowerShell file
+        shell: pwsh
+        run: |
+          $fail = 0
+          $files = git ls-files '*.ps1' '*.psm1' '*.psd1'
+          foreach ($f in $files) {
+            $errs = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $f), [ref]$null, [ref]$errs)
+            if ($errs.Count -gt 0) {
+              Write-Output "::error file=$f::$($errs[0].Message)"
+              foreach ($e in $errs) { Write-Output "  $($e.Message) (line $($e.Extent.StartLineNumber))" }
+              $fail = 1
+            } else {
+              Write-Output "ok  $f"
+            }
+          }
+          exit $fail
+
+  shellcheck:
+    name: ShellCheck (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          severity: warning
+          ignore_paths: tests
+          # Templates are bashrc.d fragments — sourced into a host shell, not
+          # standalone scripts. ShellCheck correctly flags style nits inside
+          # them but they aren't actionable in isolation.
+          ignore_names: ""
+
+  no-hardcoded-user:
+    name: GAP-116 anti-regression — no hardcoded "joshu"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Grep for hardcoded "joshu" in scripted files
+        run: |
+          set -euo pipefail
+          # Acceptance test from gaps/GAP-116.yml — must be 0.
+          # Limited to scripted file types so this workflow file (which has
+          # to mention the literal patterns to scan for them) doesn't
+          # match itself.
+          includes=(--include='*.sh' --include='*.ps1' --include='*.psm1' --include='*.psd1')
+          hits=$(grep -rn 'joshu\b' "${includes[@]}" . || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Hardcoded user-account name found in scripted files. See GAP-116."
+            echo "$hits"
+            exit 1
+          fi
+          mnt_hits=$(grep -rn '/mnt/c/Users/joshu' "${includes[@]}" . || true)
+          if [ -n "$mnt_hits" ]; then
+            echo "::error::Hardcoded /mnt/c/Users path found in scripted files. See GAP-116."
+            echo "$mnt_hits"
+            exit 1
+          fi
+          echo "ok — no hardcoded user paths in scripted files"
+
+  gitleaks:
+    name: Gitleaks (full history)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-render:
+    name: tests/test-render.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run render tests
+        run: bash tests/test-render.sh
+      # NOTE: tests/test-secrets.sh deliberately not wired — pre-existing bugs
+      # surfaced when running it locally (see follow-up gap GAP-121):
+      #   1. wsl/bashrc.d/40-secrets.sh:5 references $REVEALUI_ROOT under
+      #      `set -u` without `:-` default → unbound-var error.
+      #   2. test-secrets.sh has multiple FAIL lines that don't propagate
+      #      to a non-zero exit code.
+      # Wire this step once those are fixed.
