@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Passage (age-encrypted password store) configuration
 # Requires: age, passage installed via nix
 
@@ -62,6 +63,7 @@ passenv-file() {
                     continue
                     ;;
             esac
+            # shellcheck disable=SC2163  # intentional: $line is "KEY=value", export by literal
             export "$line"
         fi
     done <<< "$content"

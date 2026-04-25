@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # RevVault (age-encrypted secret store) configuration
 if [ -n "$REVEALUI_ROOT" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
     export REVVAULT_STORE="$REVEALUI_ROOT/passage-store"
@@ -54,6 +55,7 @@ passenv-file() {
                     continue
                     ;;
             esac
+            # shellcheck disable=SC2163  # intentional: $line is "KEY=value", export by literal
             export "$line"
         fi
     done <<< "$content"

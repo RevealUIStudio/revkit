@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Antigravity / Chrome DevTools Bridge
 # Forwards Chrome DevTools port from Windows host to WSL
 

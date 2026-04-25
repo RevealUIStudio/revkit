@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Tool initialization: direnv, nvm, bun, go, pulumi, pip
 [ -d "$HOME/bin" ] && export PATH="$HOME/bin:$PATH"
 if command -v direnv &>/dev/null; then
