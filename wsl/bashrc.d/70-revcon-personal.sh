@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # revcon — personal opt-out
 #
 # Sources ~/suite/.jv/revcon-profiles/activate.sh when present, which exports
