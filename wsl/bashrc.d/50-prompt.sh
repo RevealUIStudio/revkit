@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # RevealUI prompt — two-line, git-aware, nix-aware
 
 __rv_git() {
