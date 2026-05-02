@@ -7,9 +7,9 @@
 	email = founder@revealui.com
 [credential "https://github.com"]
 	helper =
-	helper = !/home/joshua-v-dev/bin/gh auth git-credential
+	helper = !/usr/bin/gh auth git-credential
 [credential "https://gist.github.com"]
 	helper =
-	helper = !/home/joshua-v-dev/bin/gh auth git-credential
+	helper = !/usr/bin/gh auth git-credential
 [init]
 	defaultBranch = main
