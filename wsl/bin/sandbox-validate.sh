@@ -1,7 +1,7 @@
 #!/bin/bash
-# Studio environment validation — health checks for DevKit tiers
+# Sandbox environment validation — health checks for DevKit tiers
 # Installed to /usr/local/bin/ by bootstrap-wsl.sh
-# Usage: studio validate [--verbose] [--json]
+# Usage: sandbox validate [--verbose] [--json]
 
 set -uo pipefail
 
@@ -13,7 +13,7 @@ for arg in "$@"; do
     case "$arg" in
         --verbose|-v) VERBOSE=1 ;;
         --json) JSON_MODE=1 ;;
-        *) echo "Usage: studio validate [--verbose] [--json]" >&2; exit 1 ;;
+        *) echo "Usage: sandbox validate [--verbose] [--json]" >&2; exit 1 ;;
     esac
 done
 
@@ -186,75 +186,75 @@ else
 fi
 
 # 9. Connection string env vars set
-if [ -n "${STUDIO_DATABASE_URL:-}" ] && [ -n "${STUDIO_REDIS_URL:-}" ]; then
+if [ -n "${SANDBOX_DATABASE_URL:-}" ] && [ -n "${SANDBOX_REDIS_URL:-}" ]; then
     check_pass "Connection string env vars set"
 else
-    check_fail "Connection strings missing (DATABASE_URL=${STUDIO_DATABASE_URL:+set}, REDIS_URL=${STUDIO_REDIS_URL:+set})"
+    check_fail "Connection strings missing (DATABASE_URL=${SANDBOX_DATABASE_URL:+set}, REDIS_URL=${SANDBOX_REDIS_URL:+set})"
 fi
 
 # --- Tier-specific checks ---
 
 if [ "${DEVKIT_TIER:-}" = "T0" ]; then
-    section "T0 checks (Studio drive not mounted)"
+    section "T0 checks (Sandbox drive not mounted)"
 
-    # 10. REVEALUI_STUDIO_MOUNTED unset
-    if [ -z "${REVEALUI_STUDIO_MOUNTED:-}" ]; then
-        check_pass "REVEALUI_STUDIO_MOUNTED unset"
+    # 10. REVEALUI_SANDBOX_MOUNTED unset
+    if [ -z "${REVEALUI_SANDBOX_MOUNTED:-}" ]; then
+        check_pass "REVEALUI_SANDBOX_MOUNTED unset"
     else
-        check_fail "REVEALUI_STUDIO_MOUNTED should be unset at T0 (value=${REVEALUI_STUDIO_MOUNTED})"
+        check_fail "REVEALUI_SANDBOX_MOUNTED should be unset at T0 (value=${REVEALUI_SANDBOX_MOUNTED})"
     fi
 
-    # 11. studio up refuses with tier error
-    studio_err="$(studio-services.sh up 2>&1 || true)"
-    if echo "$studio_err" | grep -qi "T0\|tier\|not mounted"; then
-        check_pass "studio up correctly refuses at T0"
+    # 11. sandbox up refuses with tier error
+    sandbox_err="$(sandbox-services.sh up 2>&1 || true)"
+    if echo "$sandbox_err" | grep -qi "T0\|tier\|not mounted"; then
+        check_pass "sandbox up correctly refuses at T0"
     else
-        check_fail "studio up did not refuse at T0"
+        check_fail "sandbox up did not refuse at T0"
     fi
 
-    # 12. /mnt/studio not a mountpoint
-    if ! mountpoint -q /mnt/studio 2>/dev/null; then
-        check_pass "/mnt/studio not mounted"
+    # 12. /mnt/sandbox not a mountpoint
+    if ! mountpoint -q /mnt/sandbox 2>/dev/null; then
+        check_pass "/mnt/sandbox not mounted"
     else
-        check_fail "/mnt/studio is mounted but tier is T0"
+        check_fail "/mnt/sandbox is mounted but tier is T0"
     fi
 
 elif [ "${DEVKIT_TIER:-}" = "T1" ]; then
-    section "T1 checks (Studio drive mounted)"
+    section "T1 checks (Sandbox drive mounted)"
 
-    # 13. /mnt/studio is a mountpoint
-    if mountpoint -q /mnt/studio 2>/dev/null; then
-        check_pass "/mnt/studio is mounted"
+    # 13. /mnt/sandbox is a mountpoint
+    if mountpoint -q /mnt/sandbox 2>/dev/null; then
+        check_pass "/mnt/sandbox is mounted"
     else
-        check_fail "/mnt/studio not mounted but tier is T1"
+        check_fail "/mnt/sandbox not mounted but tier is T1"
     fi
 
-    # 14. REVEALUI_STUDIO_MOUNTED=1
-    if [ "${REVEALUI_STUDIO_MOUNTED:-}" = "1" ]; then
-        check_pass "REVEALUI_STUDIO_MOUNTED=1"
+    # 14. REVEALUI_SANDBOX_MOUNTED=1
+    if [ "${REVEALUI_SANDBOX_MOUNTED:-}" = "1" ]; then
+        check_pass "REVEALUI_SANDBOX_MOUNTED=1"
     else
-        check_fail "REVEALUI_STUDIO_MOUNTED not set to 1 (${REVEALUI_STUDIO_MOUNTED:-<unset>})"
+        check_fail "REVEALUI_SANDBOX_MOUNTED not set to 1 (${REVEALUI_SANDBOX_MOUNTED:-<unset>})"
     fi
 
-    # 15. Studio directory structure exists
+    # 15. Sandbox directory structure exists
     dirs_ok=true
     for d in databases/postgres databases/redis models cache; do
-        if [ ! -d "/mnt/studio/$d" ]; then
-            check_fail "Missing directory: /mnt/studio/$d"
+        if [ ! -d "/mnt/sandbox/$d" ]; then
+            check_fail "Missing directory: /mnt/sandbox/$d"
             dirs_ok=false
         fi
     done
     if $dirs_ok; then
-        check_pass "Studio directory structure intact"
+        check_pass "Sandbox directory structure intact"
     fi
 
-    # 16. Studio drive free space > 5%
-    used_pct="$(df --output=pcent /mnt/studio 2>/dev/null | tail -1 | tr -d ' %')"
+    # 16. Sandbox drive free space > 5%
+    used_pct="$(df --output=pcent /mnt/sandbox 2>/dev/null | tail -1 | tr -d ' %')"
     if [ -n "$used_pct" ] && [ "$used_pct" -lt 95 ]; then
         free_pct=$((100 - used_pct))
-        check_pass "Studio drive free space: ${free_pct}%"
+        check_pass "Sandbox drive free space: ${free_pct}%"
     else
-        check_fail "Studio drive low on space (${used_pct:-?}% used)"
+        check_fail "Sandbox drive low on space (${used_pct:-?}% used)"
     fi
 
     # 17. Docker daemon reachable
@@ -268,8 +268,8 @@ elif [ "${DEVKIT_TIER:-}" = "T1" ]; then
 
     if $docker_ok; then
         # 18. Postgres container healthy
-        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^studio-postgres$'; then
-            if docker exec studio-postgres pg_isready -q 2>/dev/null; then
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^sandbox-postgres$'; then
+            if docker exec sandbox-postgres pg_isready -q 2>/dev/null; then
                 check_pass "Postgres container healthy"
             else
                 check_fail "Postgres container running but not ready"
@@ -279,8 +279,8 @@ elif [ "${DEVKIT_TIER:-}" = "T1" ]; then
         fi
 
         # 19. Redis container healthy
-        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^studio-redis$'; then
-            if docker exec studio-redis redis-cli ping 2>/dev/null | grep -q PONG; then
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^sandbox-redis$'; then
+            if docker exec sandbox-redis redis-cli ping 2>/dev/null | grep -q PONG; then
                 check_pass "Redis container healthy"
             else
                 check_fail "Redis container running but not responding"
@@ -290,8 +290,8 @@ elif [ "${DEVKIT_TIER:-}" = "T1" ]; then
         fi
 
         # 20. Postgres on correct port (5433)
-        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^studio-postgres$'; then
-            pg_port="$(docker port studio-postgres 5432 2>/dev/null || true)"
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^sandbox-postgres$'; then
+            pg_port="$(docker port sandbox-postgres 5432 2>/dev/null || true)"
             if echo "$pg_port" | grep -q "5433"; then
                 check_pass "Postgres mapped to port 5433"
             else
@@ -302,8 +302,8 @@ elif [ "${DEVKIT_TIER:-}" = "T1" ]; then
         fi
 
         # 21. Redis on correct port (6380)
-        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^studio-redis$'; then
-            redis_port="$(docker port studio-redis 6379 2>/dev/null || true)"
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^sandbox-redis$'; then
+            redis_port="$(docker port sandbox-redis 6379 2>/dev/null || true)"
             if echo "$redis_port" | grep -q "6380"; then
                 check_pass "Redis mapped to port 6380"
             else
