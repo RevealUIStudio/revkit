@@ -20,7 +20,7 @@ echo 'for f in ~/.revealui/wsl/bashrc.d/*.sh; do source "$f"; done' >> ~/.bashrc
 
 ## Profile Presets
 
-| Profile | Tier | RAM | Cores | Docker | Studio Drive | Ollama |
+| Profile | Tier | RAM | Cores | Docker | Sandbox Drive | Ollama |
 |---------|------|-----|-------|--------|--------------|--------|
 | `solo-dev.toml` | T0 | 8GB | 4 | No | No | No |
 | `full-stack.toml` | T1 | 12GB | 8 | Yes | Yes | No |

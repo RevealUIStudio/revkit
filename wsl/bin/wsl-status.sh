@@ -1,5 +1,5 @@
 #!/bin/bash
-# Studio environment status — called by Get-WSLStatus from PowerShell
+# Sandbox environment status — called by Get-WSLStatus from PowerShell
 # Usage: wsl-status.sh [--json]
 
 JSON_MODE=0
@@ -13,14 +13,14 @@ done
 tier="${DEVKIT_TIER:-unknown}"
 root="${REVEALUI_ROOT:-not set}"
 
-studio_mounted=false
-if mountpoint -q /mnt/studio 2>/dev/null; then
-    studio_mounted=true
+sandbox_mounted=false
+if mountpoint -q /mnt/sandbox 2>/dev/null; then
+    sandbox_mounted=true
 fi
 
 services=0
-if $studio_mounted && command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
-    services=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -c '^studio-' || true)
+if $sandbox_mounted && command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+    services=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -c '^sandbox-' || true)
 fi
 
 if [ "$JSON_MODE" -eq 1 ]; then
@@ -38,7 +38,7 @@ if [ "$JSON_MODE" -eq 1 ]; then
     tier_val="$(json_escape "$tier")"
     root_val="$(json_escape "$root")"
 
-    json_output="{\"tier\":\"$tier_val\",\"root\":\"$root_val\",\"studio_mounted\":$studio_mounted,\"services\":$services}"
+    json_output="{\"tier\":\"$tier_val\",\"root\":\"$root_val\",\"sandbox_mounted\":$sandbox_mounted,\"services\":$services}"
     if command -v jq &>/dev/null; then
         printf '%s' "$json_output" | jq .
     else
@@ -48,15 +48,15 @@ else
     echo "Tier: $tier"
     echo "Root: $root"
 
-    if $studio_mounted; then
-        echo "Studio: mounted"
-        df -h /mnt/studio | tail -1
+    if $sandbox_mounted; then
+        echo "Sandbox: mounted"
+        df -h /mnt/sandbox | tail -1
         if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
-            echo "Services: $services studio container(s) running"
+            echo "Services: $services sandbox container(s) running"
         else
             echo "Services: Docker not running"
         fi
     else
-        echo "Studio: not mounted"
+        echo "Sandbox: not mounted"
     fi
 fi

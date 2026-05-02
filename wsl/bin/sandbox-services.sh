@@ -1,7 +1,7 @@
 #!/bin/bash
-# Studio infrastructure service manager
+# Sandbox infrastructure service manager
 # Installed to /usr/local/bin/ by bootstrap-wsl.sh
-# Shell alias: studio() in bashrc.d/15-docker.sh
+# Shell alias: sandbox() in bashrc.d/15-docker.sh
 
 set -euo pipefail
 
@@ -14,7 +14,7 @@ die() { echo "error: $*" >&2; exit 1; }
 
 require_tier() {
     if [ "${DEVKIT_TIER:-T0}" = "T0" ]; then
-        die "Studio drive not mounted (tier T0). Mount it first: mount-studio-drive.sh"
+        die "Sandbox drive not mounted (tier T0). Mount it first: mount-sandbox-drive.sh"
     fi
 }
 
@@ -43,9 +43,9 @@ compose() {
 
 usage() {
     cat <<EOF
-Studio infrastructure manager
+Sandbox infrastructure manager
 
-Usage: studio <command> [options]
+Usage: sandbox <command> [options]
 
 Commands:
   up [--ai]      Start services (add --ai for Ollama)
@@ -78,7 +78,7 @@ cmd_up() {
         esac
     done
 
-    echo "Starting Studio services..."
+    echo "Starting Sandbox services..."
     if [ ${#profiles[@]} -gt 0 ]; then
         compose "${profiles[@]}" up -d
     else
@@ -90,7 +90,7 @@ cmd_up() {
 
 cmd_down() {
     ensure_docker
-    echo "Stopping Studio services..."
+    echo "Stopping Sandbox services..."
     compose --profile ai down
 }
 
@@ -116,12 +116,12 @@ cmd_pull() {
 
 cmd_psql() {
     ensure_docker
-    docker exec -it studio-postgres psql -U "${POSTGRES_USER:-studio}" -d "${POSTGRES_DB:-studio}" "$@"
+    docker exec -it sandbox-postgres psql -U "${POSTGRES_USER:-sandbox}" -d "${POSTGRES_DB:-sandbox}" "$@"
 }
 
 cmd_redis_cli() {
     ensure_docker
-    docker exec -it studio-redis redis-cli "$@"
+    docker exec -it sandbox-redis redis-cli "$@"
 }
 
 # --- Main ---
@@ -142,7 +142,7 @@ case "$command" in
     pull)      cmd_pull ;;
     psql)      cmd_psql "$@" ;;
     redis-cli) cmd_redis_cli "$@" ;;
-    validate)  exec /usr/local/bin/studio-validate.sh "$@" ;;
+    validate)  exec /usr/local/bin/sandbox-validate.sh "$@" ;;
     help|-h|--help) usage ;;
-    *)         die "Unknown command: $command. Run 'studio help' for usage." ;;
+    *)         die "Unknown command: $command. Run 'sandbox help' for usage." ;;
 esac

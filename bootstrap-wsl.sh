@@ -26,12 +26,12 @@ done
 
 # --- Step 2: Set up sudoers for passwordless mount ---
 # The NOPASSWD rule pins to the exact `--mount-only` argument so any future
-# expansion of mount-studio-drive.sh's argument surface (new flags, alternate
+# expansion of mount-sandbox-drive.sh's argument surface (new flags, alternate
 # mount points) is automatically rejected by sudoers until this rule is
 # updated. The `--init` mode (one-time marker setup) intentionally requires
 # interactive sudo and is NOT covered here.
 #
-# To add a new arg to mount-studio-drive.sh, update the NOPASSWD rule below
+# To add a new arg to mount-sandbox-drive.sh, update the NOPASSWD rule below
 # AND every caller to pass the new arg list verbatim. See the script's
 # own header comment for context (GAP-119, 2026-04-24).
 echo "[2/6] Configuring sudoers for passwordless mount..."
@@ -40,7 +40,7 @@ CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
 # RevealUI - passwordless mount operations (restricted to mount helper +
 # pinned to --mount-only argument; --init still requires interactive sudo).
-$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-studio-drive.sh --mount-only
+$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-only
 EOF
 sudo chmod 0440 "$SUDOERS_FILE"
 if sudo visudo -cf "$SUDOERS_FILE" > /dev/null 2>&1; then
@@ -144,17 +144,17 @@ else
     echo "  WARNING: $BOOT_SCRIPT not found, skipping" >&2
 fi
 
-# --- Step 6: Initialize Studio directories ---
-if mountpoint -q /mnt/studio 2>/dev/null; then
-    echo "[6/6] Initializing Studio directories..."
-    mkdir -p /mnt/studio/databases/postgres
-    mkdir -p /mnt/studio/databases/redis
-    mkdir -p /mnt/studio/databases/supabase
-    mkdir -p /mnt/studio/models
-    mkdir -p /mnt/studio/cache
-    echo "  Studio directories initialized"
+# --- Step 6: Initialize Sandbox directories ---
+if mountpoint -q /mnt/sandbox 2>/dev/null; then
+    echo "[6/6] Initializing Sandbox directories..."
+    mkdir -p /mnt/sandbox/databases/postgres
+    mkdir -p /mnt/sandbox/databases/redis
+    mkdir -p /mnt/sandbox/databases/supabase
+    mkdir -p /mnt/sandbox/models
+    mkdir -p /mnt/sandbox/cache
+    echo "  Sandbox directories initialized"
 else
-    echo "[6/6] Studio drive not mounted, skipping directory init"
+    echo "[6/6] Sandbox drive not mounted, skipping directory init"
 fi
 
 echo ""

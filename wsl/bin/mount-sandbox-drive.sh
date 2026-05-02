@@ -1,5 +1,5 @@
 #!/bin/bash
-# mount-studio-drive.sh — Mounts the Studio infrastructure drive by filesystem label.
+# mount-sandbox-drive.sh — Mounts the Sandbox infrastructure drive by filesystem label.
 # Called by Windows mount script (Mount-WSLDev.ps1) after wsl --mount --bare.
 #
 # Defense-in-depth checks (GAP-118 + GAP-119, 2026-04-24):
@@ -9,7 +9,7 @@
 #     future expansion of this script's arg surface is automatically rejected
 #     until the sudoers rule is updated to match.
 #
-#  2. After mount, $MOUNT_POINT/.studio-marker MUST exist (placed during one-
+#  2. After mount, $MOUNT_POINT/.sandbox-marker MUST exist (placed during one-
 #     time `--init` setup). If it's missing, the script unmounts immediately
 #     and exits 1 — this catches the case where the label-fallback path
 #     accidentally mounted some other ext4 drive (Forge, external backup, etc.)
@@ -19,13 +19,13 @@
 #     mode, source, device, outcome).
 #
 # Usage:
-#   sudo /usr/local/bin/mount-studio-drive.sh --mount-only   # steady-state, NOPASSWD path
-#   sudo /usr/local/bin/mount-studio-drive.sh --init         # one-time setup; creates marker
+#   sudo /usr/local/bin/mount-sandbox-drive.sh --mount-only   # steady-state, NOPASSWD path
+#   sudo /usr/local/bin/mount-sandbox-drive.sh --init         # one-time setup; creates marker
 set -euo pipefail
 
-MOUNT_POINT="/mnt/studio"
-DRIVE_LABEL="Studio"
-MARKER_FILE="$MOUNT_POINT/.studio-marker"
+MOUNT_POINT="/mnt/sandbox"
+DRIVE_LABEL="Sandbox"
+MARKER_FILE="$MOUNT_POINT/.sandbox-marker"
 LOG_FILE="/var/log/revealui-mount.log"
 
 INIT_MARKER=false
@@ -45,11 +45,11 @@ while [[ $# -gt 0 ]]; do
             cat <<HELP
 Usage: $0 --mount-only | --init
 
-  --mount-only  Mount the Studio drive and verify $MARKER_FILE exists.
+  --mount-only  Mount the Sandbox drive and verify $MARKER_FILE exists.
                 If marker missing, unmount and exit 1. This is the steady-
                 state mode used by the NOPASSWD sudoers rule.
-  --init        Mount the Studio drive and create $MARKER_FILE if missing.
-                Use this once when first connecting a new Studio drive.
+  --init        Mount the Sandbox drive and create $MARKER_FILE if missing.
+                Use this once when first connecting a new Sandbox drive.
                 Requires interactive sudo (not covered by the NOPASSWD rule).
 HELP
             exit 0
@@ -92,8 +92,8 @@ log_mount() {
 if mountpoint -q "$MOUNT_POINT" 2>/dev/null; then
     if [[ "$INIT_MARKER" == "true" ]]; then
         if [[ ! -f "$MARKER_FILE" ]]; then
-            echo "Studio drive already mounted but marker missing — creating $MARKER_FILE."
-            printf 'Studio drive marker — created %s\n' \
+            echo "Sandbox drive already mounted but marker missing — creating $MARKER_FILE."
+            printf 'Sandbox drive marker — created %s\n' \
                 "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$MARKER_FILE"
             chmod 644 "$MARKER_FILE"
             log_mount "init=created-marker-on-already-mounted"
@@ -161,7 +161,7 @@ fi
 # --- Marker verification (or creation) ---
 if [[ "$INIT_MARKER" == "true" ]]; then
     if [[ ! -f "$MARKER_FILE" ]]; then
-        printf 'Studio drive marker — created %s\n' \
+        printf 'Sandbox drive marker — created %s\n' \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$MARKER_FILE"
         chmod 644 "$MARKER_FILE"
         echo "Created $MARKER_FILE."
