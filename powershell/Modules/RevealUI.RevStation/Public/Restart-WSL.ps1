@@ -18,7 +18,7 @@ function Restart-WSL {
     Write-Host 'Waiting for shutdown...' -ForegroundColor Yellow
     Start-Sleep -Seconds 3
 
-    Write-Host 'Mounting Studio drive...' -ForegroundColor Yellow
+    Write-Host 'Mounting Sandbox drive...' -ForegroundColor Yellow
     Mount-WSLDev
 
     Write-Host 'Initializing WSL...' -ForegroundColor Green

@@ -4,7 +4,7 @@
 function Register-DevMountTask {
     <#
     .SYNOPSIS
-        Registers a Task Scheduler task to auto-mount the Studio drive to WSL.
+        Registers a Task Scheduler task to auto-mount the Sandbox drive to WSL.
     .DESCRIPTION
         Creates a scheduled task with three triggers (logon, USB insertion, periodic 30-min)
         that runs Mount-WSLDev via pwsh.exe with inline module discovery. Requires elevation.
@@ -39,7 +39,7 @@ if ($r) {
 <?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>Auto-mount WD My Passport SSD to WSL at /mnt/studio via RevealUI.RevStation module</Description>
+    <Description>Auto-mount WD My Passport SSD to WSL at /mnt/sandbox via RevealUI.RevStation module</Description>
   </RegistrationInfo>
   <Triggers>
     <LogonTrigger>

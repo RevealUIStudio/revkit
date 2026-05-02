@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # RevealUI base environment setup
-# Discovers REVEALUI_ROOT and checks Studio drive mount status
+# Discovers REVEALUI_ROOT and checks Sandbox drive mount status
 
 _find_revealui_root() {
     # Check env var first
@@ -26,17 +26,17 @@ _find_revealui_root() {
 
 REVEALUI_ROOT="$(_find_revealui_root)"
 export REVEALUI_ROOT
-export REVEALUI_STUDIO="/mnt/studio"
+export REVEALUI_SANDBOX="/mnt/sandbox"
 
-# Studio drive mount check
-if [ -d "$REVEALUI_STUDIO" ] && mountpoint -q "$REVEALUI_STUDIO" 2>/dev/null; then
-    export REVEALUI_STUDIO_MOUNTED=1
+# Sandbox drive mount check
+if [ -d "$REVEALUI_SANDBOX" ] && mountpoint -q "$REVEALUI_SANDBOX" 2>/dev/null; then
+    export REVEALUI_SANDBOX_MOUNTED=1
 else
-    unset REVEALUI_STUDIO_MOUNTED
+    unset REVEALUI_SANDBOX_MOUNTED
 fi
 
 # Tier detection
-if [ -n "${REVEALUI_STUDIO_MOUNTED:-}" ]; then
+if [ -n "${REVEALUI_SANDBOX_MOUNTED:-}" ]; then
     export DEVKIT_TIER="T1"
 else
     export DEVKIT_TIER="T0"

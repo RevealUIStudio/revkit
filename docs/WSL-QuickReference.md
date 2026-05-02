@@ -6,8 +6,8 @@
 |---------|-------------|
 | `wsls` | Start WSL (no warnings) |
 | `Restart-WSL` | Shutdown and restart WSL |
-| `Get-WSLStatus` | Check WSL and Studio drive status |
-| `Mount-WSLDev` | Run the Studio drive mount script |
+| `Get-WSLStatus` | Check WSL and Sandbox drive status |
+| `Mount-WSLDev` | Run the Sandbox drive mount script |
 | `Get-WSLMounts` | Show all WSL mounted drives |
 
 ## 📁 File Locations
@@ -17,7 +17,7 @@
 | Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.RevStation\` |
 | PowerShell Profile (pwsh 7+) | `C:\Users\joshu\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
-| Studio Drive Mount | `/mnt/studio` (inside WSL) |
+| Sandbox Drive Mount | `/mnt/sandbox` (inside WSL) |
 
 ## 🔧 Manual Operations
 
@@ -53,11 +53,11 @@ wsl --unmount \\.\PHYSICALDRIVE1       # Manual unmount
 
 ## 🐧 Inside WSL Commands
 
-### Check Studio Drive
+### Check Sandbox Drive
 ```bash
-df -h /mnt/studio                 # Check Studio drive space
-ls -la /mnt/studio                # List Studio drive contents
-mount | grep studio               # Verify mount
+df -h /mnt/sandbox                 # Check Sandbox drive space
+ls -la /mnt/sandbox                # List Sandbox drive contents
+mount | grep sandbox               # Verify mount
 ```
 
 ### Check Systemd Status
@@ -70,7 +70,7 @@ journalctl --user -xe              # User session logs
 ### Navigate to Projects
 ```bash
 cd ~/projects          # Your main projects directory
-cd /mnt/studio       # Studio drive root
+cd /mnt/sandbox       # Sandbox drive root
 ```
 
 ## ⚙️ Configuration Files
@@ -99,7 +99,7 @@ wsl --shutdown
 wsl --unregister Ubuntu  # ⚠️ DESTRUCTIVE - backup first!
 ```
 
-### Studio Drive Not Mounted
+### Sandbox Drive Not Mounted
 ```powershell
 wsl --unmount \\.\PHYSICALDRIVE1
 Mount-WSLDev
@@ -124,7 +124,7 @@ Mount-WSLDev
 
 - **Scheduled Task**: `WSL-Mount-DevDrive` runs Mount-WSLDev at logon, USB insertion, and every 30min
 - **Profile Functions**: Loaded automatically in every PowerShell session
-- **Studio Drive**: 916GB ext4 drive optimized for development
+- **Sandbox Drive**: 916GB ext4 drive optimized for development
 - **Systemd Warning**: False positive - systemd starts successfully after ~3 seconds
 - **PowerShell Profile**: Reload with `. $PROFILE` after editing
 

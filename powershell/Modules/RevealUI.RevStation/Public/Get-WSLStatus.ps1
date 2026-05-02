@@ -19,15 +19,15 @@ function Get-WSLStatus {
     $tier = ($tierRaw -join '').Trim()
     Write-Host "  Tier: $tier"
 
-    Write-Host "`n=== Studio Drive Status ===" -ForegroundColor Cyan
-    $devMountRaw = wsl.exe -d $Distribution -e bash -c "mountpoint -q /mnt/studio && echo MOUNTED || echo NOT_MOUNTED" 2>&1
+    Write-Host "`n=== Sandbox Drive Status ===" -ForegroundColor Cyan
+    $devMountRaw = wsl.exe -d $Distribution -e bash -c "mountpoint -q /mnt/sandbox && echo MOUNTED || echo NOT_MOUNTED" 2>&1
     $devMounted = $devMountRaw -match 'MOUNTED' -and $devMountRaw -notmatch 'NOT_MOUNTED'
 
     if ($devMounted) {
-        Write-Host '  /mnt/studio: MOUNTED' -ForegroundColor Green
-        wsl.exe -d $Distribution -e bash -c "df -h /mnt/studio | tail -1"
+        Write-Host '  /mnt/sandbox: MOUNTED' -ForegroundColor Green
+        wsl.exe -d $Distribution -e bash -c "df -h /mnt/sandbox | tail -1"
     } else {
-        Write-Host '  /mnt/studio: NOT MOUNTED' -ForegroundColor Yellow
+        Write-Host '  /mnt/sandbox: NOT MOUNTED' -ForegroundColor Yellow
     }
 
     Write-Host "`n=== Systemd Status ===" -ForegroundColor Cyan
