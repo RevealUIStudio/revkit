@@ -1,35 +1,35 @@
 #Requires -Version 7.0
 #Requires -PSEdition Core
 
-function Register-DevMountTask {
+function Register-WSLHealthTask {
     <#
     .SYNOPSIS
-        Registers a Task Scheduler task to auto-mount the Studio drive to WSL.
+        Registers a Task Scheduler task to monitor WSL health every 3 minutes.
     .DESCRIPTION
-        Creates a scheduled task with three triggers (logon, USB insertion, periodic 30-min)
-        that runs Mount-WSLDev via pwsh.exe with inline module discovery. Requires elevation.
+        Creates a scheduled task that runs Invoke-WSLRecovery via pwsh.exe with inline
+        module discovery. Detects zombie WSL states and auto-recovers. Requires elevation.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([void])]
     param()
 
     if (-not (Test-IsAdmin)) {
-        Write-DevLog 'Elevating to register mount task...' -Level WARN -Source 'TaskReg'
-        Invoke-Elevated -Command 'Register-DevMountTask' -Wait
+        Write-DevLog 'Elevating to register health task...' -Level WARN -Source 'TaskReg'
+        Invoke-Elevated -Command 'Register-WSLHealthTask' -Wait
         return
     }
 
-    $taskName = 'WSL-Mount-DevDrive'
+    $taskName = 'WSL-Health-Monitor'
 
-    # Inline module discovery + Mount-WSLDev command
+    # Inline module discovery + Invoke-WSLRecovery command
     $command = @'
 $r = Get-Volume | Where-Object DriveLetter | ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
-  Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv" } | Select-Object -First 1
+  Where-Object { Test-Path "$_\powershell\Modules\RevealUI.RevStation" } | Select-Object -First 1
 if ($r) {
   $env:PSModulePath = (Join-Path $r 'powershell\Modules') + ';' + $env:PSModulePath
-  Import-Module RevealUI.DevEnv
-  Mount-WSLDev -TriggerSource scheduled
-} else { Write-Error 'RevealUI.DevEnv module not found on any drive' }
+  Import-Module RevealUI.RevStation
+  Invoke-WSLRecovery -TriggerSource scheduled
+} else { Write-Error 'RevealUI.RevStation module not found on any drive' }
 '@
 
     # Base64 encode to avoid XML escaping issues
@@ -39,24 +39,14 @@ if ($r) {
 <?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>Auto-mount WD My Passport SSD to WSL at /mnt/studio via RevealUI.DevEnv module</Description>
+    <Description>Monitor WSL health every 3 minutes and auto-recover zombie VM states</Description>
   </RegistrationInfo>
   <Triggers>
-    <LogonTrigger>
-      <Enabled>true</Enabled>
-      <UserId>$($env:USERDOMAIN)\$($env:USERNAME)</UserId>
-      <Delay>PT10S</Delay>
-    </LogonTrigger>
-    <EventTrigger>
-      <Enabled>true</Enabled>
-      <Subscription>&lt;QueryList&gt;&lt;Query Id="0" Path="Microsoft-Windows-Kernel-PnP/Configuration"&gt;&lt;Select Path="Microsoft-Windows-Kernel-PnP/Configuration"&gt;*[System[EventID=400]]&lt;/Select&gt;&lt;/Query&gt;&lt;/QueryList&gt;</Subscription>
-      <Delay>PT10S</Delay>
-    </EventTrigger>
     <TimeTrigger>
       <Enabled>true</Enabled>
       <StartBoundary>2026-01-01T00:00:00</StartBoundary>
       <Repetition>
-        <Interval>PT30M</Interval>
+        <Interval>PT3M</Interval>
         <StopAtDurationEnd>false</StopAtDurationEnd>
       </Repetition>
     </TimeTrigger>
@@ -65,7 +55,7 @@ if ($r) {
     <Principal id="Author">
       <UserId>$($env:USERDOMAIN)\$($env:USERNAME)</UserId>
       <LogonType>InteractiveToken</LogonType>
-      <RunLevel>HighestAvailable</RunLevel>
+      <RunLevel>LeastPrivilege</RunLevel>
     </Principal>
   </Principals>
   <Settings>
@@ -79,7 +69,7 @@ if ($r) {
     <Enabled>true</Enabled>
     <Hidden>false</Hidden>
     <RunOnlyIfIdle>false</RunOnlyIfIdle>
-    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
+    <ExecutionTimeLimit>PT2M</ExecutionTimeLimit>
     <Priority>7</Priority>
   </Settings>
   <Actions Context="Author">
@@ -115,15 +105,11 @@ if ($r) {
         return
     }
 
-    $triggerCount = $task.Triggers.Count
     Write-Host ''
     Write-DevLog "Verification:" -Source 'TaskReg'
-    Write-Host "  Triggers: $triggerCount (logon, USB, periodic 30min)"
-    Write-Host "  Engine:   conhost --headless pwsh.exe (PS7, no window)"
-    Write-Host "  RunLevel: $($task.Principal.RunLevel)"
+    Write-Host "  Trigger:   every 3 minutes (PT3M)"
+    Write-Host "  Engine:    conhost --headless pwsh.exe (PS7, no window)"
+    Write-Host "  RunLevel:  $($task.Principal.RunLevel)"
+    Write-Host "  TimeLimit: PT2M"
     Write-Host ''
-
-    if ($triggerCount -lt 3) {
-        Write-DevLog "Expected 3 triggers but found $triggerCount" -Level WARN -Source 'TaskReg'
-    }
 }

@@ -6,8 +6,9 @@
 |---------|-------|-------------|
 | `Start-WSL` | `wsls` | Start WSL (filtered output) |
 | `Restart-WSL` | `wslr` | Shutdown and restart WSL |
-| `Get-WSLStatus` | `wslstat` | Check WSL and Studio drive status |
-| `Mount-WSLDev` | `wslmount` | Mount Studio SSD to WSL |
+| `Get-WSLStatus` | `wslstat` | Check WSL and Forge drive status |
+| `Mount-WSLDev` | `wslmount` | Mount Forge SSD to WSL |
+| `Dismount-WSLDev` | `wslunmount` | Safely eject Forge SSD from WSL |
 | `Get-WSLMounts` | `wslmounts` | Show all WSL mounted drives |
 | `Sync-RevealUIToWindows` | `wslsync` | Mirror WSL project to Windows |
 | `Get-Secret` | `secret` | Retrieve secrets via passage |
@@ -26,11 +27,11 @@
 
 | Item | Path |
 |------|------|
-| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.DevEnv\` |
+| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.RevStation\` |
 | Logs | `<module>\logs\` |
 | PowerShell Profile | `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
-| Studio Drive Mount | `/mnt/studio` (inside WSL) |
+| Forge Drive Mount | `/mnt/forge` (inside WSL) |
 
 ## Manual Operations
 
@@ -74,11 +75,11 @@ wslsync                             # Alias
 
 ## Inside WSL Commands
 
-### Check Studio Drive
+### Check Forge Drive
 ```bash
-df -h /mnt/studio                 # Check Studio drive space
-ls -la /mnt/studio                # List Studio drive contents
-mount | grep studio               # Verify mount
+df -h /mnt/forge                 # Check Forge drive space
+ls -la /mnt/forge                # List Forge drive contents
+mount | grep forge               # Verify mount
 ```
 
 ### Check Systemd Status
@@ -91,7 +92,7 @@ journalctl --user -xe              # User session logs
 ### Navigate to Projects
 ```bash
 cd ~/projects          # Your main projects directory
-cd /mnt/studio       # Studio drive root
+cd /mnt/forge       # Forge drive root
 ```
 
 ## Configuration Files
@@ -120,7 +121,7 @@ wsl --shutdown
 wsl --unregister Ubuntu  # DESTRUCTIVE - backup first!
 ```
 
-### Studio Drive Not Mounted
+### Forge Drive Not Mounted
 ```powershell
 wsl --unmount \\.\PHYSICALDRIVE1
 Mount-WSLDev
@@ -145,14 +146,14 @@ Mount-WSLDev
 
 - **Scheduled Tasks**: `Register-DevMountTask` and `Register-SyncTask` use pwsh.exe (PS7)
 - **Module Loading**: Loaded automatically in every pwsh session via profile stub
-- **Studio Drive**: 916GB ext4 drive optimized for development
+- **Forge Drive**: 916GB ext4 drive optimized for development
 - **Systemd Warning**: False positive - systemd starts successfully after ~3 seconds
 - **PowerShell Profile**: Reload with `. $PROFILE` after editing
 
 ## Support
 
 - WSL Issues: `wsl --help`
-- Module commands: `Get-Command -Module RevealUI.DevEnv`
+- Module commands: `Get-Command -Module RevealUI.RevStation`
 - This Reference: `Show-WSLHelp` or `wslhelp`
 
 ---

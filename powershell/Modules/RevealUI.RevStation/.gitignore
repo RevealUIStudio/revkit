@@ -1,0 +1,3 @@
+local-config.ps1
+logs/*
+!logs/.gitkeep
