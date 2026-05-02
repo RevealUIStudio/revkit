@@ -2,7 +2,7 @@
 # Passage (age-encrypted password store) configuration
 # Requires: age, passage installed via nix
 
-# Point passage at the portable SSD store
+# Point passage at the SSD store
 if [ -n "$REVEALUI_ROOT" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
     export PASSAGE_DIR="$REVEALUI_ROOT/passage-store"
 fi

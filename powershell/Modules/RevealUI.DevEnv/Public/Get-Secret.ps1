@@ -3,15 +3,26 @@
 
 function Get-Secret {
     [CmdletBinding()]
-    [OutputType([string])]
     param(
         [Parameter(Mandatory, Position = 0)]
         [string]$Path,
 
         [string]$Distribution = 'Ubuntu',
 
+        [switch]$AsPlainText,
+
         [switch]$AsSecureString
     )
+
+    if (-not $AsPlainText -and -not $AsSecureString) {
+        $err = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new(
+                'Specify -AsPlainText or -AsSecureString. Plaintext secrets may be logged or captured.'),
+            'OutputModeRequired',
+            [System.Management.Automation.ErrorCategory]::InvalidArgument,
+            $null)
+        $PSCmdlet.ThrowTerminatingError($err)
+    }
 
     $root = $env:REVEALUI_ROOT
     if (-not $root) {
@@ -22,10 +33,6 @@ function Get-Secret {
             [System.Exception]::new('RevealUI SSD not found. Is the drive connected?'),
             'DriveNotFound', [System.Management.Automation.ErrorCategory]::ObjectNotFound, $null)
         $PSCmdlet.ThrowTerminatingError($err)
-    }
-
-    if (-not $AsSecureString) {
-        Write-Warning 'Secret will be returned as plaintext. Use -AsSecureString for sensitive contexts.'
     }
 
     $driveLetter = $root.Substring(0, 1).ToLower()
