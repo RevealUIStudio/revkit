@@ -1,11 +1,11 @@
 #!/bin/bash
-# Studio infrastructure service manager
+# Forge infrastructure service manager
 # Installed to /usr/local/bin/ by bootstrap-wsl.sh
-# Shell alias: studio() in bashrc.d/15-docker.sh
+# Shell alias: forge() in bashrc.d/15-docker.sh
 
 set -euo pipefail
 
-COMPOSE_DIR="${REVEALUI_ROOT:?REVEALUI_ROOT not set — run bootstrap-wsl.sh, then source ~/.bashrc, or set explicitly}/wsl/docker"
+COMPOSE_DIR="${REVEALUI_ROOT:-/mnt/c/Users/joshu/.revealui}/wsl/docker"
 COMPOSE_FILE="$COMPOSE_DIR/compose.yml"
 
 # --- Helpers ---
@@ -14,7 +14,7 @@ die() { echo "error: $*" >&2; exit 1; }
 
 require_tier() {
     if [ "${DEVKIT_TIER:-T0}" = "T0" ]; then
-        die "Studio drive not mounted (tier T0). Mount it first: mount-studio-drive.sh"
+        die "Forge drive not mounted (tier T0). Mount it first: mount-forge-drive.sh"
     fi
 }
 
@@ -43,9 +43,9 @@ compose() {
 
 usage() {
     cat <<EOF
-Studio infrastructure manager
+Forge infrastructure manager
 
-Usage: studio <command> [options]
+Usage: forge <command> [options]
 
 Commands:
   up [--ai]      Start services (add --ai for Ollama)
@@ -78,7 +78,7 @@ cmd_up() {
         esac
     done
 
-    echo "Starting Studio services..."
+    echo "Starting Forge services..."
     if [ ${#profiles[@]} -gt 0 ]; then
         compose "${profiles[@]}" up -d
     else
@@ -90,7 +90,7 @@ cmd_up() {
 
 cmd_down() {
     ensure_docker
-    echo "Stopping Studio services..."
+    echo "Stopping Forge services..."
     compose --profile ai down
 }
 
@@ -116,12 +116,12 @@ cmd_pull() {
 
 cmd_psql() {
     ensure_docker
-    docker exec -it studio-postgres psql -U "${POSTGRES_USER:-studio}" -d "${POSTGRES_DB:-studio}" "$@"
+    docker exec -it forge-postgres psql -U "${POSTGRES_USER:-forge}" -d "${POSTGRES_DB:-forge}" "$@"
 }
 
 cmd_redis_cli() {
     ensure_docker
-    docker exec -it studio-redis redis-cli "$@"
+    docker exec -it forge-redis redis-cli "$@"
 }
 
 # --- Main ---
@@ -142,7 +142,7 @@ case "$command" in
     pull)      cmd_pull ;;
     psql)      cmd_psql "$@" ;;
     redis-cli) cmd_redis_cli "$@" ;;
-    validate)  exec /usr/local/bin/studio-validate.sh "$@" ;;
+    validate)  exec /usr/local/bin/forge-validate.sh "$@" ;;
     help|-h|--help) usage ;;
-    *)         die "Unknown command: $command. Run 'studio help' for usage." ;;
+    *)         die "Unknown command: $command. Run 'forge help' for usage." ;;
 esac

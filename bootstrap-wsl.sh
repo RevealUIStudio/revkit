@@ -1,9 +1,8 @@
 #!/bin/bash
 # RevealUI WSL Bootstrap
 # Run ONCE inside an interactive WSL session:
-#   bash /mnt/c/Users/<your-windows-user>/.revealui/bootstrap-wsl.sh
-#   (or from portable SSD: bash /mnt/<drive>/.revealui/bootstrap-wsl.sh)
-#   (or set REVEALUI_ROOT explicitly: REVEALUI_ROOT=/path/to/.revealui bash .../bootstrap-wsl.sh)
+#   bash /mnt/c/Users/joshu/.revealui/bootstrap-wsl.sh
+#   (or from SSD: bash /mnt/<drive>/.revealui/bootstrap-wsl.sh)
 
 set -euo pipefail
 
@@ -25,26 +24,18 @@ for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
 done
 
 # --- Step 2: Set up sudoers for passwordless mount ---
-# The NOPASSWD rule pins to the exact `--mount-only` argument so any future
-# expansion of mount-studio-drive.sh's argument surface (new flags, alternate
-# mount points) is automatically rejected by sudoers until this rule is
-# updated. The `--init` mode (one-time marker setup) intentionally requires
-# interactive sudo and is NOT covered here.
-#
-# To add a new arg to mount-studio-drive.sh, update the NOPASSWD rule below
-# AND every caller to pass the new arg list verbatim. See the script's
-# own header comment for context (GAP-119, 2026-04-24).
 echo "[2/6] Configuring sudoers for passwordless mount..."
 SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
-# RevealUI - passwordless mount operations (restricted to mount helper +
-# pinned to --mount-only argument; --init still requires interactive sudo).
-$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-studio-drive.sh --mount-only
+# RevealUI - passwordless mount operations
+$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-forge-drive.sh
 EOF
 sudo chmod 0440 "$SUDOERS_FILE"
 if sudo visudo -cf "$SUDOERS_FILE" > /dev/null 2>&1; then
-    echo "  Sudoers validated (NOPASSWD pinned to --mount-only)"
+    echo "  Sudoers validated"
+    echo "  NOTE: If upgrading an existing install, run: sudo visudo -f $SUDOERS_FILE"
+    echo "        and remove any NOPASSWD lines for /usr/bin/mount and /bin/mount"
 else
     echo "  ERROR: Sudoers syntax error, removing" >&2
     sudo rm "$SUDOERS_FILE"
@@ -61,41 +52,34 @@ else
 
 # --- RevealUI environment mode ---
 # Guard: only detect and print once per terminal session.
+# REVEALUI_MODE is exported, so subshells (e.g. direnv) inherit it
+# and skip the detection block entirely.
 if [ -z "$REVEALUI_MODE" ]; then
     _revealui_root=""
-    # Explicit override wins
-    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/wsl/bashrc.d/00-base.sh" ]; then
-        _revealui_root="$REVEALUI_ROOT"
+    # Primary: C: drive (always available)
+    if [ -f "/mnt/c/Users/joshu/.revealui/wsl/bashrc.d/00-base.sh" ]; then
+        _revealui_root="/mnt/c/Users/joshu/.revealui"
     else
-        # Primary: any Windows user's .revealui under /mnt/c/Users/* (works for any account name)
-        for _candidate in /mnt/c/Users/*/.revealui; do
+        # Fallback: scan known SSD locations
+        for _candidate in /mnt/e/professional/.revealui /mnt/e/.revealui /mnt/d/.revealui; do
             if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
                 _revealui_root="$_candidate"
                 break
             fi
         done
-        # Fallback: scan known portable SSD locations
-        if [ -z "$_revealui_root" ]; then
-            for _candidate in /mnt/?/.revealui /mnt/?/professional/.revealui; do
-                if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
-                    _revealui_root="$_candidate"
-                    break
-                fi
-            done
-        fi
     fi
 
     if [ -n "$_revealui_root" ]; then
-        export REVEALUI_MODE="portable"
-        export REVEALUI_SSD_PATH="$_revealui_root"
+        export REVEALUI_MODE="managed"
+        export REVEALUI_ROOT="$_revealui_root"
         for _f in "$_revealui_root"/wsl/bashrc.d/*.sh; do
             [ -r "$_f" ] && . "$_f"
         done
-        echo -e "\033[1;36m● RevealUI: portable mode\033[0m (at $_revealui_root)"
+        echo -e "\033[1;36m● RevealUI: managed\033[0m ($_revealui_root)"
     else
-        export REVEALUI_MODE="local"
-        unset REVEALUI_SSD_PATH
-        echo -e "\033[0;37m● RevealUI: local mode\033[0m"
+        export REVEALUI_MODE="bare"
+        unset REVEALUI_ROOT
+        echo -e "\033[0;37m● RevealUI: bare\033[0m"
     fi
     unset _revealui_root _candidate _f
 fi
@@ -142,17 +126,17 @@ else
     echo "  WARNING: $BOOT_SCRIPT not found, skipping" >&2
 fi
 
-# --- Step 6: Initialize Studio directories ---
-if mountpoint -q /mnt/studio 2>/dev/null; then
-    echo "[6/6] Initializing Studio directories..."
-    mkdir -p /mnt/studio/databases/postgres
-    mkdir -p /mnt/studio/databases/redis
-    mkdir -p /mnt/studio/databases/supabase
-    mkdir -p /mnt/studio/models
-    mkdir -p /mnt/studio/cache
-    echo "  Studio directories initialized"
+# --- Step 6: Initialize Forge directories ---
+if mountpoint -q /mnt/forge 2>/dev/null; then
+    echo "[6/6] Initializing Forge directories..."
+    mkdir -p /mnt/forge/databases/postgres
+    mkdir -p /mnt/forge/databases/redis
+    mkdir -p /mnt/forge/databases/supabase
+    mkdir -p /mnt/forge/models
+    mkdir -p /mnt/forge/cache
+    echo "  Forge directories initialized"
 else
-    echo "[6/6] Studio drive not mounted, skipping directory init"
+    echo "[6/6] Forge drive not mounted, skipping directory init"
 fi
 
 echo ""

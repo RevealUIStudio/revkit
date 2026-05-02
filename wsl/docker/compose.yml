@@ -1,38 +1,38 @@
-# Studio infrastructure services
-# Usage: studio up | studio down | studio status
+# Forge infrastructure services
+# Usage: forge up | forge down | forge status
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: studio-postgres
+    container_name: forge-postgres
     restart: unless-stopped
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-studio}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studio}
-      POSTGRES_DB: ${POSTGRES_DB:-studio}
+      POSTGRES_USER: ${POSTGRES_USER:-forge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in wsl/docker/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-forge}
     volumes:
-      - ${STUDIO_DATA:-/mnt/studio/databases}/postgres:/var/lib/postgresql/data
+      - ${FORGE_DATA:-/mnt/forge/databases}/postgres:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studio}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge}"]
       interval: 10s
       timeout: 5s
       retries: 3
 
   redis:
     image: redis:7-alpine
-    container_name: studio-redis
+    container_name: forge-redis
     restart: unless-stopped
     ports:
       - "6380:6379"
     command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
-      - ${STUDIO_DATA:-/mnt/studio/databases}/redis:/data
+      - ${FORGE_DATA:-/mnt/forge/databases}/redis:/data
     deploy:
       resources:
         limits:
@@ -45,15 +45,15 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    container_name: studio-ollama
+    container_name: forge-ollama
     profiles: ["ai"]
     ports:
       - "11434:11434"
     volumes:
-      - ${STUDIO_DATA:-/mnt/studio/models}:/root/.ollama
+      - ${FORGE_DATA:-/mnt/forge/models}:/root/.ollama
     deploy:
       resources:
         limits:
           memory: 4G
     environment:
-      OLLAMA_HOST: 0.0.0.0
+      OLLAMA_HOST: 127.0.0.1

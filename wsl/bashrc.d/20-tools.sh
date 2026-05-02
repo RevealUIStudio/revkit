@@ -1,5 +1,4 @@
-# shellcheck shell=bash
-# Tool initialization: direnv, nvm, bun, go, pulumi, pip
+# Tool initialization: direnv, fnm/nvm, bun, go, pulumi, pip
 
 # Zig / user bin
 [ -d "$HOME/bin" ] && export PATH="$HOME/bin:$PATH"
@@ -11,10 +10,14 @@ if command -v direnv &>/dev/null; then
     export DIRENV_WARN_TIMEOUT=""
 fi
 
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+# fnm (preferred) / nvm (fallback)
+if command -v fnm &>/dev/null; then
+    eval "$(fnm env)"
+elif [ -s "$HOME/.nvm/nvm.sh" ]; then
+    export NVM_DIR="$HOME/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+fi
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
