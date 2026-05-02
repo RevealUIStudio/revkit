@@ -61,6 +61,8 @@ else
 
 # --- RevealUI environment mode ---
 # Guard: only detect and print once per terminal session.
+# REVEALUI_MODE is exported, so subshells (e.g. direnv) inherit it
+# and skip the detection block entirely.
 if [ -z "$REVEALUI_MODE" ]; then
     _revealui_root=""
     # Explicit override wins
@@ -86,16 +88,16 @@ if [ -z "$REVEALUI_MODE" ]; then
     fi
 
     if [ -n "$_revealui_root" ]; then
-        export REVEALUI_MODE="portable"
-        export REVEALUI_SSD_PATH="$_revealui_root"
+        export REVEALUI_MODE="managed"
+        export REVEALUI_ROOT="$_revealui_root"
         for _f in "$_revealui_root"/wsl/bashrc.d/*.sh; do
             [ -r "$_f" ] && . "$_f"
         done
-        echo -e "\033[1;36m● RevealUI: portable mode\033[0m (at $_revealui_root)"
+        echo -e "\033[1;36m● RevealUI: managed\033[0m ($_revealui_root)"
     else
-        export REVEALUI_MODE="local"
-        unset REVEALUI_SSD_PATH
-        echo -e "\033[0;37m● RevealUI: local mode\033[0m"
+        export REVEALUI_MODE="bare"
+        unset REVEALUI_ROOT
+        echo -e "\033[0;37m● RevealUI: bare\033[0m"
     fi
     unset _revealui_root _candidate _f
 fi

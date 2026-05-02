@@ -26,7 +26,7 @@ function Find-RevealUIDrive {
         return $homeRoot
     }
 
-    # Layer 3: Scan available drives for .revealui folder with our marker (portable SSD fallback)
+    # Layer 3: Scan available drives for .revealui folder with our marker (SSD fallback)
     $found = Get-Volume | Where-Object { $_.DriveLetter } |
              ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
              Where-Object { Test-Path (Join-Path $_ $marker) -ErrorAction SilentlyContinue } |

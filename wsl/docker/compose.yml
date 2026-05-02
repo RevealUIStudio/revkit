@@ -10,7 +10,7 @@ services:
       - "5433:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-studio}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in wsl/docker/.env}
       POSTGRES_DB: ${POSTGRES_DB:-studio}
     volumes:
       - ${STUDIO_DATA:-/mnt/studio/databases}/postgres:/var/lib/postgresql/data
@@ -56,4 +56,4 @@ services:
         limits:
           memory: 4G
     environment:
-      OLLAMA_HOST: 0.0.0.0
+      OLLAMA_HOST: 127.0.0.1
