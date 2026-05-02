@@ -26,7 +26,7 @@
 
 | Item | Path |
 |------|------|
-| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.DevEnv\` |
+| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.RevStation\` |
 | Logs | `<module>\logs\` |
 | PowerShell Profile | `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
@@ -152,7 +152,7 @@ Mount-WSLDev
 ## Support
 
 - WSL Issues: `wsl --help`
-- Module commands: `Get-Command -Module RevealUI.DevEnv`
+- Module commands: `Get-Command -Module RevealUI.RevStation`
 - This Reference: `Show-WSLHelp` or `wslhelp`
 
 ---

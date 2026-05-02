@@ -38,16 +38,16 @@ function Register-SyncTask {
     # task auto-discovers .revealui under whichever Windows account scheduled it.
     $command = @'
 $knownPaths = @((Join-Path $env:USERPROFILE '.revealui'), 'E:\.revealui', 'E:\professional\.revealui')
-$r = $knownPaths | Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv" } | Select-Object -First 1
+$r = $knownPaths | Where-Object { Test-Path "$_\powershell\Modules\RevealUI.RevStation" } | Select-Object -First 1
 if (-not $r) {
   $r = Get-Volume | Where-Object DriveLetter | ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
-    Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv" } | Select-Object -First 1
+    Where-Object { Test-Path "$_\powershell\Modules\RevealUI.RevStation" } | Select-Object -First 1
 }
 if ($r) {
   $env:PSModulePath = (Join-Path $r 'powershell\Modules') + ';' + $env:PSModulePath
-  Import-Module RevealUI.DevEnv
+  Import-Module RevealUI.RevStation
   Sync-AllRepos -Target all -TriggerSource scheduled
-} else { Write-Error 'RevealUI.DevEnv module not found on any drive'; exit 1 }
+} else { Write-Error 'RevealUI.RevStation module not found on any drive'; exit 1 }
 '@
 
     # Base64 encode to avoid XML escaping issues

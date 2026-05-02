@@ -32,7 +32,7 @@ function Mount-WSLDev {
     if (-not $DevDriveSerial) {
         $err = [System.Management.Automation.ErrorRecord]::new(
             [System.Exception]::new(
-                'DevDriveSerial is not set. Create powershell/Modules/RevealUI.DevEnv/local-config.ps1 from local-config.example.ps1 and set $DevDriveSerial to your SSD serial number.'),
+                'DevDriveSerial is not set. Create powershell/Modules/RevealUI.RevStation/local-config.ps1 from local-config.example.ps1 and set $DevDriveSerial to your SSD serial number.'),
             'SerialNotConfigured',
             [System.Management.Automation.ErrorCategory]::InvalidOperation,
             $null)
