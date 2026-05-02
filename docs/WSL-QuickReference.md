@@ -14,7 +14,7 @@
 
 | Item | Path |
 |------|------|
-| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.DevEnv\` |
+| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.RevStation\` |
 | PowerShell Profile (pwsh 7+) | `C:\Users\joshu\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
 | Studio Drive Mount | `/mnt/studio` (inside WSL) |

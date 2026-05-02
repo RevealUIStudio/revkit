@@ -24,12 +24,12 @@ function Register-DevMountTask {
     # Inline module discovery + Mount-WSLDev command
     $command = @'
 $r = Get-Volume | Where-Object DriveLetter | ForEach-Object { "$($_.DriveLetter):\.revealui"; "$($_.DriveLetter):\professional\.revealui" } |
-  Where-Object { Test-Path "$_\powershell\Modules\RevealUI.DevEnv" } | Select-Object -First 1
+  Where-Object { Test-Path "$_\powershell\Modules\RevealUI.RevStation" } | Select-Object -First 1
 if ($r) {
   $env:PSModulePath = (Join-Path $r 'powershell\Modules') + ';' + $env:PSModulePath
-  Import-Module RevealUI.DevEnv
+  Import-Module RevealUI.RevStation
   Mount-WSLDev -TriggerSource scheduled
-} else { Write-Error 'RevealUI.DevEnv module not found on any drive' }
+} else { Write-Error 'RevealUI.RevStation module not found on any drive' }
 '@
 
     # Base64 encode to avoid XML escaping issues
@@ -39,7 +39,7 @@ if ($r) {
 <?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>Auto-mount WD My Passport SSD to WSL at /mnt/studio via RevealUI.DevEnv module</Description>
+    <Description>Auto-mount WD My Passport SSD to WSL at /mnt/studio via RevealUI.RevStation module</Description>
   </RegistrationInfo>
   <Triggers>
     <LogonTrigger>
