@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 #Requires -PSEdition Core
 
-# RevealUI.DevEnv - Portable development environment module
+# RevealUI.RevStation - Portable development environment module
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'

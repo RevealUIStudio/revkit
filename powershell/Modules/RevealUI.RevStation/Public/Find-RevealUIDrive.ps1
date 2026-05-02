@@ -8,7 +8,7 @@ function Find-RevealUIDrive {
         [switch]$UpdateEnv
     )
 
-    $marker = "powershell\Modules\RevealUI.DevEnv\RevealUI.DevEnv.psd1"
+    $marker = "powershell\Modules\RevealUI.RevStation\RevealUI.RevStation.psd1"
 
     # Layer 1: Check existing env var
     if ($env:REVEALUI_ROOT -and (Test-Path (Join-Path $env:REVEALUI_ROOT $marker) -ErrorAction SilentlyContinue)) {

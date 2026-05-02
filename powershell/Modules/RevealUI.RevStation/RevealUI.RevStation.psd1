@@ -1,5 +1,5 @@
 @{
-    RootModule             = 'RevealUI.DevEnv.psm1'
+    RootModule             = 'RevealUI.RevStation.psm1'
     ModuleVersion          = '1.0.0'
     GUID                   = 'a3f7c8e1-9b2d-4f6a-8e5c-1d3b7a9f2c4e'
     Author                 = 'RevealUI Studio'
@@ -40,7 +40,7 @@
 
     PrivateData = @{
         PSData = @{
-            Tags       = @('WSL', 'DevEnv', 'RevealUI')
+            Tags       = @('WSL', 'RevStation', 'RevealUI')
         }
     }
 }
