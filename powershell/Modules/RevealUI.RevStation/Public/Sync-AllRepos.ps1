@@ -6,6 +6,22 @@ function Sync-AllRepos {
     .SYNOPSIS
         Syncs all registered repos on C: and/or E: drives with GitHub.
     .DESCRIPTION
+        DEPRECATED 2026-05-08: the registry below points at dead paths.
+        - C: side: C:\Users\joshu\projects\<repo> — that directory was emptied on 2026-04-24
+          (personal repos moved to E:\projects\, professional dev moved to WSL ~/revfleet/).
+        - E: side: E:\repos\personal\ and E:\repos\professional\ — both deleted on 2026-05-08
+          when this whole sync model was retired.
+
+        The scheduled task `RevealUI-Repo-Sync` was unregistered/disabled on 2026-05-08.
+        GitHub remotes + the weekly WSL backup (`RevealUI-WSL-Weekly-Backup`) now cover
+        the redundancy this used to provide.
+
+        If you ever want to re-enable repo mirroring: rewrite the registry to reflect
+        the post-2026-05-08 layout (or trim it to a smaller, intentional set), update the
+        scheduled-task encoded payload to `Import-Module RevealUI.RevStation` (it still
+        references the old `RevealUI.DevEnv` name), and re-register via Register-SyncTask.
+
+        --- ORIGINAL DOCS BELOW ---
         C: repos use git pull --ff-only (skips if dirty or diverged).
         E: repos use git fetch + reset --hard origin/main (always matches GitHub).
         E: drive is optional — skipped gracefully if unavailable.
