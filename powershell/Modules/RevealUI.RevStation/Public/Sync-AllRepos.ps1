@@ -7,7 +7,7 @@ function Sync-AllRepos {
         Syncs all registered repos on C: and/or E: drives with GitHub.
     .DESCRIPTION
         DEPRECATED 2026-05-08: the registry below points at dead paths.
-        - C: side: C:\Users\joshu\projects\<repo> — that directory was emptied on 2026-04-24
+        - C: side: %USERPROFILE%\projects\<repo> — that directory was emptied on 2026-04-24
           (personal repos moved to E:\projects\, professional dev moved to WSL ~/revfleet/).
         - E: side: E:\repos\personal\ and E:\repos\professional\ — both deleted on 2026-05-08
           when this whole sync model was retired.
