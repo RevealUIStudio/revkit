@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Tool initialization: direnv, nvm, bun, go, pulumi, pip
+# Tool initialization: direnv, fnm/nvm, bun, rust, go, pulumi, pip
 
 # Zig / user bin
 [ -d "$HOME/bin" ] && export PATH="$HOME/bin:$PATH"
@@ -11,14 +11,21 @@ if command -v direnv &>/dev/null; then
     export DIRENV_WARN_TIMEOUT=""
 fi
 
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+# fnm (preferred) / nvm (fallback)
+if command -v fnm &>/dev/null; then
+    eval "$(fnm env)"
+elif [ -s "$HOME/.nvm/nvm.sh" ]; then
+    export NVM_DIR="$HOME/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+fi
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 [ -d "$BUN_INSTALL/bin" ] && export PATH="$BUN_INSTALL/bin:$PATH"
+
+# rust / cargo (must precede 60-license.sh which calls `command -v revvault`)
+[ -d "$HOME/.cargo/bin" ] && export PATH="$HOME/.cargo/bin:$PATH"
 
 # go
 [ -d "$HOME/go-install/go/bin" ] && export PATH="$PATH:$HOME/go-install/go/bin"
