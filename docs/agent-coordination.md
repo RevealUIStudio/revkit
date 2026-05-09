@@ -4,9 +4,9 @@ Multi-agent coordination for Claude Code sessions, powered by a shared workboard
 
 ## Status (2026-04-23)
 
-**This file-based workboard is an *alternative* coordination mode, not the suite's default.**
+**This file-based workboard is an *alternative* coordination mode, not the fleet's default.**
 
-The authoritative RevealUI Suite setup has moved to **RPC-only coordination via the RevDev daemon** — see `~/suite/.claude/rules/hooks-architecture.md` in the suite workspace. In that model there is no `.claude/workboard.md`, no lock file, and no file-based "Active Sessions" table; coordination flows through the daemon's Unix socket, and `isDaemonAlive()` is a fast `fs.statSync` on the socket with no ping.
+The authoritative RevFleet setup has moved to **RPC-only coordination via the RevDev daemon** — see `~/revfleet/.claude/rules/hooks-architecture.md` in the fleet workspace. In that model there is no `.claude/workboard.md`, no lock file, and no file-based "Active Sessions" table; coordination flows through the daemon's Unix socket, and `isDaemonAlive()` is a fast `fs.statSync` on the socket with no ping.
 
 The templates and hooks documented below still ship with revkit for two legitimate use cases:
 

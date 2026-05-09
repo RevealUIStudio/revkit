@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # revcon — personal opt-out
 #
-# Sources ~/suite/.jv/revcon-profiles/activate.sh when present, which exports
+# Sources ~/revfleet/.jv/revcon-profiles/activate.sh when present, which exports
 # REVCON_PRIVATE_PROFILES_DIR (private profile resolution) and
 # REVCON_SKIP_EDITORS=cursor (skip cursor for the operator's own use).
 #
@@ -11,6 +11,6 @@
 #
 # Safe no-op if .jv isn't cloned (e.g. on a machine without the private repo).
 
-if [ -f "$HOME/suite/.jv/revcon-profiles/activate.sh" ]; then
-  . "$HOME/suite/.jv/revcon-profiles/activate.sh"
+if [ -f "$HOME/revfleet/.jv/revcon-profiles/activate.sh" ]; then
+  . "$HOME/revfleet/.jv/revcon-profiles/activate.sh"
 fi
