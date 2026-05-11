@@ -10,7 +10,7 @@
 param(
   [string]$Distro = 'Ubuntu',
   [string]$SnapshotDir = 'E:\backups\wsl-snapshots\current',
-  [int]$KeepCount = 2
+  [int]$KeepCount = 4
 )
 
 $ErrorActionPreference = 'Stop'
