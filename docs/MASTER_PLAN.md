@@ -4,9 +4,9 @@
 **Status:** Active — TOML-profile bootstrap for WSL workstations; sandbox-drive rename shipped (revkit#13)
 **Owner:** RevealUI Studio (`founder@revealui.com`)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
-**Fleet master index:** [`revealui-jv:docs/MASTER_INDEX.md`](https://github.com/RevealUIStudio/revealui-jv/blob/main/docs/MASTER_INDEX.md)
+**Fleet master index:** RevealUI Studio internal coordination hub (`MASTER_INDEX.md`, private).
 
-> Fleet-level cross-cutting plans live in [`revealui-jv:docs/MASTER_PLAN.md`](https://github.com/RevealUIStudio/revealui-jv/blob/main/docs/MASTER_PLAN.md). This file is RevKit-scoped only.
+> Fleet-level cross-cutting plans live in the internal coordination hub's `MASTER_PLAN.md`. This file is RevKit-scoped only.
 
 ---
 
@@ -21,7 +21,7 @@
 - **Boot optimization** — `wsl/setup-wsl-boot.sh` masks 23 hardware/desktop services, disables Docker/snap auto-start (sockets preserved); supports `--revert`
 - **Editor configs** — portable Zed settings (extends RevCon for the rest)
 - **PowerShell module** `RevealUI.RevStation` — `Sync-AllRepos`, `Mount-WSLDev`, `Compact-VHDx` helpers
-- **Sandbox-drive support** — optional ext4 USB at `/mnt/sandbox` for product-demo + red-team work (NOT primary dev infra per [`project_forge_drive_role`](file:///C:/Users/joshu/.claude/projects/--wsl-localhost-ubuntu-home-joshua-v-dev-revfleet/memory/project_forge_drive_role.md))
+- **Sandbox-drive support** — optional ext4 USB at `/mnt/sandbox` for product-demo + red-team work (NOT primary dev infra per the internal `project_forge_drive_role` memory entry)
 - **Backup guards** — pre-commit + pre-push hooks; weekly-WSL-backup PowerShell script (scheduled task)
 - **Workboard template** — file-based coord (alternative to RevDev daemon RPC) for greenfield/offline projects
 
@@ -79,7 +79,7 @@ Peer agent reconciling drift between `wsl/bashrc.d/` source files and what's act
 
 ## Roadmap
 
-Pre-1.0 per [`versioning.md`](https://github.com/RevealUIStudio/revealui-jv/blob/main/.claude/rules/versioning.md). Promotion gated on real external consumers (other contributors using RevKit to bootstrap their own machines).
+Pre-1.0 per the fleet versioning convention (RevealUI Studio internal). Promotion gated on real external consumers (other contributors using RevKit to bootstrap their own machines).
 
 ### Phase 0 — Single-developer bootstrap (DONE)
 
@@ -121,4 +121,4 @@ Currently WSL-only. Mac/Linux native bootstraps need:
 - [`docs/agent-coordination.md`](./agent-coordination.md) — file-based workboard template (alternative to RevDev daemon)
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt) + [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md) — WSL ops reference
 - [`README.md`](../README.md) — quick start
-- [`revealui-jv:docs/MASTER_INDEX.md`](https://github.com/RevealUIStudio/revealui-jv/blob/main/docs/MASTER_INDEX.md) — fleet-level navigation
+- Fleet master index (`MASTER_INDEX.md` in the RevealUI Studio internal coordination hub) — fleet-level navigation
