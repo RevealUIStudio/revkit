@@ -1,3 +1,11 @@
+---
+type: master-plan
+repo: revkit
+last-updated: 2026-05-10
+owner: RevealUI Studio
+staleness-status: FRESH
+---
+
 # RevKit — Master Plan
 
 **Last Updated:** 2026-05-10
