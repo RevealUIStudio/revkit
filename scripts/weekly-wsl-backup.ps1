@@ -69,6 +69,20 @@ try {
   }
 
   $targetSizeGB = (Get-Item $target).Length / 1GB
+
+  # Sanity check: a healthy export is at least 1 GB AND at least 25% of the
+  # vhdx size on disk. wsl --export has been observed to return exit 0 after
+  # producing a truncated or 0-byte tar (2026-04-26: 18 GB; 2026-05-10: 0 B).
+  # Without this check, the DR layer silently rots — fail the task explicitly
+  # so the Task Scheduler LastTaskResult propagates the failure.
+  $minAbsoluteGB    = 1.0
+  $minRelativeRatio = 0.25
+  $minRelativeGB    = if ($vhdxSizeGB) { $vhdxSizeGB * $minRelativeRatio } else { 0 }
+  $minGB            = [math]::Max($minAbsoluteGB, $minRelativeGB)
+  if ($targetSizeGB -lt $minGB) {
+    throw "Exported tar suspiciously small: $([math]::Round($targetSizeGB,2)) GB (need >= $([math]::Round($minGB,2)) GB — $([int]($minRelativeRatio*100))% of $([math]::Round($vhdxSizeGB,1)) GB vhdx, floor $minAbsoluteGB GB). Likely a silent wsl --export failure. Bad tar preserved at $target for inspection; previous snapshots untouched."
+  }
+
   Write-Log 'INFO' "Export complete: $([math]::Round($targetSizeGB,2)) GB in $([math]::Round($exportDuration.TotalMinutes,1)) min"
 
   # Rotate: keep only N most recent Ubuntu-*.tar files
