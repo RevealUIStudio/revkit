@@ -22,8 +22,8 @@ templates/wsl/setup-wsl-boot.sh      lts-drive   # documented operator-run-this 
 wsl/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
 
 # STALE INFRASTRUCTURE — wsl/bin/setup-revealui-sync-hooks.sh references
-# /mnt/e/projects/RevealUI, which was retired 2026-05-08 (E:\projects\
-# mirror dropped + RevealUI-Repo-Sync scheduled task removed). The hook
+# the retired Windows-side projects mirror (sync target dropped 2026-05-08
+# along with the matching RevealUI-Repo-Sync scheduled task). The hook
 # script is dead code; tracked here as a follow-on cleanup item.
 wsl/bin/setup-revealui-sync-hooks.sh  lts-drive   # stale; retired sync target
 
@@ -33,5 +33,5 @@ wsl/bin/setup-revealui-sync-hooks.sh  lts-drive   # stale; retired sync target
 docs/WSL-QuickReference.md                                           abs-windows-user
 powershell/Modules/RevealUI.RevStation/docs/WSL-QuickReference.md    abs-windows-user
 
-# Usage example in CLI help text — /home/user is a generic placeholder.
+# Usage example in CLI help text uses a generic placeholder username.
 scripts/render.sh                                                    abs-home-path
