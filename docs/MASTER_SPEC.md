@@ -129,7 +129,7 @@ age_identity_path = "~/.age-identity/keys.txt"  # RevVault expects this
 
 **Tier transitions** are detected automatically on shell login by `00-base.sh`. The `sandbox validate` command verifies tier consistency (no env-var drift between expected + actual).
 
-Per [`project_forge_drive_role`](file:///C:/Users/joshu/.claude/projects/--wsl-localhost-ubuntu-home-joshua-v-dev-revfleet/memory/project_forge_drive_role.md), the sandbox drive's role changed 2026-04-24 from "primary dev infra" to "product-demo + red-team security-research lab." The T1 capabilities above remain documented for completeness but are NOT the recommended deployment for daily dev infra — `pnpm store`, Docker data-root, Ollama models, build caches, and active ext4 working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive (NTFS/9p hostile + USB unplugability).
+Per the internal `project_forge_drive_role` memory entry, the sandbox drive's role changed 2026-04-24 from "primary dev infra" to "product-demo + red-team security-research lab." The T1 capabilities above remain documented for completeness but are NOT the recommended deployment for daily dev infra — `pnpm store`, Docker data-root, Ollama models, build caches, and active ext4 working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive (NTFS/9p hostile + USB unplugability).
 
 ### Env vars
 
@@ -221,4 +221,4 @@ Pre-1.0. Profile schema versioning lives inside the profile itself (`schema_vers
 - [`docs/agent-coordination.md`](./agent-coordination.md) — workboard template + alternative coord mode
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt), [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md)
 - [`README.md`](../README.md) — quick start
-- [`revealui-jv:docs/MASTER_INDEX.md`](https://github.com/RevealUIStudio/revealui-jv/blob/main/docs/MASTER_INDEX.md) — fleet-level navigation
+- Fleet master index (`MASTER_INDEX.md` in the RevealUI Studio internal coordination hub) — fleet-level navigation
