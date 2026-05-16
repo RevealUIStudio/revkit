@@ -55,14 +55,14 @@ echo "Source:   $SECRETS_SH"
 echo ""
 
 # We test passenv validation in a subshell to isolate side effects.
-# passenv needs PASSAGE_DIR set and the `passage` command, but for
-# validation tests (which reject before calling passage) we can mock
+# passenv needs REVVAULT_STORE set and the `revvault` command, but for
+# validation tests (which reject before calling revvault) we can mock
 # the environment enough to test the guard logic.
 
 # ---------------------------------------------------------------------------
 # Helper: run passenv in an isolated subshell
 # ---------------------------------------------------------------------------
-# Sources 40-secrets.sh, sets a dummy PASSAGE_DIR, stubs `passage` to
+# Sources 40-secrets.sh, sets a dummy REVVAULT_STORE, stubs `revvault` to
 # return a dummy value (so valid-name tests can reach the export path),
 # then calls passenv with the given arguments.
 
@@ -71,14 +71,15 @@ run_passenv() {
     # Source the secrets file
     source "$SECRETS_SH"
 
-    # Set up minimal environment so passenv doesn't bail on PASSAGE_DIR
-    export PASSAGE_DIR="/tmp/fake-passage-store"
+    # Set up minimal environment so passenv doesn't bail on REVVAULT_STORE
+    export REVVAULT_STORE="/tmp/fake-revvault-store"
+    export PASSAGE_DIR="$REVVAULT_STORE"  # backward-compat alias
 
-    # Stub passage to return a value — only reached for valid names
-    passage() {
+    # Stub revvault to return a value — only reached for valid names
+    revvault() {
       echo "dummy-secret-value"
     }
-    export -f passage
+    export -f revvault
 
     passenv "$@"
   )
@@ -143,28 +144,29 @@ assert_ok "accepts single letter" run_passenv "X" "some/path"
 assert_ok "accepts name with numbers" run_passenv "API_KEY_2" "some/path"
 
 # ---------------------------------------------------------------------------
-# 4. PASSAGE_DIR must be set
+# 4. REVVAULT_STORE must be set
 # ---------------------------------------------------------------------------
 
 echo ""
-echo "--- PASSAGE_DIR requirement ---"
+echo "--- REVVAULT_STORE requirement ---"
 
-# Run passenv without PASSAGE_DIR set
+# Run passenv without REVVAULT_STORE set
 no_dir_result="$(
   (
     source "$SECRETS_SH"
+    unset REVVAULT_STORE
     unset PASSAGE_DIR
     passenv "VALID_NAME" "some/path"
   ) 2>&1 || true
 )"
 no_dir_exit=$?
 
-# The function should fail when PASSAGE_DIR is unset
-if [[ $no_dir_exit -ne 0 ]] || [[ "$no_dir_result" == *"PASSAGE_DIR"* ]] || [[ "$no_dir_result" == *"REVVAULT_STORE"* ]]; then
-  echo "PASS: passenv fails when PASSAGE_DIR is unset"
+# The function should fail when REVVAULT_STORE is unset
+if [[ $no_dir_exit -ne 0 ]] || [[ "$no_dir_result" == *"REVVAULT_STORE"* ]] || [[ "$no_dir_result" == *"PASSAGE_DIR"* ]]; then
+  echo "PASS: passenv fails when REVVAULT_STORE is unset"
   PASS=$((PASS + 1))
 else
-  echo "FAIL: passenv should fail when PASSAGE_DIR is unset"
+  echo "FAIL: passenv should fail when REVVAULT_STORE is unset"
   FAIL=$((FAIL + 1))
 fi
 
