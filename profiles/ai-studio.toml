@@ -15,13 +15,6 @@ wsl_memory = "16GB"
 wsl_processors = "8"
 wsl_swap = "8GB"
 
-[infrastructure]
-studio_mount = "/mnt/forge"
-postgres_port = "5432"
-redis_port = "6379"
-ollama_port = "11434"
-chrome_devtools_port = "9222"
-
 [features]
 docker = true
 nix = true

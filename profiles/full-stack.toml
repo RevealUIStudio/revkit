@@ -1,6 +1,6 @@
 # RevealUI DevKit — Full-Stack Profile (T1)
 # =============================================
-# Laptop + studio drive. Docker-managed Postgres and Redis,
+# Laptop + sandbox drive. Docker-managed Postgres and Redis,
 # Nix dev shells, RevVault secrets. No AI/Ollama.
 
 [identity]
@@ -14,13 +14,6 @@ github_org = "your-org"
 wsl_memory = "12GB"
 wsl_processors = "8"
 wsl_swap = "4GB"
-
-[infrastructure]
-studio_mount = "/mnt/forge"
-postgres_port = "5432"
-redis_port = "6379"
-ollama_port = ""
-chrome_devtools_port = "9222"
 
 [features]
 docker = true

@@ -135,3 +135,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run secrets tests
         run: bash tests/test-secrets.sh
+
+  no-bashrc-template-drift:
+    name: No bashrc.d template drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Check templates/wsl/bashrc.d/ is empty
+        run: bash scripts/check-no-bashrc-template-drift.sh

@@ -38,11 +38,6 @@ declare -A PLACEHOLDER_MAP=(
   [WSL_MEMORY]="hardware.wsl_memory"
   [WSL_PROCESSORS]="hardware.wsl_processors"
   [WSL_SWAP]="hardware.wsl_swap"
-  [STUDIO_MOUNT]="infrastructure.studio_mount"
-  [POSTGRES_PORT]="infrastructure.postgres_port"
-  [REDIS_PORT]="infrastructure.redis_port"
-  [OLLAMA_PORT]="infrastructure.ollama_port"
-  [CHROME_DEVTOOLS_PORT]="infrastructure.chrome_devtools_port"
   [PROJECT_DIR]="project.project_dir"
   [PROJECT_NAME]="project.project_name"
 )
@@ -95,18 +90,12 @@ SUPPORTED PLACEHOLDERS (from config TOML)
   {{WSL_MEMORY}}           hardware.wsl_memory
   {{WSL_PROCESSORS}}       hardware.wsl_processors
   {{WSL_SWAP}}             hardware.wsl_swap
-  {{STUDIO_MOUNT}}         infrastructure.studio_mount
-  {{POSTGRES_PORT}}        infrastructure.postgres_port
-  {{REDIS_PORT}}           infrastructure.redis_port
-  {{OLLAMA_PORT}}          infrastructure.ollama_port
-  {{CHROME_DEVTOOLS_PORT}} infrastructure.chrome_devtools_port
   {{PROJECT_DIR}}          project.project_dir
   {{PROJECT_NAME}}         project.project_name
 
 CONFIG TOML SECTIONS
   [identity]        User and git identity
   [hardware]        WSL resource limits
-  [infrastructure]  Ports and mount points
   [features]        Boolean feature flags (docker, nix, revvault, tailscale, ollama)
   [project]         Project paths and name
 
