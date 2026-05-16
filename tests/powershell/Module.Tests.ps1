@@ -58,20 +58,20 @@ Describe 'RevealUI.RevStation exports' {
     }
 
     Context 'aliases' {
-        $expectedAliases = @{
-            wsls      = 'Start-WSL'
-            wslr      = 'Restart-WSL'
-            wslstat   = 'Get-WSLStatus'
-            wslmount  = 'Mount-WSLDev'
-            wslmounts = 'Get-WSLMounts'
-            wslhelp   = 'Show-WSLHelp'
-            wslsync   = 'Sync-RevealUIToWindows'
-            secret    = 'Get-Secret'
-        }
+        $expectedAliases = @(
+            @{ Alias = 'wsls';      Func = 'Start-WSL' }
+            @{ Alias = 'wslr';      Func = 'Restart-WSL' }
+            @{ Alias = 'wslstat';   Func = 'Get-WSLStatus' }
+            @{ Alias = 'wslmount';  Func = 'Mount-WSLDev' }
+            @{ Alias = 'wslmounts'; Func = 'Get-WSLMounts' }
+            @{ Alias = 'wslhelp';   Func = 'Show-WSLHelp' }
+            @{ Alias = 'wslsync';   Func = 'Sync-RevealUIToWindows' }
+            @{ Alias = 'secret';    Func = 'Get-Secret' }
+        )
 
-        It '<_.Key> -> <_.Value>' -ForEach $expectedAliases.GetEnumerator() {
-            $alias = Get-Alias $_.Key -ErrorAction Stop
-            $alias.Definition | Should -Be $_.Value
+        It '<Alias> -> <Func>' -ForEach $expectedAliases {
+            $a = Get-Alias $Alias -ErrorAction Stop
+            $a.Definition | Should -Be $Func
         }
     }
 }
