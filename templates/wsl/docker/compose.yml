@@ -1,34 +1,38 @@
+# Sandbox infrastructure services
+# Usage: sandbox up | sandbox down | sandbox status
+
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: studio-postgres
+    container_name: sandbox-postgres
     restart: unless-stopped
     ports:
-      - "{{POSTGRES_PORT}}:5432"
+      - "5433:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-studio}
+      POSTGRES_USER: ${POSTGRES_USER:-sandbox}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in wsl/docker/.env}
-      POSTGRES_DB: ${POSTGRES_DB:-studio}
+      POSTGRES_DB: ${POSTGRES_DB:-sandbox}
     volumes:
-      - ${STUDIO_DATA:-{{STUDIO_MOUNT}}/databases}/postgres:/var/lib/postgresql/data
+      - ${SANDBOX_DATA:-/mnt/sandbox/databases}/postgres:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studio}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sandbox}"]
       interval: 10s
       timeout: 5s
       retries: 3
+
   redis:
     image: redis:7-alpine
-    container_name: studio-redis
+    container_name: sandbox-redis
     restart: unless-stopped
     ports:
-      - "{{REDIS_PORT}}:6379"
+      - "6380:6379"
     command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
-      - ${STUDIO_DATA:-{{STUDIO_MOUNT}}/databases}/redis:/data
+      - ${SANDBOX_DATA:-/mnt/sandbox/databases}/redis:/data
     deploy:
       resources:
         limits:
@@ -38,14 +42,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
   ollama:
     image: ollama/ollama:latest
-    container_name: studio-ollama
+    container_name: sandbox-ollama
     profiles: ["ai"]
     ports:
-      - "{{OLLAMA_PORT}}:11434"
+      - "11434:11434"
     volumes:
-      - ${STUDIO_DATA:-{{STUDIO_MOUNT}}/models}:/root/.ollama
+      - ${SANDBOX_DATA:-/mnt/sandbox/models}:/root/.ollama
     deploy:
       resources:
         limits:

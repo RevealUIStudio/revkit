@@ -16,10 +16,9 @@ wsl/bashrc.d/70-revcon-personal.sh   private-jv-repo
 # drive mounts (E: → /mnt/e or D: → /mnt/d). Per ~/.claude/rules/wsl.md
 # this is the documented portable-devkit discovery path. Templates in
 # templates/ ship the same logic so derived environments work the same.
-templates/wsl/bashrc.d/00-base.sh    lts-drive   # devkit auto-discovery
 wsl/bashrc.d/00-base.sh              lts-drive   # devkit auto-discovery
-templates/wsl/setup-wsl-boot.sh      lts-drive   # documented operator-run-this examples
 wsl/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
+templates/wsl/setup-wsl-boot.sh      lts-drive   # byte-identical to wsl/setup-wsl-boot.sh per refactor; same operator-run-this examples
 
 # STALE INFRASTRUCTURE — wsl/bin/setup-revealui-sync-hooks.sh references
 # the retired Windows-side projects mirror (sync target dropped 2026-05-08

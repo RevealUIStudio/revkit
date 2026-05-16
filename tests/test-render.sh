@@ -106,13 +106,6 @@ wsl_memory = "8GB"
 wsl_processors = "4"
 wsl_swap = "2GB"
 
-[infrastructure]
-studio_mount = "/mnt/test"
-postgres_port = "5432"
-redis_port = "6379"
-ollama_port = "11434"
-chrome_devtools_port = "9222"
-
 [features]
 docker = true
 nix = true
@@ -205,11 +198,6 @@ Org: {{GITHUB_ORG}}
 TMPL
 
 cat > "$WORK/templates-identity/infra.txt" <<'TMPL'
-Mount: {{STUDIO_MOUNT}}
-Postgres: {{POSTGRES_PORT}}
-Redis: {{REDIS_PORT}}
-Ollama: {{OLLAMA_PORT}}
-Chrome: {{CHROME_DEVTOOLS_PORT}}
 Memory: {{WSL_MEMORY}}
 CPUs: {{WSL_PROCESSORS}}
 Swap: {{WSL_SWAP}}
@@ -229,13 +217,8 @@ assert_contains "GIT_NAME resolved" "$rendered_identity" "Name: Test User"
 assert_contains "GIT_EMAIL resolved" "$rendered_identity" "Email: test@example.com"
 assert_contains "GITHUB_ORG resolved" "$rendered_identity" "Org: test-org"
 
-# Check rendered infra/hardware/project values
+# Check rendered hardware/project values
 rendered_infra="$(cat "$PARSE_OUT/infra.txt" 2>/dev/null || echo "")"
-assert_contains "STUDIO_MOUNT resolved" "$rendered_infra" "Mount: /mnt/test"
-assert_contains "POSTGRES_PORT resolved" "$rendered_infra" "Postgres: 5432"
-assert_contains "REDIS_PORT resolved" "$rendered_infra" "Redis: 6379"
-assert_contains "OLLAMA_PORT resolved" "$rendered_infra" "Ollama: 11434"
-assert_contains "CHROME_DEVTOOLS_PORT resolved" "$rendered_infra" "Chrome: 9222"
 assert_contains "WSL_MEMORY resolved" "$rendered_infra" "Memory: 8GB"
 assert_contains "WSL_PROCESSORS resolved" "$rendered_infra" "CPUs: 4"
 assert_contains "WSL_SWAP resolved" "$rendered_infra" "Swap: 2GB"
@@ -273,14 +256,13 @@ Third: testuser"
 
 # Values with special characters (paths with slashes) are handled
 mkdir -p "$WORK/templates-special"
-echo "Dir: {{PROJECT_DIR}} Mount: {{STUDIO_MOUNT}}" > "$WORK/templates-special/paths.txt"
+echo "Dir: {{PROJECT_DIR}}" > "$WORK/templates-special/paths.txt"
 
 SPECIAL_OUT="$WORK/output-special"
 bash "$RENDER" --config "$WORK/full.toml" --output "$SPECIAL_OUT" --templates "$WORK/templates-special" --verbose 2>/dev/null
 
 special_rendered="$(cat "$SPECIAL_OUT/paths.txt" 2>/dev/null || echo "")"
 assert_contains "paths with slashes rendered" "$special_rendered" "Dir: ~/projects/TestProject"
-assert_contains "mount path with slashes rendered" "$special_rendered" "Mount: /mnt/test"
 
 # ---------------------------------------------------------------------------
 # 7. Missing required fields are caught (warning, unresolved markers remain)
@@ -297,7 +279,7 @@ git_email = "partial@test.com"
 TOML
 
 mkdir -p "$WORK/templates-partial"
-echo "Hello {{USERNAME}}, port: {{POSTGRES_PORT}}" > "$WORK/templates-partial/test.txt"
+echo "Hello {{USERNAME}}, mem: {{WSL_MEMORY}}" > "$WORK/templates-partial/test.txt"
 
 PARTIAL_OUT="$WORK/output-partial"
 partial_stderr="$(bash "$RENDER" --config "$WORK/partial.toml" --output "$PARTIAL_OUT" --templates "$WORK/templates-partial" --verbose 2>&1 1>/dev/null)"
@@ -309,7 +291,7 @@ partial_rendered="$(cat "$PARTIAL_OUT/test.txt" 2>/dev/null || echo "")"
 assert_contains "present values resolved in partial config" "$partial_rendered" "Hello partial-user"
 
 # Missing placeholders should remain as raw {{...}} markers
-assert_contains "missing placeholder retained as raw marker" "$partial_rendered" "{{POSTGRES_PORT}}"
+assert_contains "missing placeholder retained as raw marker" "$partial_rendered" "{{WSL_MEMORY}}"
 
 # ---------------------------------------------------------------------------
 # 8. TOML parser handles comments and blank lines correctly
@@ -334,13 +316,6 @@ github_org = "comm-org"
 wsl_memory = "16GB"
 wsl_processors = "8"
 wsl_swap = "4GB"
-
-[infrastructure]
-studio_mount = "/mnt/comm"
-postgres_port = "5433"
-redis_port = "6380"
-ollama_port = "11435"
-chrome_devtools_port = "9223"
 
 [project]
 project_dir = "~/projects/CommTest"
@@ -370,13 +345,6 @@ github_org = bare-org
 wsl_memory = 8GB
 wsl_processors = 4
 wsl_swap = 2GB
-
-[infrastructure]
-studio_mount = /mnt/bare
-postgres_port = 5432
-redis_port = 6379
-ollama_port = 11434
-chrome_devtools_port = 9222
 
 [project]
 project_dir = ~/projects/Bare
