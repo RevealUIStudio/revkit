@@ -19,7 +19,7 @@ set -euo pipefail
 # Constants
 # ---------------------------------------------------------------------------
 
-readonly VERSION="1.0.0"
+readonly VERSION="0.5.0"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
