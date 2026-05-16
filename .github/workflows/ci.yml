@@ -127,10 +127,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run render tests
         run: bash tests/test-render.sh
-      # NOTE: tests/test-secrets.sh deliberately not wired — pre-existing bugs
-      # surfaced when running it locally (see follow-up gap GAP-121):
-      #   1. wsl/bashrc.d/40-secrets.sh:5 references $REVEALUI_ROOT under
-      #      `set -u` without `:-` default → unbound-var error.
-      #   2. test-secrets.sh has multiple FAIL lines that don't propagate
-      #      to a non-zero exit code.
-      # Wire this step once those are fixed.
+
+  test-secrets:
+    name: tests/test-secrets.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Run secrets tests
+        run: bash tests/test-secrets.sh

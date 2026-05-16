@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # RevVault (age-encrypted secret store) configuration
-if [ -n "$REVEALUI_ROOT" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
+if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
     export REVVAULT_STORE="$REVEALUI_ROOT/passage-store"
     export PASSAGE_DIR="$REVVAULT_STORE"
 fi
@@ -22,7 +22,7 @@ passenv() {
             ;;
     esac
 
-    if [ -z "$REVVAULT_STORE" ]; then
+    if [ -z "${REVVAULT_STORE:-}" ]; then
         echo "WARN: REVVAULT_STORE not set" >&2
         return 1
     fi
