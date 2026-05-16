@@ -3,7 +3,7 @@
 # Requires: age, passage installed via nix
 
 # Point passage at the SSD store
-if [ -n "$REVEALUI_ROOT" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
+if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
     export PASSAGE_DIR="$REVEALUI_ROOT/passage-store"
 fi
 
@@ -27,7 +27,7 @@ passenv() {
             ;;
     esac
 
-    if [ -z "$PASSAGE_DIR" ]; then
+    if [ -z "${PASSAGE_DIR:-}" ]; then
         echo "WARN: PASSAGE_DIR not set" >&2
         return 1
     fi
