@@ -34,6 +34,40 @@ jobs:
           done < <(git ls-files '*.sh')
           exit "$fail"
 
+  git-hooks-validate:
+    # M-11 fleet-wide pre-push hook lives under git-hooks/ without a .sh
+    # extension (git looks for exact names like `pre-push`), so the
+    # parse-shell job above does NOT cover it. Lint + syntax-check
+    # everything under git-hooks/ here.
+    name: bash -n + shellcheck (git-hooks/*)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: bash -n every git hook
+        run: |
+          set -euo pipefail
+          fail=0
+          if [ ! -d git-hooks ]; then
+            echo "git-hooks/ directory missing — M-11 bootstrap will skip wiring"
+            exit 1
+          fi
+          while IFS= read -r -d '' f; do
+            # Skip markdown / non-script files inside the dir
+            case "$f" in *.md) continue ;; esac
+            if ! out=$(bash -n "$f" 2>&1); then
+              echo "::error file=$f::$out"
+              fail=1
+            else
+              echo "ok  $f"
+            fi
+          done < <(find git-hooks -type f -print0)
+          exit "$fail"
+      - name: ShellCheck git-hooks/*
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+        with:
+          severity: error
+          scandir: ./git-hooks
+
   parse-powershell:
     name: PowerShell parse (all .ps1/.psm1/.psd1)
     runs-on: ubuntu-latest
@@ -135,6 +169,49 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run secrets tests
         run: bash tests/test-secrets.sh
+
+  test-pre-push-hook:
+    # M-11 hook smoke test. Builds a throwaway git repo with real commits,
+    # invokes the hook with various ref combinations, asserts exit codes +
+    # stderr content. Does NOT exercise the deployed hook (no remote in CI);
+    # verifies its enforcement logic in isolation.
+    name: tests/test-pre-push-hook.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Run pre-push hook tests
+        run: bash tests/test-pre-push-hook.sh
+
+  bootstrap-m11-wiring:
+    # Sanity-check that bootstrap-wsl.sh + bootstrap.ps1 still reference the
+    # M-11 hook + set core.hooksPath. Catches accidental removal of the
+    # wiring during unrelated refactors. Read-only — does not execute either
+    # bootstrap script.
+    name: bootstrap M-11 wiring intact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Check bootstrap-wsl.sh references the hook + sets hooksPath
+        run: |
+          set -euo pipefail
+          fail=0
+          if ! grep -qF 'git-hooks/pre-push' bootstrap-wsl.sh; then
+            echo "::error file=bootstrap-wsl.sh::M-11 wiring lost: no reference to git-hooks/pre-push"
+            fail=1
+          fi
+          if ! grep -qF 'core.hooksPath' bootstrap-wsl.sh; then
+            echo "::error file=bootstrap-wsl.sh::M-11 wiring lost: no core.hooksPath setup"
+            fail=1
+          fi
+          if ! grep -qF 'git-hooks' bootstrap.ps1; then
+            echo "::error file=bootstrap.ps1::M-11 wiring lost: no reference to git-hooks/"
+            fail=1
+          fi
+          if ! grep -qF 'core.hooksPath' bootstrap.ps1; then
+            echo "::error file=bootstrap.ps1::M-11 wiring lost: no core.hooksPath setup"
+            fail=1
+          fi
+          exit "$fail"
 
   no-bashrc-template-drift:
     name: No bashrc.d template drift
