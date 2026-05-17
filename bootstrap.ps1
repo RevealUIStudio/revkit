@@ -20,16 +20,16 @@ Write-Host ""
 
 # --- Step 1: Determine our own location ---
 $revealRoot = $PSScriptRoot  # E:\.revealui
-Write-Host "[1/5] SSD detected at: $revealRoot" -ForegroundColor Green
+Write-Host "[1/6] SSD detected at: $revealRoot" -ForegroundColor Green
 
 # --- Step 2: Set REVEALUI_ROOT environment variable (persisted) ---
-Write-Host "[2/5] Setting REVEALUI_ROOT environment variable..."
+Write-Host "[2/6] Setting REVEALUI_ROOT environment variable..."
 [System.Environment]::SetEnvironmentVariable('REVEALUI_ROOT', $revealRoot, 'User')
 $env:REVEALUI_ROOT = $revealRoot
 Write-Host "  REVEALUI_ROOT = $revealRoot" -ForegroundColor Green
 
 # --- Step 3: Set execution policy ---
-Write-Host "[3/5] Setting PowerShell execution policy..."
+Write-Host "[3/6] Setting PowerShell execution policy..."
 try {
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
     Write-Host "  ExecutionPolicy = RemoteSigned (CurrentUser)" -ForegroundColor Green
@@ -38,7 +38,7 @@ try {
 }
 
 # --- Step 4: Write profile stub to Documents (CFA-protected, needs elevation) ---
-Write-Host "[4/5] Writing profile stub..."
+Write-Host "[4/6] Writing profile stub..."
 
 # Allow pwsh.exe through Controlled Folder Access (CFA/ransomware protection)
 $pwshPath = (Get-Process -Id $PID).Path
@@ -107,13 +107,64 @@ if ($addedCfa) {
 }
 
 # --- Step 5: Register scheduled task for auto-mount ---
-Write-Host "[5/5] Registering auto-mount scheduled task..."
+Write-Host "[5/6] Registering auto-mount scheduled task..."
 $taskScript = Join-Path $revealRoot "scripts\create-mount-task.ps1"
 if (Test-Path $taskScript) {
     & $taskScript
 } else {
     Write-Host "  Task script not found at: $taskScript" -ForegroundColor Yellow
     Write-Host "  Skipping scheduled task registration" -ForegroundColor Yellow
+}
+
+# --- Step 6: Wire fleet-wide pre-push hook (M-11) ---
+# Spec: internal fleet-security-hardening lane, meta-durability-fixes §M-11
+#
+# Class killed: absent server-side branch protection on private repos (T0-15;
+# GitHub Free rejects branch-protection API on private repos and owner has
+# rejected the Team upgrade). The pre-push hook script lives in-repo at
+# $revealRoot\git-hooks\pre-push and is deployed globally via core.hooksPath
+# so every clone on this Windows host inherits it.
+#
+# Conflict handling (per design): fail-loudly when the user already has a
+# different global core.hooksPath. Silent overwrite would clobber another
+# tool's setup; silent skip would silently disable M-11. The user decides.
+Write-Host "[6/6] Wiring fleet-wide pre-push hook (M-11)..."
+$hooksDir   = Join-Path $revealRoot "git-hooks"
+$prePushHook = Join-Path $hooksDir "pre-push"
+
+if (-not (Test-Path $prePushHook)) {
+    Write-Host "  WARNING: $prePushHook not found — skipping M-11 wiring" -ForegroundColor Yellow
+} elseif (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host "  WARNING: git not on PATH — skipping M-11 wiring" -ForegroundColor Yellow
+} else {
+    # Read current global hooksPath. `git config --get` exits 1 when unset;
+    # tolerate that without tripping the script.
+    $existing = $null
+    try {
+        $existing = (& git config --global --get core.hooksPath 2>$null)
+    } catch {
+        $existing = $null
+    }
+    if ($LASTEXITCODE -ne 0) { $existing = $null }
+
+    if ([string]::IsNullOrWhiteSpace($existing)) {
+        & git config --global core.hooksPath $hooksDir
+        Write-Host "  Set: global core.hooksPath = $hooksDir" -ForegroundColor Green
+    } elseif ($existing -eq $hooksDir) {
+        Write-Host "  global core.hooksPath already = $hooksDir (no-op)" -ForegroundColor Gray
+    } else {
+        # Fail loudly. Do not silently overwrite (would clobber another tool)
+        # or silently skip (would disable M-11). Owner decides.
+        Write-Host "  ERROR: global core.hooksPath is already set to a DIFFERENT path:" -ForegroundColor Red
+        Write-Host "    current: $existing" -ForegroundColor Red
+        Write-Host "    revkit:  $hooksDir" -ForegroundColor Red
+        Write-Host "  Resolve manually, then re-run bootstrap:" -ForegroundColor Yellow
+        Write-Host "    git config --global --unset core.hooksPath" -ForegroundColor Yellow
+        Write-Host "  Then: & '$PSCommandPath'" -ForegroundColor Yellow
+        throw "core.hooksPath conflict (M-11)"
+    }
+    Write-Host "  M-11 active: pre-push will reject direct/force/unsigned pushes to main + test" -ForegroundColor Green
+    Write-Host "  Per-repo escape hatch: git config revealui.hooks.no-protection true" -ForegroundColor Gray
 }
 
 Write-Host ""
