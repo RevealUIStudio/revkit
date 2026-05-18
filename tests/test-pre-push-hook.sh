@@ -276,13 +276,15 @@ else
     FAIL=$((FAIL + 1))
 fi
 
-# Fast-forward push (local descends from remote) → no force-push complaint.
+# Fast-forward push (local descends from remote) → no force-push rejection.
 # Will still fail on unsigned commits, but the failure message must NOT
-# mention force-push. Escape hatch stays ON for this subtest.
+# include the force-push rejection. Escape hatch stays ON for this subtest;
+# the escape-hatch warning intentionally mentions "Force-push" so we match
+# the actual rejection string, not any substring containing "Force-push".
 ff_out="$(printf '%s\n' \
     "refs/heads/main $SHA_MAIN_2_AMENDED refs/heads/main $SHA_MAIN_1" \
     | bash "$HOOK" 2>&1 >/dev/null || true)"
-if [[ "$ff_out" != *"Force-push"* ]]; then
+if [[ "$ff_out" != *"Force-push to protected branch rejected"* ]]; then
     echo "PASS: fast-forward push not flagged as force-push"
     PASS=$((PASS + 1))
 else
