@@ -20,12 +20,6 @@ wsl/bashrc.d/00-base.sh              lts-drive   # devkit auto-discovery
 wsl/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
 templates/wsl/setup-wsl-boot.sh      lts-drive   # byte-identical to wsl/setup-wsl-boot.sh per refactor; same operator-run-this examples
 
-# STALE INFRASTRUCTURE — wsl/bin/setup-revealui-sync-hooks.sh references
-# the retired Windows-side projects mirror (sync target dropped 2026-05-08
-# along with the matching RevealUI-Repo-Sync scheduled task). The hook
-# script is dead code; tracked here as a follow-on cleanup item.
-wsl/bin/setup-revealui-sync-hooks.sh  lts-drive   # stale; retired sync target
-
 # Windows path docs. These quote real example paths users will see on
 # their own Windows hosts. Could be parameterized to <username>; for now
 # allowlist.
