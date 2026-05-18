@@ -37,9 +37,6 @@ revkit/
 │   └── config.example.toml          # template for custom profiles
 ├── scripts/
 │   ├── render.sh                    # TOML profile → ~/.revealui/ tree
-│   ├── backup-guard-pre-commit.sh   # block commits in mirror clones
-│   ├── backup-guard-pre-push.sh     # block pushes from mirror clones
-│   ├── install-backup-guards.ps1    # PowerShell installer for the guards
 │   └── weekly-wsl-backup.ps1        # scheduled task — exports Ubuntu distro
 ├── wsl/
 │   ├── bashrc.d/                    # shell config fragments sourced by .bashrc
@@ -52,7 +49,7 @@ revkit/
 │   └── Register-VHDxCompactTask.ps1
 ├── powershell/
 │   └── Modules/
-│       └── RevealUI.RevStation/     # PowerShell module (Sync-AllRepos, Mount-WSLDev, etc.)
+│       └── RevealUI.RevStation/     # PowerShell module (Mount-WSLDev, Sync-RevealUIToWindows, etc.)
 ├── editor-configs/                  # portable editor settings (Zed)
 ├── templates/
 │   └── hooks/                       # workboard.template.md (file-based coord template)
@@ -158,8 +155,8 @@ Per the internal `project_forge_drive_role` memory entry, the sandbox drive's ro
 
 | Cmdlet | Purpose |
 |---|---|
-| `Sync-AllRepos` | Bulk fetch + reset across configured repo clones (E: drive mirrors) |
 | `Mount-WSLDev` | Mount the sandbox/forge drive into WSL via `wsl --mount` |
+| `Sync-RevealUIToWindows` | One-shot mirror of the WSL RevealUI tree to a Windows path (manual / `wslsync` alias) |
 | `Compact-VHDx` | Compact the WSL ext4.vhdx file to reclaim disk |
 | `Register-VHDxCompactTask` | Install scheduled task to compact VHDx weekly |
 
@@ -182,12 +179,9 @@ Module discovery: profile chain in `C:\Program Files\PowerShell\7\profile.ps1` �
 
 ## Backup model
 
-Two layers:
+**Weekly WSL `.tar` snapshot** — `weekly-wsl-backup.ps1` runs Sunday 03:00 via scheduled task `RevealUI-WSL-Weekly-Backup`; exports Ubuntu distro to `E:\backups\wsl-snapshots\current\Ubuntu-<date>.tar`; keeps 2 most recent. Recovery: `wsl --import`.
 
-1. **Weekly WSL `.tar` snapshot** — `weekly-wsl-backup.ps1` runs Sunday 03:00 via scheduled task `RevealUI-WSL-Weekly-Backup`; exports Ubuntu distro to `E:\backups\wsl-snapshots\current\Ubuntu-<date>.tar`; keeps 2 most recent. Recovery: `wsl --import`.
-2. **Mirror-clone protection** — pre-commit + pre-push hooks block accidental edits to read-only Windows-side mirrors at `E:\projects\*` (which auto-sync from GitHub via `git fetch + reset --hard`).
-
-The mirror-mode `RevealUI-Repo-Sync` scheduled task that ran every 30 min was retired 2026-05-08 (broken since 2026-05-01 module rename); GitHub remote + weekly WSL backup are the redundancy layer now.
+The previous Windows-side mirror infrastructure (read-only `E:\projects\*` clones synced by the `RevealUI-Repo-Sync` 30-min scheduled task; backup-guard pre-commit/pre-push hooks; `install-backup-guards.ps1` installer) was retired 2026-05-08 (the sync task had been silently broken since 2026-05-01 due to the `RevealUI.DevEnv` → `RevealUI.RevStation` module rename). GitHub remotes + the weekly WSL snapshot above are now the redundancy layer.
 
 ---
 
