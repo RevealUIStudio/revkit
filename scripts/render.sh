@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# render.sh — Template engine for revealui-devkit
+# render.sh — Template engine for revkit
 #
 # Reads a TOML config file, walks templates/ recursively, replaces
 # {{PLACEHOLDER}} patterns with config values, writes rendered files
@@ -19,7 +19,7 @@ set -euo pipefail
 # Constants
 # ---------------------------------------------------------------------------
 
-readonly VERSION="0.5.0"
+readonly VERSION="0.5.1"
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

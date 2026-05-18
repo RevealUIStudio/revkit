@@ -11,10 +11,10 @@ Describe 'RevealUI.RevStation manifest' {
         { Test-ModuleManifest -Path $script:ManifestPath -ErrorAction Stop } | Should -Not -Throw
     }
 
-    It 'declares ModuleVersion in the 0.5.x line' {
+    It 'declares ModuleVersion in the 0.6.x line' {
         $manifest = Test-ModuleManifest -Path $script:ManifestPath
         $manifest.Version.Major | Should -Be 0
-        $manifest.Version.Minor | Should -Be 5
+        $manifest.Version.Minor | Should -Be 6
     }
 
     It 'requires PowerShell 7+' {
@@ -48,8 +48,7 @@ Describe 'RevealUI.RevStation exports' {
         $expectedFunctions = @(
             'Start-WSL', 'Restart-WSL', 'Mount-WSLDev', 'Get-WSLStatus', 'Get-WSLMounts',
             'Find-RevealUIDrive', 'Show-WSLHelp', 'Get-Secret', 'Sync-RevealUIToWindows',
-            'Sync-AllRepos', 'Register-DevMountTask', 'Register-SyncTask',
-            'Unregister-DevMountTask', 'Unregister-SyncTask'
+            'Register-DevMountTask', 'Unregister-DevMountTask'
         )
 
         It 'exports <_>' -ForEach $expectedFunctions {

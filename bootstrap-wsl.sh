@@ -217,7 +217,7 @@ fi
 # tool's setup; silent skip would silently disable M-11. The user decides.
 echo "[8/8] Wiring fleet-wide pre-push hook (M-11)..."
 HOOKS_DIR="$SCRIPT_DIR/git-hooks"
-PRE_PUSH_HOOK="$HOOKS_DIR/pre-push"
+PRE_PUSH_HOOK="$SCRIPT_DIR/git-hooks/pre-push"
 
 if [ ! -d "$HOOKS_DIR" ] || [ ! -f "$PRE_PUSH_HOOK" ]; then
     echo "  WARNING: $HOOKS_DIR/pre-push not found — skipping M-11 wiring" >&2

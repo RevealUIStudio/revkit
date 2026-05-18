@@ -28,9 +28,9 @@ staleness-status: FRESH
 - **Tier detection** in `wsl/bashrc.d/00-base.sh` — `DEVKIT_TIER=T0` (no sandbox drive) or `T1` (mounted)
 - **Boot optimization** — `wsl/setup-wsl-boot.sh` masks 23 hardware/desktop services, disables Docker/snap auto-start (sockets preserved); supports `--revert`
 - **Editor configs** — portable Zed settings (extends RevCon for the rest)
-- **PowerShell module** `RevealUI.RevStation` — `Sync-AllRepos`, `Mount-WSLDev`, `Compact-VHDx` helpers
+- **PowerShell module** `RevealUI.RevStation` — `Mount-WSLDev`, `Compact-VHDx`, `Sync-RevealUIToWindows` helpers
 - **Sandbox-drive support** — optional ext4 USB at `/mnt/sandbox` for product-demo + red-team work (NOT primary dev infra per the internal `project_forge_drive_role` memory entry)
-- **Backup guards** — pre-commit + pre-push hooks; weekly-WSL-backup PowerShell script (scheduled task)
+- **Weekly WSL backup** — PowerShell script `weekly-wsl-backup.ps1` scheduled via `RevealUI-WSL-Weekly-Backup` task (Sunday 03:00)
 - **Workboard template** — file-based coord (alternative to RevDev daemon RPC) for greenfield/offline projects
 
 ### What works (verified by code + revkit#13 ship)
@@ -43,7 +43,6 @@ staleness-status: FRESH
 | `setup-wsl-boot.sh` (boot optimization) | Built | High — `--revert` supported; idempotent |
 | PowerShell module install | Built | High |
 | Sandbox-drive mount script | Built | Medium — source uses `/mnt/sandbox` post-revkit#13; deployed checkout still uses `/mnt/forge` (rebootstrap pending) |
-| Pre-commit + pre-push backup guards | Built | High |
 | Weekly WSL `.tar` snapshot rotation | Built | High |
 
 ### Known drift between source + deployment (per memory)
@@ -80,7 +79,7 @@ Peer agent reconciling drift between `wsl/bashrc.d/` source files and what's act
 
 - **revkit#13** (MERGED 2026-05-02) — drive label + path rename `forge` → `sandbox`. Source-side update; deployment rebootstrap pending.
 - WSL boot optimization (`setup-wsl-boot.sh`) finalized; default `multi-user.target`; login barrier drop-in.
-- Backup guards (`backup-guard-pre-commit.sh`, `backup-guard-pre-push.sh`) and `Register-VHDxCompactTask.ps1`.
+- `Register-VHDxCompactTask.ps1` — VHDx compaction scheduled task installer.
 - `weekly-wsl-backup.ps1` scheduled task (Sunday 03:00) — exports Ubuntu distro to `E:\backups\wsl-snapshots\current\`.
 
 ---
