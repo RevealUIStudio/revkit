@@ -136,7 +136,7 @@ assert_contains "--help mentions SUPPORTED PLACEHOLDERS" "$help_output" "SUPPORT
 
 version_output="$(bash "$RENDER" --version 2>&1)"
 assert_ok "--version exits 0" bash "$RENDER" --version
-assert_contains "--version prints version number" "$version_output" "0.5.0"
+assert_contains "--version prints version number" "$version_output" "0.5.1"
 assert_contains "--version prints script name" "$version_output" "render.sh"
 
 # ---------------------------------------------------------------------------
