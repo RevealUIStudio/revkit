@@ -6,7 +6,7 @@
 # or start from one of the preset profiles:
 #
 #   solo-dev.toml   — Minimal laptop-only setup (T0 tier, 8GB RAM)
-#   full-stack.toml — Laptop + studio drive (T1 tier, 12GB RAM)
+#   full-stack.toml — Laptop + sandbox drive (T1 tier, 12GB RAM)
 #   ai-studio.toml  — Full-stack + Ollama & agent orchestration (16GB RAM)
 #   team.toml       — Multi-developer setup with Tailscale networking
 #
@@ -34,29 +34,6 @@ github_org = ""        # GitHub organization name (e.g., "RevealUIStudio")
 wsl_memory = ""        # Max memory WSL can use (e.g., "8GB", "12GB", "16GB")
 wsl_processors = ""    # Number of virtual CPUs assigned to WSL (e.g., "4", "8")
 wsl_swap = ""          # Swap file size (e.g., "2GB", "4GB"); "0" disables swap
-
-# --------------------------------------------------------------------------
-# [infrastructure] — Service ports and mount points
-# --------------------------------------------------------------------------
-# Ports are the HOST-SIDE (Windows) ports that forward into WSL services.
-# Set a port to "" or omit it to disable that service.
-
-[infrastructure]
-studio_mount = ""              # Mount point for an external dev drive (e.g., "/mnt/forge")
-                               # Leave empty if you have no external drive — everything
-                               # stays on the WSL ext4 filesystem.
-
-postgres_port = ""             # PostgreSQL port exposed to Windows (e.g., "5432")
-                               # Used by database tooling and apps connecting from Windows.
-
-redis_port = ""                # Redis port exposed to Windows (e.g., "6379")
-                               # Used for caching and pub/sub in the dev stack.
-
-ollama_port = ""               # Ollama API port exposed to Windows (e.g., "11434")
-                               # Only relevant if features.ollama = true.
-
-chrome_devtools_port = ""      # Chrome DevTools debugging port (e.g., "9222")
-                               # Enables remote debugging from Windows browsers.
 
 # --------------------------------------------------------------------------
 # [features] — Toggle capabilities on or off

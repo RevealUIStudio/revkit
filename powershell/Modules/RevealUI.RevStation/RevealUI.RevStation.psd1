@@ -1,6 +1,6 @@
 @{
     RootModule             = 'RevealUI.RevStation.psm1'
-    ModuleVersion          = '1.0.0'
+    ModuleVersion          = '0.6.0'
     GUID                   = 'a3f7c8e1-9b2d-4f6a-8e5c-1d3b7a9f2c4e'
     Author                 = 'RevealUI Studio'
     CompanyName            = 'RevealUI'
@@ -19,11 +19,8 @@
         'Show-WSLHelp'
         'Get-Secret'
         'Sync-RevealUIToWindows'
-        'Sync-AllRepos'
         'Register-DevMountTask'
-        'Register-SyncTask'
         'Unregister-DevMountTask'
-        'Unregister-SyncTask'
     )
 
     AliasesToExport   = @(
@@ -34,7 +31,6 @@
         'wslmounts'
         'wslhelp'
         'wslsync'
-        'syncall'
         'secret'
     )
 

@@ -14,7 +14,7 @@ echo "Source: $SCRIPT_DIR"
 echo ""
 
 # --- Step 1: Install helper scripts to /usr/local/bin ---
-echo "[1/6] Installing helper scripts to /usr/local/bin..."
+echo "[1/8] Installing helper scripts to /usr/local/bin..."
 for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
     [ -f "$script" ] || continue
     name=$(basename "$script")
@@ -34,7 +34,7 @@ done
 # To add a new arg to mount-sandbox-drive.sh, update the NOPASSWD rule below
 # AND every caller to pass the new arg list verbatim. See the script's
 # own header comment for context (GAP-119, 2026-04-24).
-echo "[2/6] Configuring sudoers for passwordless mount..."
+echo "[2/8] Configuring sudoers for passwordless mount..."
 SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
@@ -52,7 +52,7 @@ else
 fi
 
 # --- Step 3: Add hook to .bashrc ---
-echo "[3/6] Adding RevealUI hook to ~/.bashrc..."
+echo "[3/8] Adding RevealUI hook to ~/.bashrc..."
 MARKER="# --- RevealUI environment mode ---"
 if grep -qF "$MARKER" ~/.bashrc 2>/dev/null; then
     echo "  Hook already present in ~/.bashrc, skipping"
@@ -107,7 +107,7 @@ HOOK
 fi
 
 # --- Step 4: Link git and SSH configs ---
-echo "[4/6] Linking git and SSH configs..."
+echo "[4/8] Linking git and SSH configs..."
 CONFIGS_DIR="$SCRIPT_DIR/wsl/config"
 
 if [ -f "$CONFIGS_DIR/gitconfig" ]; then
@@ -136,7 +136,7 @@ if [ -f "$CONFIGS_DIR/ssh-config" ]; then
 fi
 
 # --- Step 5: Run boot optimization ---
-echo "[5/6] Running boot optimization..."
+echo "[5/8] Running boot optimization..."
 BOOT_SCRIPT="$SCRIPT_DIR/wsl/setup-wsl-boot.sh"
 if [ -f "$BOOT_SCRIPT" ]; then
     sudo bash "$BOOT_SCRIPT"
@@ -146,7 +146,7 @@ fi
 
 # --- Step 6: Initialize Sandbox directories ---
 if mountpoint -q /mnt/sandbox 2>/dev/null; then
-    echo "[6/6] Initializing Sandbox directories..."
+    echo "[6/8] Initializing Sandbox directories..."
     mkdir -p /mnt/sandbox/databases/postgres
     mkdir -p /mnt/sandbox/databases/redis
     mkdir -p /mnt/sandbox/databases/supabase
@@ -154,7 +154,107 @@ if mountpoint -q /mnt/sandbox 2>/dev/null; then
     mkdir -p /mnt/sandbox/cache
     echo "  Sandbox directories initialized"
 else
-    echo "[6/6] Sandbox drive not mounted, skipping directory init"
+    echo "[6/8] Sandbox drive not mounted, skipping directory init"
+fi
+
+# --- Step 7: Deploy Claude Code hooks (M-4 scanner + future hooks) ---
+# Spec: internal fleet-security-hardening lane § M-4 (meta-durability-fixes)
+#
+# Scope (intentionally narrow): only the M-4 sudoers + filesystem invariant
+# scanner is deployed here. The other hooks under ~/.claude/hooks/
+# (session-start.js, post-edit.js, etc.) are NOT touched — they have a
+# separate lifecycle and the revkit/templates/hooks/ tree is out of sync
+# with what's actually deployed (see agent-coordination.md status note).
+# Adopting hooks wholesale via revkit is its own initiative; M-4 carves
+# out only what M-4 needs.
+#
+# Idempotent: copies are content-checked first; bashrc-style banner notes
+# what happened.
+echo "[7/8] Deploying Claude Code M-4 scanner hook..."
+CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
+M4_SRC="$SCRIPT_DIR/wsl/bin/m4-sudoers-fs-scanner.js"
+M4_DEST="$CLAUDE_HOOKS_DIR/m4-sudoers-fs-scanner.js"
+
+if [ ! -f "$M4_SRC" ]; then
+    echo "  WARNING: $M4_SRC not found — M-4 scanner not deployed" >&2
+elif ! command -v node >/dev/null 2>&1; then
+    echo "  WARNING: node not in PATH — skipping M-4 scanner syntax check + deploy" >&2
+else
+    # Validate before deploying — never copy a broken hook into the user's
+    # Claude Code session-start chain.
+    if ! node --check "$M4_SRC" >/dev/null 2>&1; then
+        echo "  ERROR: $M4_SRC failed node --check; refusing to deploy" >&2
+        exit 1
+    fi
+    mkdir -p "$CLAUDE_HOOKS_DIR"
+    # cmp -s returns 0 if identical; only copy when content differs to
+    # avoid touching mtime on every bootstrap re-run.
+    if [ -f "$M4_DEST" ] && cmp -s "$M4_SRC" "$M4_DEST"; then
+        echo "  $M4_DEST already up to date"
+    else
+        sed 's/\r$//' "$M4_SRC" > "$M4_DEST"
+        chmod 0644 "$M4_DEST"
+        echo "  Deployed: $M4_DEST"
+    fi
+    echo "  Note: M-4 invocation must be wired into ~/.claude/hooks/session-start.js"
+    echo "        (one-time edit; see meta-durability-fixes.md §M-4 integration)"
+fi
+
+# --- Step 8: Wire fleet-wide pre-push hook (M-11) ---
+# Spec: internal fleet-security-hardening lane, meta-durability-fixes §M-11
+#
+# Class killed: absent server-side branch protection on private repos (T0-15;
+# GitHub Free rejects branch-protection API on private repos and owner has
+# rejected the Team upgrade). The next-best durable enforcement is a uniformly-
+# installed local pre-push hook deployed via global core.hooksPath, so every
+# clone in the dev environment inherits the hook without per-clone setup.
+#
+# Source-of-truth: $SCRIPT_DIR/git-hooks/ — updates land on `git pull` of revkit
+# without re-running bootstrap. Re-running bootstrap is idempotent.
+#
+# Conflict handling (per design): fail-loudly when the user already has a
+# different global core.hooksPath. Silent overwrite would clobber another
+# tool's setup; silent skip would silently disable M-11. The user decides.
+echo "[8/8] Wiring fleet-wide pre-push hook (M-11)..."
+HOOKS_DIR="$SCRIPT_DIR/git-hooks"
+PRE_PUSH_HOOK="$SCRIPT_DIR/git-hooks/pre-push"
+
+if [ ! -d "$HOOKS_DIR" ] || [ ! -f "$PRE_PUSH_HOOK" ]; then
+    echo "  WARNING: $HOOKS_DIR/pre-push not found — skipping M-11 wiring" >&2
+elif ! command -v git >/dev/null 2>&1; then
+    echo "  WARNING: git not in PATH — skipping M-11 wiring" >&2
+else
+    # Validate the hook is syntactically parseable before pointing core.hooksPath at it.
+    if ! bash -n "$PRE_PUSH_HOOK" >/dev/null 2>&1; then
+        echo "  ERROR: $PRE_PUSH_HOOK failed bash -n; refusing to wire M-11" >&2
+        exit 1
+    fi
+    # Ensure the executable bit is set. UNC writes from Windows land 0644 on
+    # WSL ext4; the bit is reset on every checkout from a UNC-side commit.
+    chmod +x "$PRE_PUSH_HOOK"
+
+    # Read current global hooksPath. `git config --global --get` exits 1 when
+    # the key is unset — capture that without tripping `set -e`.
+    EXISTING_HOOKS_PATH="$(git config --global --get core.hooksPath 2>/dev/null || true)"
+
+    if [ -z "$EXISTING_HOOKS_PATH" ]; then
+        git config --global core.hooksPath "$HOOKS_DIR"
+        echo "  Set: global core.hooksPath = $HOOKS_DIR"
+    elif [ "$EXISTING_HOOKS_PATH" = "$HOOKS_DIR" ]; then
+        echo "  global core.hooksPath already = $HOOKS_DIR (no-op)"
+    else
+        # Fail loudly. Do not silently overwrite (would clobber another tool)
+        # or silently skip (would disable M-11). Owner decides.
+        echo "  ERROR: global core.hooksPath is already set to a DIFFERENT path:" >&2
+        echo "    current: $EXISTING_HOOKS_PATH" >&2
+        echo "    revkit:  $HOOKS_DIR" >&2
+        echo "  Resolve manually, then re-run bootstrap:" >&2
+        echo "    git config --global --unset core.hooksPath" >&2
+        echo "  Then: bash $0" >&2
+        exit 1
+    fi
+    echo "  M-11 active: pre-push will reject direct/force/unsigned pushes to main + test"
+    echo "  Per-repo escape hatch: git config revealui.hooks.no-protection true"
 fi
 
 echo ""

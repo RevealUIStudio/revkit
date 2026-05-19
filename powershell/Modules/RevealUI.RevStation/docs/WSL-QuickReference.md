@@ -19,8 +19,6 @@
 |---------|-------------|
 | `Register-DevMountTask` | Register auto-mount scheduled task |
 | `Unregister-DevMountTask` | Remove auto-mount scheduled task |
-| `Register-SyncTask` | Register WSL-to-Windows sync task |
-| `Unregister-SyncTask` | Remove sync scheduled task |
 
 ## File Locations
 
@@ -143,7 +141,7 @@ Mount-WSLDev
 
 ## Tips
 
-- **Scheduled Tasks**: `Register-DevMountTask` and `Register-SyncTask` use pwsh.exe (PS7)
+- **Scheduled Tasks**: `Register-DevMountTask` uses pwsh.exe (PS7)
 - **Module Loading**: Loaded automatically in every pwsh session via profile stub
 - **Sandbox Drive**: 916GB ext4 drive optimized for development
 - **Systemd Warning**: False positive - systemd starts successfully after ~3 seconds
