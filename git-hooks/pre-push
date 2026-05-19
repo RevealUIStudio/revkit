@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+# RevealUI Studio — fleet-wide pre-push hook (M-11).
+#
+# Purpose
+#   Enforce branch-pipeline discipline on private RevealUI fleet repos that
+#   cannot use GitHub server-side branch protection (Free plan limitation).
+#   Mirrors the public-repo protection on RevealUIStudio/revealui:
+#
+#     feature/<topic>  -->  PR  -->  test  -->  PR  -->  main
+#
+#   Direct push to main/test is rejected. Force-push to main/test is rejected
+#   (allowed on feature/*). Unsigned commits to main/test are rejected.
+#
+# Deployment
+#   Installed globally via `git config --global core.hooksPath
+#   "$REVEALUI_ROOT/git-hooks"` by revkit's bootstrap-wsl.sh + bootstrap.ps1.
+#   Per-clone hook copies are an anti-pattern (per-machine fragility) and are
+#   not used; the hook IS the dev environment.
+#
+# Per-repo escape hatch (auditable)
+#   git config revealui.hooks.no-protection true
+#   ...allows the next push. Visible in `git config --list --local`.
+#   For repos that legitimately need direct-to-main (docs-only with no review,
+#   etc.). Use sparingly — every set should be a documented decision.
+#
+# Pre-push stdin contract (git-scm.com/docs/githooks#_pre_push)
+#   For each ref being pushed, git writes one line to stdin:
+#       <local_ref> SP <local_sha> SP <remote_ref> SP <remote_sha> LF
+#   A sha of 40 zeros means "no commit" (branch deletion or first push).
+#
+# Hardline conventions
+#   - No regex authored (bash string ops + `case` patterns + git plumbing).
+#   - Exit 0 = allow push, exit 1 = block. Output to stderr.
+#   - Read-only against the working tree.
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+readonly HOOK_NAME="revealui-m11-pre-push"
+readonly PROTECTED_BRANCHES=("refs/heads/main" "refs/heads/test")
+readonly ZERO_SHA="0000000000000000000000000000000000000000"
+readonly ESCAPE_HATCH_CONFIG_KEY="revealui.hooks.no-protection"
+# Cap signed-commit verification to keep first-push scans bounded.
+readonly SIGNATURE_VERIFY_MAX_COMMITS=50
+
+# ---------------------------------------------------------------------------
+# Output helpers
+# ---------------------------------------------------------------------------
+
+_err()  { printf '[%s] ERROR: %s\n' "$HOOK_NAME" "$*" >&2; }
+_warn() { printf '[%s] WARN:  %s\n' "$HOOK_NAME" "$*" >&2; }
+_info() { printf '[%s] info:  %s\n' "$HOOK_NAME" "$*" >&2; }
+
+# ---------------------------------------------------------------------------
+# Escape hatch
+# ---------------------------------------------------------------------------
+#
+# Read the per-repo opt-out flag. Returns 0 (allow) when set to "true",
+# 1 (enforce) otherwise. The flag is per-repo (local config), never global,
+# never system — global would defeat the durability requirement.
+escape_hatch_engaged() {
+    local value
+    value="$(git config --local --get "$ESCAPE_HATCH_CONFIG_KEY" 2>/dev/null || true)"
+    [[ "$value" == "true" ]]
+}
+
+# ---------------------------------------------------------------------------
+# Branch classification
+# ---------------------------------------------------------------------------
+#
+# is_protected_ref <remote_ref>
+#   Returns 0 if the remote ref name matches a protected branch.
+#   Pure string equality; no regex.
+is_protected_ref() {
+    local ref="$1"
+    local protected
+    for protected in "${PROTECTED_BRANCHES[@]}"; do
+        [[ "$ref" == "$protected" ]] && return 0
+    done
+    return 1
+}
+
+# is_feature_ref <remote_ref>
+#   Returns 0 if the ref starts with refs/heads/feature/.
+#   Uses parameter-expansion prefix-strip (no regex).
+is_feature_ref() {
+    local ref="$1"
+    local stripped="${ref#refs/heads/feature/}"
+    # If stripping changed the string, the prefix matched and there's content
+    # after it.
+    [[ "$stripped" != "$ref" && -n "$stripped" ]]
+}
+
+# current_branch
+#   Best-effort name of the branch the push originated from. Used in
+#   diagnostics only — enforcement keys off remote_ref, not local state.
+current_branch() {
+    git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "(unknown)"
+}
+
+# ---------------------------------------------------------------------------
+# Force-push detection
+# ---------------------------------------------------------------------------
+#
+# is_force_push <local_sha> <remote_sha>
+#   Returns 0 if the push would lose history on the remote (force-push).
+#   A non-force push fast-forwards: remote_sha must be an ancestor of
+#   local_sha. New branches (remote_sha == ZERO_SHA) are not force-pushes.
+#
+#   Note: this catches --force AND --force-with-lease at the moment they
+#   would rewrite remote history. We don't need to inspect git's CLI args.
+is_force_push() {
+    local local_sha="$1"
+    local remote_sha="$2"
+
+    # New branch: remote has no prior state to overwrite.
+    [[ "$remote_sha" == "$ZERO_SHA" ]] && return 1
+
+    # Branch deletion: local_sha == ZERO_SHA. Handled separately by caller;
+    # treat as not a force-push of new content here.
+    [[ "$local_sha" == "$ZERO_SHA" ]] && return 1
+
+    # If remote_sha is reachable from local_sha, the push is a fast-forward.
+    if git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        return 1
+    fi
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Signed-commit verification
+# ---------------------------------------------------------------------------
+#
+# verify_signed_range <local_sha> <remote_sha>
+#   Walks every commit added by this push and runs `git verify-commit`.
+#   Returns 0 when every commit verifies; 1 on the first failure.
+#
+#   For new branches (remote_sha == ZERO_SHA) we verify the last
+#   SIGNATURE_VERIFY_MAX_COMMITS commits reachable from local_sha —
+#   bounding work on first-time pushes of long-lived branches.
+#
+#   `git verify-commit` exits 0 only when a valid signature is present
+#   AND trusted by the local gpg/ssh keyring. A commit signed by an
+#   untrusted key fails — same as unsigned. That's the intended posture.
+verify_signed_range() {
+    local local_sha="$1"
+    local remote_sha="$2"
+    local rev_args=()
+
+    if [[ "$remote_sha" == "$ZERO_SHA" ]]; then
+        rev_args=(--max-count="$SIGNATURE_VERIFY_MAX_COMMITS" "$local_sha")
+    else
+        rev_args=("${remote_sha}..${local_sha}")
+    fi
+
+    local sha
+    while IFS= read -r sha; do
+        [[ -z "$sha" ]] && continue
+        if ! git verify-commit "$sha" >/dev/null 2>&1; then
+            _err "Unsigned or untrusted-signature commit: $sha"
+            _err "Run: git log -1 --format='%H %s' $sha"
+            return 1
+        fi
+    done < <(git rev-list "${rev_args[@]}" 2>/dev/null)
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Per-ref evaluation
+# ---------------------------------------------------------------------------
+#
+# evaluate_ref <local_ref> <local_sha> <remote_ref> <remote_sha>
+#   Applies the M-11 rules to one push entry. Returns 0 to allow, 1 to block.
+#   Prints a remediation pointer on block.
+evaluate_ref() {
+    local local_ref="$1"
+    local local_sha="$2"
+    local remote_ref="$3"
+    local remote_sha="$4"
+
+    # Skip tag pushes and unrelated refs (only branches are policed).
+    case "$remote_ref" in
+        refs/heads/*) ;;
+        *) return 0 ;;
+    esac
+
+    # Branch-deletion pushes (local_sha == ZERO_SHA) targeting main/test
+    # are rejected. Deletion of feature branches is allowed.
+    if [[ "$local_sha" == "$ZERO_SHA" ]]; then
+        if is_protected_ref "$remote_ref"; then
+            _err "Refusing to delete protected branch: $remote_ref"
+            _err "Remediation: protected branches (main, test) cannot be deleted via push."
+            return 1
+        fi
+        return 0
+    fi
+
+    # Rule 1: no direct push to a protected branch.
+    if is_protected_ref "$remote_ref"; then
+        # The push is to main or test. Enforce sign + force rules.
+        # First: was this push opened from a feature/* branch via a PR
+        # merge? In practice this hook runs on the developer's machine and
+        # we cannot distinguish "merge-via-PR" from "git push origin main"
+        # — both end up writing main directly. The durable enforcement is
+        # therefore: NO direct push to main/test from any branch. PRs land
+        # via the GitHub web UI, not via git push.
+        local branch
+        branch="$(current_branch)"
+        _err "Direct push to protected branch rejected: $remote_ref (from local '$branch')"
+        _err "Remediation: open a PR from your feature/* branch into '${remote_ref#refs/heads/}'."
+        _err "  fleet branch pipeline: feature/<topic> -> PR -> test -> PR -> main"
+        _err "Escape hatch (auditable, per-repo):"
+        _err "  git config $ESCAPE_HATCH_CONFIG_KEY true"
+        return 1
+    fi
+
+    # Non-protected branch (feature/*, chore/*, fix/*, etc.):
+    # Force-push allowed. Unsigned commits allowed (signed-commit policy
+    # applies only to protected branches). Nothing to block here.
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Protected-branch deep checks
+# ---------------------------------------------------------------------------
+#
+# This block only runs if Rule 1 in evaluate_ref() is bypassed via the
+# per-repo escape hatch. Without the escape hatch, evaluate_ref() blocks
+# the push before these checks ever run. With the escape hatch engaged we
+# STILL enforce no-force-push + signed-commits — the escape hatch only
+# opens up direct-push, not history rewrites or unsigned commits.
+deep_check_protected_ref() {
+    local local_ref="$1"
+    local local_sha="$2"
+    local remote_ref="$3"
+    local remote_sha="$4"
+
+    # Force-push check.
+    if is_force_push "$local_sha" "$remote_sha"; then
+        _err "Force-push to protected branch rejected: $remote_ref"
+        _err "  local:  $local_sha"
+        _err "  remote: $remote_sha"
+        _err "Remediation: rebase + open a fresh PR; never rewrite shared history."
+        _err "  (escape hatch does NOT cover force-push — history loss is irreversible)"
+        return 1
+    fi
+
+    # Signed-commit check.
+    if ! verify_signed_range "$local_sha" "$remote_sha"; then
+        _err "Unsigned commits in push to protected branch: $remote_ref"
+        _err "Remediation: configure commit signing (gpg or ssh) and amend/rebase."
+        _err "  https://docs.github.com/en/authentication/managing-commit-signature-verification"
+        _err "  (escape hatch does NOT cover unsigned commits)"
+        return 1
+    fi
+
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+main() {
+    local exit_code=0
+    local lines_seen=0
+
+    # If the escape hatch is engaged we still want a loud reminder in the
+    # output so it never becomes invisible default-behavior.
+    if escape_hatch_engaged; then
+        _warn "Per-repo escape hatch ENGAGED ($ESCAPE_HATCH_CONFIG_KEY=true)"
+        _warn "Direct-push restriction is DISABLED for this push."
+        _warn "Force-push + signed-commit checks remain ACTIVE."
+        _warn "To re-enable: git config --unset $ESCAPE_HATCH_CONFIG_KEY"
+    fi
+
+    while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+        # Skip blank lines (some git versions emit one on EOF).
+        [[ -z "${local_ref:-}" && -z "${remote_ref:-}" ]] && continue
+        lines_seen=$((lines_seen + 1))
+
+        case "$remote_ref" in
+            refs/heads/*) ;;
+            *) continue ;;
+        esac
+
+        if is_protected_ref "$remote_ref"; then
+            if escape_hatch_engaged; then
+                # Escape hatch covers Rule 1 only; still enforce force-push
+                # + signed-commits.
+                if ! deep_check_protected_ref \
+                        "$local_ref" "$local_sha" "$remote_ref" "$remote_sha"; then
+                    exit_code=1
+                fi
+            else
+                # Default: block direct push to protected ref outright.
+                if ! evaluate_ref \
+                        "$local_ref" "$local_sha" "$remote_ref" "$remote_sha"; then
+                    exit_code=1
+                fi
+            fi
+        else
+            # Non-protected branch — feature/*, chore/*, etc. Allow.
+            :
+        fi
+    done
+
+    # If git invoked us with no refs (e.g. nothing to push), exit cleanly.
+    if [[ "$lines_seen" -eq 0 ]]; then
+        return 0
+    fi
+
+    return "$exit_code"
+}
+
+main "$@"

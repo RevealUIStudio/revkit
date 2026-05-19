@@ -15,13 +15,6 @@ wsl_memory = "8GB"
 wsl_processors = "4"
 wsl_swap = "2GB"
 
-[infrastructure]
-studio_mount = ""
-postgres_port = "5432"
-redis_port = ""
-ollama_port = ""
-chrome_devtools_port = "9222"
-
 [features]
 docker = false
 nix = true

@@ -6,6 +6,11 @@ function Write-Banner {
     [OutputType([void])]
     param()
 
+    # Banner is Windows-only: it queries wsl.exe and Windows-specific drive
+    # letters. On non-Windows (e.g. CI's ubuntu-latest pwsh runners where
+    # the module is imported for test purposes), skip cleanly.
+    if (-not $IsWindows) { return }
+
     # Detect environment
     $wslDistro = (wsl --list --quiet 2>$null | Select-Object -First 1) -replace '\x00',''
     $eDrive = if (Test-Path "E:\") { "E: mounted" } else { "E: disconnected" }
