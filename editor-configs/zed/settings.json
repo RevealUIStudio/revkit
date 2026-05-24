@@ -1,26 +1,51 @@
-// Zed settings
+// Zed settings — WINDOWS CLIENT (UI renderer)
 //
-// For information on how to configure Zed, see the Zed
-// documentation: https://zed.dev/docs/configuring-zed
+// Portable template for the Windows-side Zed client. Mirrors the deployed
+// %APPDATA%\Zed\settings.json EXCEPT the machine-specific `wsl_connections`
+// list (see note below).
 //
-// To see all of Zed's default settings without changing your
-// custom settings, run `zed: open default settings` from the
-// command palette (cmd-shift-p / ctrl-shift-p)
+// Topology: Zed renders on Windows; projects run on the WSL BACKEND via Zed's
+// native WSL support (the zed-remote-server runs LSP/terminal/git inside WSL
+// and reads its own ~/.config/zed/settings.json there). The WSLg-native
+// Linux-GUI path is blocked (no Mesa `dzn` ICD on Ubuntu), so Windows-render +
+// WSL-backend is the durable topology. Docs: https://zed.dev/docs/remote-development
+//
+// NOTE — `wsl_connections` is intentionally omitted from this shared template:
+// it encodes your WSL distro, your WSL username, and an absolute project path
+// inside your WSL home, none of which can live in a shared repo (the private-
+// leak CI gate rejects absolute home paths + usernames). Add it to your LOCAL
+// client settings only — one entry per distro with `distro_name`, `user`, and a
+// `projects` list of `{ "paths": [ <absolute path to the repo inside WSL> ] }` —
+// then open the project via the "open wsl" / Remote Projects flow (not the UNC path).
 {
+  "agent_servers": {
+    // ACP external agents. They execute INSIDE WSL when a project is opened via
+    // the WSL connection (the `claude` binary is on the WSL PATH there).
+    "codex-acp": { "type": "registry" },
+    "claude-acp": { "type": "registry" }
+  },
+  "agent": {
+    "inline_assistant_model": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "enable_thinking": false
+    },
+    "default_model": {
+      "provider": "openrouter",
+      "model": "openrouter/auto",
+      "enable_thinking": false
+    },
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "session": { "trust_all_worktrees": true },
+  "load_direnv": "shell_hook",
+  "terminal": { "shell": "system" },
   "ui_font_size": 16,
   "buffer_font_size": 15,
   "theme": {
-    "mode": "dark",
-    "light": "One Light",
-    "dark": "Ayu Dark",
-  },
-  "terminal": {
-    "shell": {
-      "with_arguments": {
-        "program": "wsl.exe",
-        "args": ["-d", "Ubuntu"]
-      }
-    },
-    "working_directory": "current_project_directory"
+    "mode": "system",
+    "light": "Ayu Light",
+    "dark": "Ayu Dark"
   }
 }
