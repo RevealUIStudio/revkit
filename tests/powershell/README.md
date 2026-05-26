@@ -19,7 +19,7 @@ Invoke-Pester ./tests/powershell/
 | `Module.Tests.ps1` | Manifest + exports | `Test-ModuleManifest`; 11 public functions + 8 aliases enumerated |
 | `Find-RevealUIDrive.Tests.ps1` | `Find-RevealUIDrive` | Layer 1 (env var) + Layer 2 (USERPROFILE). Layer 3 (`Get-Volume`) is Windows-only, intentionally not exercised on Linux runners. |
 | `Get-Secret.Tests.ps1` | `Get-Secret` | Argument-validation guards (OutputModeRequired error; mandatory `-Path`). |
-| `Show-WSLHelp.Tests.ps1` | `Show-WSLHelp` | Docs file presence + the not-found path doesn't throw on Linux (where `notepad.exe` is missing). |
+| `Show-WSLHelp.Tests.ps1` | `Show-WSLHelp` | Docs file presence (`WSL-QuickReference.md`) + module export. Launch path (opens `notepad.exe`) is not exercised — unreliable to mock; lives in the manual integration suite. |
 
 ## What's NOT covered (integration-only)
 
