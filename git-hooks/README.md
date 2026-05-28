@@ -61,7 +61,7 @@ git config --unset revealui.hooks.no-protection
 
 ## Deployment
 
-Linux/WSL — `bootstrap-wsl.sh` step 7 runs:
+Linux/WSL — `bootstrap-wsl.sh` step 8 runs:
 
 ```bash
 git config --global core.hooksPath "$SCRIPT_DIR/git-hooks"
