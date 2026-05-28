@@ -18,7 +18,7 @@ Then bootstrap from WSL:
 bash /mnt/c/Users/$USER/.revealui/bootstrap-wsl.sh
 ```
 
-The bootstrap installs helper scripts to `/usr/local/bin`, configures sudoers for passwordless drive mounting, adds a `~/.bashrc` hook that sources `wsl/bashrc.d/*.sh` from the cloned repo, applies WSL boot optimization, and initializes the Sandbox drive directories (if mounted).
+The bootstrap installs helper scripts to `/usr/local/bin`, configures sudoers for passwordless drive mounting, adds a `~/.bashrc` hook that sources `wsl/bashrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path`, applies WSL boot optimization, initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and wires the fleet-wide pre-push git hook via `git config --global core.hooksPath`.
 
 Open a new WSL shell — you should see a `● RevealUI: managed` banner. Then `wsl --shutdown` from Windows to apply the boot optimization.
 
