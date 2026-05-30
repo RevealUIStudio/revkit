@@ -37,9 +37,11 @@ function Write-Health {
   $line = "$stamp [$EntryType] $Message"
   Write-Host $line
   # Primary: Application event log (requires source registered once with admin).
+  # Use System.Diagnostics.EventLog directly — Write-EventLog is Windows
+  # PowerShell 5.1 only, removed in PowerShell 7+, and this script runs in pwsh.
   try {
-    Write-EventLog -LogName Application -Source $EventSource -EventId $EventId `
-      -EntryType $EntryType -Message $Message -ErrorAction Stop
+    $entryTypeEnum = [System.Diagnostics.EventLogEntryType]::$EntryType
+    [System.Diagnostics.EventLog]::WriteEntry($EventSource, $Message, $entryTypeEnum, $EventId)
   } catch {
     # Fallback: append to a known log file so non-admin contexts still leave
     # a trail. Path matches the weekly-backup script's own log directory for
