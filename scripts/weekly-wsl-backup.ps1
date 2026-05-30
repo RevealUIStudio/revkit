@@ -20,8 +20,18 @@ function Write-Log {
   param([string]$Level, [string]$Message)
   $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [$Level] $Message"
   Write-Host $line
-  if (Test-Path (Split-Path $logFile -Parent)) {
-    Add-Content -Path $logFile -Value $line -ErrorAction SilentlyContinue
+  # Try the primary log on E:. If that fails (drive asleep, disconnected, locked),
+  # fall back to %TEMP%. Silent drops are how this script went 3 weeks without
+  # surfacing the truncated-tar failure on 2026-05-10. Never lose an error line.
+  $fallbackLog = Join-Path $env:TEMP 'wsl-backup-fallback.log'
+  try {
+    if (Test-Path (Split-Path $logFile -Parent)) {
+      Add-Content -Path $logFile -Value $line -ErrorAction Stop
+    } else {
+      throw "Log parent dir missing: $(Split-Path $logFile -Parent)"
+    }
+  } catch {
+    Add-Content -Path $fallbackLog -Value "$line  (primary log unavailable: $($_.Exception.Message))" -ErrorAction SilentlyContinue
   }
 }
 
