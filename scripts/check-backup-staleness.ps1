@@ -15,7 +15,13 @@ param(
   [string]$Pattern = 'Ubuntu-*.tar',
   [int]$MaxAgeDays = 10,
   [string]$EventSource = 'RevealUI-Health',
-  [int]$EventId = 9100
+  [int]$EventId = 9100,
+  # Path to the live distro vhdx, used to size the "valid snapshot" floor the
+  # same way weekly-wsl-backup.ps1 does (>= 25% of vhdx, min 1 GB).
+  [string]$VhdxPath = 'C:\WSL\Ubuntu\ext4.vhdx',
+  # Override the validity floor in GB (0 = derive from $VhdxPath). Exposed
+  # mainly so the test suite can exercise the size gate with small fixtures.
+  [double]$MinValidGB = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,18 +71,49 @@ if (-not (Test-Path $SnapshotDir)) {
   exit 1
 }
 
-$newest = Get-ChildItem $SnapshotDir -Filter $Pattern -ErrorAction SilentlyContinue |
-  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+# A failed `wsl --export` can return exit 0 yet leave a truncated or 0-byte tar
+# in place — weekly-wsl-backup.ps1 deliberately PRESERVES that bad artifact for
+# inspection. Selecting the newest tar purely by timestamp would treat such a
+# fresh failure artifact as a healthy backup, so a weekly run that keeps failing
+# every Sunday would suppress this warning indefinitely while the last usable
+# snapshot silently ages out. Exclude failed-export artifacts by applying the
+# SAME size floor weekly-wsl-backup.ps1 uses to declare an export valid, then
+# take the newest snapshot that clears it.
+$minGB = $MinValidGB
+if ($minGB -le 0) {
+  $vhdxSizeGB = if (Test-Path $VhdxPath) { (Get-Item $VhdxPath).Length / 1GB } else { 0 }
+  $minGB = if ($vhdxSizeGB) { [math]::Max(1.0, $vhdxSizeGB * 0.25) } else { 1.0 }
+}
 
-if (-not $newest) {
+$allSnapshots = Get-ChildItem $SnapshotDir -Filter $Pattern -ErrorAction SilentlyContinue |
+  Sort-Object LastWriteTime -Descending
+
+if (-not $allSnapshots) {
   Write-Health -EntryType 'Error' -Message "No WSL backup snapshots found in $SnapshotDir matching $Pattern"
   exit 1
 }
 
+# Newest snapshot whose size clears the validity floor (i.e. not a failed export).
+$newest = $allSnapshots | Where-Object { ($_.Length / 1GB) -ge $minGB } | Select-Object -First 1
+
+if (-not $newest) {
+  $newestAny   = $allSnapshots | Select-Object -First 1
+  $newestAnyGB = [math]::Round($newestAny.Length / 1GB, 2)
+  Write-Health -EntryType 'Error' -Message ("No VALID WSL backup in {0}: newest tar '{1}' is only {2} GB (< {3} GB floor) — a failed/truncated export, not a usable snapshot. Check RevealUI-WSL-Weekly-Backup LastTaskResult." -f $SnapshotDir, $newestAny.Name, $newestAnyGB, [math]::Round($minGB, 2))
+  exit 1
+}
+
+# Repeated-failure signal: a valid snapshot exists but newer (sub-floor) tars
+# are piling up on top of it — surfaced in the staleness warning below.
+$newerInvalid = @($allSnapshots | Where-Object { $_.LastWriteTime -gt $newest.LastWriteTime })
+
 $ageDays = [math]::Round(((Get-Date) - $newest.LastWriteTime).TotalDays, 1)
 if ($ageDays -gt $MaxAgeDays) {
   $sizeGB = [math]::Round($newest.Length / 1GB, 2)
-  Write-Health -EntryType 'Warning' -Message ("WSL backup stale: newest snapshot '{0}' is {1} days old ({2} GB), exceeds {3}-day threshold. Check Task Scheduler -> RevealUI-WSL-Weekly-Backup LastTaskResult." -f $newest.Name, $ageDays, $sizeGB, $MaxAgeDays)
+  $invalidNote = if ($newerInvalid.Count -gt 0) {
+    (" {0} newer tar(s) are below the {1} GB validity floor (likely failed exports) and were ignored." -f $newerInvalid.Count, [math]::Round($minGB, 2))
+  } else { '' }
+  Write-Health -EntryType 'Warning' -Message ("WSL backup stale: newest VALID snapshot '{0}' is {1} days old ({2} GB), exceeds {3}-day threshold.{4} Check Task Scheduler -> RevealUI-WSL-Weekly-Backup LastTaskResult." -f $newest.Name, $ageDays, $sizeGB, $MaxAgeDays, $invalidNote)
   exit 2
 }
 
