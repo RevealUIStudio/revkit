@@ -46,8 +46,18 @@ exit
 
 Write-Host "[compact-vhdx] Compacting VHDx..."
 $before = (Get-Item $VhdxPath).Length
-diskpart /s $diskpartScript | Write-Host
+# Capture diskpart's native exit code explicitly. Under powershell.exe (the
+# scheduled-task path) a non-zero native exit does NOT become a terminating
+# error even with $ErrorActionPreference='Stop', so without this check a failed
+# compaction (VHDx in use, diskpart error) falls through to the "Done" message
+# and the weekly run reports success while doing nothing.
+$diskpartOutput = diskpart /s $diskpartScript 2>&1
+$diskpartExit = $LASTEXITCODE
+$diskpartOutput | Write-Host
 Remove-Item $diskpartScript -ErrorAction SilentlyContinue
+if ($diskpartExit -ne 0) {
+    throw "[compact-vhdx] diskpart exited with code $diskpartExit — compaction failed; not reporting success."
+}
 $after = (Get-Item $VhdxPath).Length
 
 $freedMB = [math]::Round(($before - $after) / 1MB)
