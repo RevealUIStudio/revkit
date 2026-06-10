@@ -238,6 +238,17 @@ deep_check_protected_ref() {
     local remote_ref="$3"
     local remote_sha="$4"
 
+    # Protected-branch DELETION (local_sha all-zeroes): never allowed, even
+    # under the escape hatch (which opens direct-push only). is_force_push()
+    # returns false for the all-zero local sha and verify_signed_range() has
+    # nothing to check, so without this guard `git push origin :main` would
+    # slip straight through the deep-check path.
+    if [ -n "$local_sha" ] && [ -z "${local_sha//0/}" ]; then
+        _err "Deletion of protected branch rejected: $remote_ref"
+        _err "  (the escape hatch covers direct-push only — never branch deletion)"
+        return 1
+    fi
+
     # Force-push check.
     if is_force_push "$local_sha" "$remote_sha"; then
         _err "Force-push to protected branch rejected: $remote_ref"

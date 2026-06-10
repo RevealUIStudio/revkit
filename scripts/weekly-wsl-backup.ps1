@@ -20,8 +20,40 @@ function Write-Log {
   param([string]$Level, [string]$Message)
   $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [$Level] $Message"
   Write-Host $line
-  if (Test-Path (Split-Path $logFile -Parent)) {
-    Add-Content -Path $logFile -Value $line -ErrorAction SilentlyContinue
+  # Try the primary log on E:. If that fails (drive asleep, disconnected, locked),
+  # fall back to %TEMP%. Silent drops are how this script went 3 weeks without
+  # surfacing the truncated-tar failure on 2026-05-10. Never lose an error line.
+  $fallbackLog = Join-Path $env:TEMP 'wsl-backup-fallback.log'
+  try {
+    if (Test-Path (Split-Path $logFile -Parent)) {
+      Add-Content -Path $logFile -Value $line -ErrorAction Stop
+    } else {
+      throw "Log parent dir missing: $(Split-Path $logFile -Parent)"
+    }
+  } catch {
+    Add-Content -Path $fallbackLog -Value "$line  (primary log unavailable: $($_.Exception.Message))" -ErrorAction SilentlyContinue
+  }
+}
+
+function Move-ToFailed {
+  param([string]$Path)
+  # Quarantine a bad/partial export into a `failed/` subdirectory: preserved for
+  # inspection but excluded from BOTH the "$Distro-*.tar" rotation glob below and
+  # the staleness freshness check (both non-recursive on $SnapshotDir). Without
+  # this, a preserved bad tar is counted as a recent snapshot and can evict a
+  # good one during rotation (KeepCount), shrinking the usable recovery set.
+  if (-not (Test-Path $Path)) { return }
+  try {
+    $failedDir = Join-Path $SnapshotDir 'failed'
+    New-Item -ItemType Directory -Force -Path $failedDir | Out-Null
+    Move-Item -Path $Path -Destination (Join-Path $failedDir (Split-Path $Path -Leaf)) -Force -ErrorAction Stop
+    Write-Log 'WARN' "Quarantined bad export to $failedDir (excluded from rotation + freshness)"
+    # Keep only the 2 most recent quarantined artifacts so failed/ can't grow unbounded.
+    Get-ChildItem $failedDir -Filter "$Distro-*.tar" -ErrorAction SilentlyContinue |
+      Sort-Object LastWriteTime -Descending | Select-Object -Skip 2 |
+      ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+  } catch {
+    Write-Log 'WARN' "Could not quarantine ${Path}: $($_.Exception.Message)"
   }
 }
 
@@ -61,6 +93,7 @@ try {
   $exportDuration = (Get-Date) - $exportStart
 
   if ($exitCode -ne 0) {
+    Move-ToFailed $target   # quarantine any partial tar (host interruption / out-of-space)
     throw "wsl --export exited with code $exitCode"
   }
 
@@ -80,7 +113,8 @@ try {
   $minRelativeGB    = if ($vhdxSizeGB) { $vhdxSizeGB * $minRelativeRatio } else { 0 }
   $minGB            = [math]::Max($minAbsoluteGB, $minRelativeGB)
   if ($targetSizeGB -lt $minGB) {
-    throw "Exported tar suspiciously small: $([math]::Round($targetSizeGB,2)) GB (need >= $([math]::Round($minGB,2)) GB — $([int]($minRelativeRatio*100))% of $([math]::Round($vhdxSizeGB,1)) GB vhdx, floor $minAbsoluteGB GB). Likely a silent wsl --export failure. Bad tar preserved at $target for inspection; previous snapshots untouched."
+    Move-ToFailed $target
+    throw "Exported tar suspiciously small: $([math]::Round($targetSizeGB,2)) GB (need >= $([math]::Round($minGB,2)) GB — $([int]($minRelativeRatio*100))% of $([math]::Round($vhdxSizeGB,1)) GB vhdx, floor $minAbsoluteGB GB). Likely a silent wsl --export failure. Bad tar quarantined under $SnapshotDir\failed\ (excluded from rotation); previous snapshots untouched."
   }
 
   Write-Log 'INFO' "Export complete: $([math]::Round($targetSizeGB,2)) GB in $([math]::Round($exportDuration.TotalMinutes,1)) min"
