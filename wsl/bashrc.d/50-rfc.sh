@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # rfc — RevFleet Claude launcher: short command + completion (interactive).
 #
 # The robust implementation lives at /usr/local/bin/rfc.sh (deployed by
@@ -27,6 +28,6 @@ _rfc_complete() {
     [ -e "${d}.git" ] || continue
     d="${d%/}"; repos+=("${d##*/}")
   done
-  COMPREPLY=( $(compgen -W "${repos[*]}" -- "$cur") )
+  mapfile -t COMPREPLY < <(compgen -W "${repos[*]}" -- "$cur")
 }
 complete -F _rfc_complete rfc
