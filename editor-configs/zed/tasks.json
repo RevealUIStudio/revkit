@@ -1,0 +1,22 @@
+// Zed task template — RevFleet Claude launcher.
+//
+// Deploy to one of:
+//   ~/.config/zed/tasks.json            (WSL-remote Zed, global) — recommended
+//   <repo>/.zed/tasks.json              (per-project)
+//
+// Requires that Zed open the project through the Ubuntu WSL connection
+// (settings.json -> wsl_connections), so the task's shell is native WSL and
+// `claude` runs in WSL. The task launches rfc.sh with no repo arg, so it uses
+// the project directory if it is under ~/revfleet. See docs/rfc-launcher.md.
+[
+  {
+    "label": "Claude (RevFleet, WSL-native)",
+    "command": "/usr/local/bin/rfc.sh",
+    "args": [],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "shell": "system"
+  }
+]
