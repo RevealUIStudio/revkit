@@ -11,6 +11,14 @@ function Write-Banner {
     # the module is imported for test purposes), skip cleanly.
     if (-not $IsWindows) { return }
 
+    # Suppress the banner whenever stdout is redirected or the session is
+    # non-interactive. Write-Host output leaks into a captured stdout pipe,
+    # and a stray banner corrupts stdio JSON-RPC protocols launched through
+    # PowerShell (ACP agents, MCP servers, LSP). Surfaced 2026-06-13: Zed's
+    # claude-acp agent is spawned via PowerShell, read this banner as
+    # JSON-RPC, and dropped the channel ("response channel cancelled").
+    if ([Console]::IsOutputRedirected -or -not [Environment]::UserInteractive) { return }
+
     # Detect environment
     $wslDistro = (wsl --list --quiet 2>$null | Select-Object -First 1) -replace '\x00',''
     $eDrive = if (Test-Path "E:\") { "E: mounted" } else { "E: disconnected" }
