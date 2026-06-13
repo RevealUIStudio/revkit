@@ -78,3 +78,15 @@ revkit/
 ## License
 
 MIT
+
+## RevFleet Claude launcher (`rfc`)
+
+`rfc <repo>` starts a Claude Code session whose process runs **inside WSL**,
+rooted in a `~/revfleet/*` repo — the configuration that makes a secure,
+prompt-free session possible (commands stay native instead of being wrapped in
+`wsl.exe`, so they allowlist by real prefix and the deny-list hooks fire).
+
+Deployed automatically by `bootstrap-wsl.sh` (`/usr/local/bin/rfc.sh` +
+`wsl/bashrc.d/50-rfc.sh`). Per-surface wiring (WSL terminal, Zed terminal, Zed
+`claude-acp` extension) and the Claude Desktop limitation are documented in
+[`docs/rfc-launcher.md`](docs/rfc-launcher.md).
