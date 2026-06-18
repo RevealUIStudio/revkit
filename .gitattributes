@@ -7,4 +7,4 @@
 *.psm1 text eol=crlf
 
 # Config files use LF (consumed by WSL/Unix tools)
-wsl/config/* text eol=lf
+shell/config/* text eol=lf

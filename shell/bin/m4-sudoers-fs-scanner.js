@@ -4,7 +4,7 @@
 // Spec: internal fleet-security-hardening lane § M-4 (meta-durability-fixes)
 // Companion designs: sprint-tier-0.md T0-1, T0-2, T0-3
 //
-// Source of truth: revkit/wsl/bin/m4-sudoers-fs-scanner.js (this file).
+// Source of truth: revkit/shell/bin/m4-sudoers-fs-scanner.js (this file).
 // Runtime location: ~/.claude/hooks/m4-sudoers-fs-scanner.js (copied by
 //   bootstrap-wsl.sh step 7).
 // Invoked from: ~/.claude/hooks/session-start.js (M-4 scan block).

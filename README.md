@@ -18,7 +18,9 @@ Then bootstrap from WSL:
 bash /mnt/c/Users/$USER/.revealui/bootstrap-wsl.sh
 ```
 
-The bootstrap installs helper scripts to `/usr/local/bin`, configures sudoers for passwordless drive mounting, adds a `~/.bashrc` hook that sources `wsl/bashrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path`, applies WSL boot optimization, initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and wires the fleet-wide pre-push git hook via `git config --global core.hooksPath`.
+The bootstrap installs helper scripts to `/usr/local/bin`, configures sudoers for passwordless drive mounting, adds a `~/.bashrc` hook that sources `shell/shellrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path`, applies WSL boot optimization, initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and wires the fleet-wide pre-push git hook via `git config --global core.hooksPath`.
+
+> **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap-wsl.sh` — the `~/.bashrc` hook is self-healing and migrates in place. No manual edit needed.
 
 Open a new WSL shell — you should see a `● RevealUI: managed` banner. Then `wsl --shutdown` from Windows to apply the boot optimization.
 
@@ -67,7 +69,7 @@ Then copy or merge the rendered output into the canonical locations (e.g. `cp ~/
 revkit/
   bootstrap-wsl.sh     # Primary entry point (run once per WSL)
   bootstrap.ps1        # PowerShell-side prep
-  wsl/                 # Source of truth — bashrc.d/, bin/, config/, docker/, setup-wsl-boot.sh
+  shell/               # Source of truth — shellrc.d/, bin/, config/, docker/, setup-wsl-boot.sh
   templates/wsl/       # Parameterized templates ({{PLACEHOLDER}} tokens for .wslconfig, gitconfig, etc.)
   profiles/            # Preset TOML configs (per-tier resource + feature defaults)
   scripts/render.sh    # Template engine (renders templates/ → output dir using a profile)
@@ -87,6 +89,6 @@ prompt-free session possible (commands stay native instead of being wrapped in
 `wsl.exe`, so they allowlist by real prefix and the deny-list hooks fire).
 
 Deployed automatically by `bootstrap-wsl.sh` (`/usr/local/bin/rfc.sh` +
-`wsl/bashrc.d/50-rfc.sh`). Per-surface wiring (WSL terminal, Zed terminal, Zed
+`shell/shellrc.d/50-rfc.sh`). Per-surface wiring (WSL terminal, Zed terminal, Zed
 `claude-acp` extension) and the Claude Desktop limitation are documented in
 [`docs/rfc-launcher.md`](docs/rfc-launcher.md).

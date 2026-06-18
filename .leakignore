@@ -10,15 +10,15 @@
 # bashrc fragment that sources the internal revcon profiles if present.
 # File is explicitly named "70-revcon-personal.sh" — opt-in, runtime-no-op
 # when the private dir isn't present.
-wsl/bashrc.d/70-revcon-personal.sh   private-jv-repo
+shell/shellrc.d/70-revcon-personal.sh   private-jv-repo
 
 # By-design: the WSL devkit bootstrap discovers .revealui under the LTS
 # drive mounts (E: → /mnt/e or D: → /mnt/d). Per ~/.claude/rules/wsl.md
 # this is the documented portable-devkit discovery path. Templates in
 # templates/ ship the same logic so derived environments work the same.
-wsl/bashrc.d/00-base.sh              lts-drive   # devkit auto-discovery
-wsl/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
-templates/wsl/setup-wsl-boot.sh      lts-drive   # byte-identical to wsl/setup-wsl-boot.sh per refactor; same operator-run-this examples
+shell/shellrc.d/00-base.sh              lts-drive   # devkit auto-discovery
+shell/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
+templates/wsl/setup-wsl-boot.sh      lts-drive   # byte-identical to shell/setup-wsl-boot.sh per refactor; same operator-run-this examples
 
 # Windows path docs. These quote real example paths users will see on
 # their own Windows hosts. Could be parameterized to <username>; for now
