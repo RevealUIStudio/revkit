@@ -14,7 +14,7 @@ echo "Source: $SCRIPT_DIR"
 echo ""
 
 # --- Step 1: Install helper scripts to /usr/local/bin ---
-echo "[1/8] Installing helper scripts to /usr/local/bin..."
+echo "[1/9] Installing helper scripts to /usr/local/bin..."
 for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
     [ -f "$script" ] || continue
     name=$(basename "$script")
@@ -34,7 +34,7 @@ done
 # To add a new arg to mount-sandbox-drive.sh, update the NOPASSWD rule below
 # AND every caller to pass the new arg list verbatim. See the script's
 # own header comment for context (GAP-119, 2026-04-24).
-echo "[2/8] Configuring sudoers for passwordless mount..."
+echo "[2/9] Configuring sudoers for passwordless mount..."
 SUDOERS_FILE="/etc/sudoers.d/wsl-revealui"
 CURRENT_USER=$(whoami)
 sudo tee "$SUDOERS_FILE" > /dev/null << EOF
@@ -52,7 +52,7 @@ else
 fi
 
 # --- Step 3: Add hook to .bashrc ---
-echo "[3/8] Adding RevealUI hook to ~/.bashrc..."
+echo "[3/9] Adding RevealUI hook to ~/.bashrc..."
 MARKER="# --- RevealUI environment mode ---"
 if grep -qF "$MARKER" ~/.bashrc 2>/dev/null; then
     echo "  Hook already present in ~/.bashrc, skipping"
@@ -107,7 +107,7 @@ HOOK
 fi
 
 # --- Step 4: Link git and SSH configs ---
-echo "[4/8] Linking git and SSH configs..."
+echo "[4/9] Linking git and SSH configs..."
 CONFIGS_DIR="$SCRIPT_DIR/wsl/config"
 
 if [ -f "$CONFIGS_DIR/gitconfig" ]; then
@@ -136,7 +136,7 @@ if [ -f "$CONFIGS_DIR/ssh-config" ]; then
 fi
 
 # --- Step 5: Run boot optimization ---
-echo "[5/8] Running boot optimization..."
+echo "[5/9] Running boot optimization..."
 BOOT_SCRIPT="$SCRIPT_DIR/wsl/setup-wsl-boot.sh"
 if [ -f "$BOOT_SCRIPT" ]; then
     sudo bash "$BOOT_SCRIPT"
@@ -146,7 +146,7 @@ fi
 
 # --- Step 6: Initialize Sandbox directories ---
 if mountpoint -q /mnt/sandbox 2>/dev/null; then
-    echo "[6/8] Initializing Sandbox directories..."
+    echo "[6/9] Initializing Sandbox directories..."
     mkdir -p /mnt/sandbox/databases/postgres
     mkdir -p /mnt/sandbox/databases/redis
     mkdir -p /mnt/sandbox/databases/supabase
@@ -154,7 +154,7 @@ if mountpoint -q /mnt/sandbox 2>/dev/null; then
     mkdir -p /mnt/sandbox/cache
     echo "  Sandbox directories initialized"
 else
-    echo "[6/8] Sandbox drive not mounted, skipping directory init"
+    echo "[6/9] Sandbox drive not mounted, skipping directory init"
 fi
 
 # --- Step 7: Deploy Claude Code hooks (M-4 scanner + future hooks) ---
@@ -170,7 +170,7 @@ fi
 #
 # Idempotent: copies are content-checked first; bashrc-style banner notes
 # what happened.
-echo "[7/8] Deploying Claude Code M-4 scanner hook..."
+echo "[7/9] Deploying Claude Code M-4 scanner hook..."
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
 M4_SRC="$SCRIPT_DIR/wsl/bin/m4-sudoers-fs-scanner.js"
 M4_DEST="$CLAUDE_HOOKS_DIR/m4-sudoers-fs-scanner.js"
@@ -200,7 +200,70 @@ else
     echo "        (one-time edit; see meta-durability-fixes.md §M-4 integration)"
 fi
 
-# --- Step 8: Wire fleet-wide pre-push hook (M-11) ---
+# --- Step 8: Wire RevFleet Claude rules per-repo via revcon/link.sh ---
+# Architecture: revcon owns Claude content, revkit installs it. Each RevFleet
+# repo gets the `revfleet` profile; revealui additionally gets the `revealui`
+# profile (later overrides earlier on filename collision — supported by
+# revcon/link.sh as of PR #38 — repeatable --profile flag).
+#
+# Scope: --editor claude only. Fleet-wide cursor/zed standardization
+# (revcon/base/{cursor,zed}) is a separate decision and is NOT triggered
+# from here. To expand later, drop the --editor flag on the link.sh call.
+#
+# Idempotent: link.sh dedupes via existing-symlink-target check; re-running
+# bootstrap re-links the same paths and reports them as unchanged.
+#
+# Fail-loud: if link.sh errors (e.g. revfleet profile missing, or repeated
+# --profile unsupported by an older link.sh), bootstrap halts. Update
+# revcon to the required version (>= PR #37 + PR #38 merged) and re-run.
+echo "[8/9] Wiring RevFleet Claude rules via revcon/link.sh..."
+REVCON_LINK_SH="$HOME/revfleet/revcon/link.sh"
+REVFLEET_ROOT="$HOME/revfleet"
+
+if [ ! -f "$REVCON_LINK_SH" ]; then
+    echo "  WARNING: $REVCON_LINK_SH not found — skipping Claude rules wiring" >&2
+    echo "  (clone RevealUIStudio/revcon to ~/revfleet/revcon, then re-run)"
+elif ! command -v bash >/dev/null 2>&1; then
+    echo "  WARNING: bash not in PATH — skipping Claude rules wiring" >&2
+else
+    # Per-repo profile assignment. Format: "repo:profile1[,profile2,...]"
+    # Sibling repos get revfleet only; revealui adds the monorepo overlay.
+    FLEET_TARGETS=(
+        "revealui:revfleet,revealui"
+        "revdev:revfleet"
+        "revvault:revfleet"
+        "revcon:revfleet"
+        "revealcoin:revfleet"
+        "revforge:revfleet"
+        "revskills:revfleet"
+        "revkit:revfleet"
+    )
+
+    for entry in "${FLEET_TARGETS[@]}"; do
+        repo="${entry%%:*}"
+        profiles_csv="${entry#*:}"
+        target_dir="$REVFLEET_ROOT/$repo"
+
+        if [ ! -d "$target_dir" ]; then
+            echo "  [skip] $repo not checked out at $target_dir"
+            continue
+        fi
+
+        # Translate CSV → repeated --profile flags
+        profile_args=()
+        IFS=',' read -ra profile_list <<< "$profiles_csv"
+        for p in "${profile_list[@]}"; do
+            profile_args+=("--profile" "$p")
+        done
+
+        echo "  [$repo] profiles: $profiles_csv"
+        bash "$REVCON_LINK_SH" --target "$target_dir" --editor claude "${profile_args[@]}" 2>&1 | sed 's/^/    /'
+    done
+
+    echo "  Done. RevFleet Claude rules wired per-repo."
+fi
+
+# --- Step 9: Wire fleet-wide pre-push hook (M-11) ---
 # Spec: internal fleet-security-hardening lane, meta-durability-fixes §M-11
 #
 # Class killed: absent server-side branch protection on private repos (T0-15;
@@ -215,7 +278,7 @@ fi
 # Conflict handling (per design): fail-loudly when the user already has a
 # different global core.hooksPath. Silent overwrite would clobber another
 # tool's setup; silent skip would silently disable M-11. The user decides.
-echo "[8/8] Wiring fleet-wide pre-push hook (M-11)..."
+echo "[9/9] Wiring fleet-wide pre-push hook (M-11)..."
 HOOKS_DIR="$SCRIPT_DIR/git-hooks"
 PRE_PUSH_HOOK="$SCRIPT_DIR/git-hooks/pre-push"
 
