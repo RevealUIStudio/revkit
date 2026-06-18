@@ -1,0 +1,4 @@
+note=ordinary Linux desktop/server: no /run/WSL marker -> linux
+uname_s=Linux
+wsl_run=absent
+expected=linux
