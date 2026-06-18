@@ -19,7 +19,7 @@
 #
 # Reusable across machines: this file is deployed to /usr/local/bin/rfc.sh by
 # bootstrap-wsl.sh step 1; the short `rfc` command + completion come from
-# wsl/bashrc.d/50-rfc.sh. Override the fleet root with REVFLEET_ROOT.
+# shell/shellrc.d/50-rfc.sh. Override the fleet root with REVFLEET_ROOT.
 
 set -euo pipefail
 

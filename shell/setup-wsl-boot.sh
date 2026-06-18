@@ -3,8 +3,8 @@
 # Idempotent — safe to re-run after config changes.
 #
 # Usage (from WSL):
-#   sudo bash /mnt/e/professional/.revealui/wsl/setup-wsl-boot.sh
-#   sudo bash /mnt/e/professional/.revealui/wsl/setup-wsl-boot.sh --revert
+#   sudo bash /mnt/e/professional/.revealui/shell/setup-wsl-boot.sh
+#   sudo bash /mnt/e/professional/.revealui/shell/setup-wsl-boot.sh --revert
 #
 # After running, restart WSL from Windows:
 #   wsl --shutdown

@@ -12,8 +12,8 @@ sandbox() {
     fi
 }
 
-# Build SANDBOX_DATABASE_URL from wsl/docker/.env if present, avoiding hardcoded credentials
-_docker_env="${REVEALUI_ROOT}/wsl/docker/.env"
+# Build SANDBOX_DATABASE_URL from shell/docker/.env if present, avoiding hardcoded credentials
+_docker_env="${REVEALUI_ROOT}/shell/docker/.env"
 if [ -f "$_docker_env" ]; then
     _pg_user=$(grep '^POSTGRES_USER=' "$_docker_env" | cut -d= -f2- | tr -d '"')
     _pg_pass=$(grep '^POSTGRES_PASSWORD=' "$_docker_env" | cut -d= -f2- | tr -d '"')

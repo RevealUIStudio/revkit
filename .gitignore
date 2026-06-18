@@ -27,7 +27,7 @@ passage-store/
 *.pssproj.user
 
 # Docker runtime env
-wsl/docker/.env
+shell/docker/.env
 
 # Editor
 *.swp

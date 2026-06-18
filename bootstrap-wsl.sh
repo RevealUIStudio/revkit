@@ -15,7 +15,7 @@ echo ""
 
 # --- Step 1: Install helper scripts to /usr/local/bin ---
 echo "[1/9] Installing helper scripts to /usr/local/bin..."
-for script in "$SCRIPT_DIR/wsl/bin/"*.sh; do
+for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
     [ -f "$script" ] || continue
     name=$(basename "$script")
     # Strip Windows line endings and install
@@ -54,10 +54,21 @@ fi
 # --- Step 3: Add hook to .bashrc ---
 echo "[3/9] Adding RevealUI hook to ~/.bashrc..."
 MARKER="# --- RevealUI environment mode ---"
+END_MARKER="# --- end RevealUI ---"
+# Self-healing: strip any existing RevealUI block (legacy wsl/ path or
+# current shell/ path) before appending, so re-running bootstrap after an
+# upgrade migrates the in-home hook in place. This is the documented upgrade
+# path for installs predating the wsl/ -> shell/ rename.
 if grep -qF "$MARKER" ~/.bashrc 2>/dev/null; then
-    echo "  Hook already present in ~/.bashrc, skipping"
-else
-    cat >> ~/.bashrc << 'HOOK'
+    _bashrc_tmp="$(mktemp)"
+    awk -v s="$MARKER" -v e="$END_MARKER" '
+        $0 == s { drop = 1 }
+        drop != 1 { print }
+        $0 == e { drop = 0 }
+    ' ~/.bashrc > "$_bashrc_tmp" && mv "$_bashrc_tmp" ~/.bashrc
+    echo "  Removed stale RevealUI hook (reinstalling current version)"
+fi
+cat >> ~/.bashrc << 'HOOK'
 
 # --- RevealUI environment mode ---
 # Guard: only detect and print once per terminal session.
@@ -66,12 +77,12 @@ else
 if [ -z "$REVEALUI_MODE" ]; then
     _revealui_root=""
     # Explicit override wins
-    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/wsl/bashrc.d/00-base.sh" ]; then
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/shell/shellrc.d/00-base.sh" ]; then
         _revealui_root="$REVEALUI_ROOT"
     else
         # Primary: any Windows user's .revealui under /mnt/c/Users/* (works for any account name)
         for _candidate in /mnt/c/Users/*/.revealui; do
-            if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
+            if [ -f "$_candidate/shell/shellrc.d/00-base.sh" ]; then
                 _revealui_root="$_candidate"
                 break
             fi
@@ -79,7 +90,7 @@ if [ -z "$REVEALUI_MODE" ]; then
         # Fallback: scan known portable SSD locations
         if [ -z "$_revealui_root" ]; then
             for _candidate in /mnt/?/.revealui /mnt/?/professional/.revealui; do
-                if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
+                if [ -f "$_candidate/shell/shellrc.d/00-base.sh" ]; then
                     _revealui_root="$_candidate"
                     break
                 fi
@@ -90,7 +101,7 @@ if [ -z "$REVEALUI_MODE" ]; then
     if [ -n "$_revealui_root" ]; then
         export REVEALUI_MODE="managed"
         export REVEALUI_ROOT="$_revealui_root"
-        for _f in "$_revealui_root"/wsl/bashrc.d/*.sh; do
+        for _f in "$_revealui_root"/shell/shellrc.d/*.sh; do
             [ -r "$_f" ] && . "$_f"
         done
         echo -e "\033[1;36m● RevealUI: managed\033[0m ($_revealui_root)"
@@ -103,12 +114,11 @@ if [ -z "$REVEALUI_MODE" ]; then
 fi
 # --- end RevealUI ---
 HOOK
-    echo "  Hook appended to ~/.bashrc"
-fi
+echo "  RevealUI hook installed in ~/.bashrc"
 
 # --- Step 4: Link git and SSH configs ---
 echo "[4/9] Linking git and SSH configs..."
-CONFIGS_DIR="$SCRIPT_DIR/wsl/config"
+CONFIGS_DIR="$SCRIPT_DIR/shell/config"
 
 if [ -f "$CONFIGS_DIR/gitconfig" ]; then
     git config --global include.path "$CONFIGS_DIR/gitconfig"
@@ -137,7 +147,7 @@ fi
 
 # --- Step 5: Run boot optimization ---
 echo "[5/9] Running boot optimization..."
-BOOT_SCRIPT="$SCRIPT_DIR/wsl/setup-wsl-boot.sh"
+BOOT_SCRIPT="$SCRIPT_DIR/shell/setup-wsl-boot.sh"
 if [ -f "$BOOT_SCRIPT" ]; then
     sudo bash "$BOOT_SCRIPT"
 else
@@ -172,7 +182,7 @@ fi
 # what happened.
 echo "[7/9] Deploying Claude Code M-4 scanner hook..."
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
-M4_SRC="$SCRIPT_DIR/wsl/bin/m4-sudoers-fs-scanner.js"
+M4_SRC="$SCRIPT_DIR/shell/bin/m4-sudoers-fs-scanner.js"
 M4_DEST="$CLAUDE_HOOKS_DIR/m4-sudoers-fs-scanner.js"
 
 if [ ! -f "$M4_SRC" ]; then
