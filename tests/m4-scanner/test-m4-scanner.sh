@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-m4-scanner.sh — Smoke tests for revkit/wsl/bin/m4-sudoers-fs-scanner.js
+# test-m4-scanner.sh — Smoke tests for revkit/shell/bin/m4-sudoers-fs-scanner.js
 #
 # Spec: internal fleet-security-hardening lane § M-4 (meta-durability-fixes)
 #
@@ -19,7 +19,7 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SCANNER="$REPO_ROOT/wsl/bin/m4-sudoers-fs-scanner.js"
+SCANNER="$REPO_ROOT/shell/bin/m4-sudoers-fs-scanner.js"
 
 if [ ! -f "$SCANNER" ]; then
     echo "ERROR: scanner not found at $SCANNER" >&2

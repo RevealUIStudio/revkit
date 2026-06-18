@@ -21,13 +21,13 @@ done
 if [ -z "${DEVKIT_TIER:-}" ]; then
     _base=""
     # Explicit override wins
-    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/wsl/bashrc.d/00-base.sh" ]; then
-        _base="${REVEALUI_ROOT}/wsl/bashrc.d/00-base.sh"
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/shell/shellrc.d/00-base.sh" ]; then
+        _base="${REVEALUI_ROOT}/shell/shellrc.d/00-base.sh"
     else
         # Discover via the same paths bashrc.d/00-base.sh searches
         for _candidate in /mnt/c/Users/*/.revealui /mnt/?/.revealui /mnt/?/professional/.revealui; do
-            if [ -f "$_candidate/wsl/bashrc.d/00-base.sh" ]; then
-                _base="$_candidate/wsl/bashrc.d/00-base.sh"
+            if [ -f "$_candidate/shell/shellrc.d/00-base.sh" ]; then
+                _base="$_candidate/shell/shellrc.d/00-base.sh"
                 break
             fi
         done
@@ -127,7 +127,7 @@ fi
 
 # 3. bashrc.d scripts parse cleanly
 bashrc_ok=true
-for f in "${REVEALUI_ROOT:-}"/wsl/bashrc.d/*.sh; do
+for f in "${REVEALUI_ROOT:-}"/shell/shellrc.d/*.sh; do
     [ -f "$f" ] || continue
     if ! bash -n "$f" 2>/dev/null; then
         check_fail "bashrc.d syntax error: $(basename "$f")"
@@ -140,7 +140,7 @@ fi
 
 # 4. Helper scripts installed in /usr/local/bin
 helpers_ok=true
-for f in "${REVEALUI_ROOT:-}"/wsl/bin/*.sh; do
+for f in "${REVEALUI_ROOT:-}"/shell/bin/*.sh; do
     [ -f "$f" ] || continue
     name="$(basename "$f")"
     installed="/usr/local/bin/$name"
@@ -178,7 +178,7 @@ else
 fi
 
 # 8. Compose file exists
-compose_file="${REVEALUI_ROOT:-}/wsl/docker/compose.yml"
+compose_file="${REVEALUI_ROOT:-}/shell/docker/compose.yml"
 if [ -f "$compose_file" ]; then
     check_pass "Compose file exists"
 else
