@@ -1,0 +1,4 @@
+note=some musl/busybox userlands report lowercase 'linux'; uname is case-normalized; real WSL marker present -> wsl
+uname_s=linux
+wsl_run=present
+expected=wsl

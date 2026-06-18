@@ -1,0 +1,4 @@
+note=macOS reports Darwin
+uname_s=Darwin
+wsl_run=absent
+expected=macos
