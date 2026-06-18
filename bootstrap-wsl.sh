@@ -173,10 +173,8 @@ fi
 # Scope (intentionally narrow): only the M-4 sudoers + filesystem invariant
 # scanner is deployed here. The other hooks under ~/.claude/hooks/
 # (session-start.js, post-edit.js, etc.) are NOT touched — they have a
-# separate lifecycle and the revkit/templates/hooks/ tree is out of sync
-# with what's actually deployed (see agent-coordination.md status note).
-# Adopting hooks wholesale via revkit is its own initiative; M-4 carves
-# out only what M-4 needs.
+# separate lifecycle. Adopting hooks wholesale via revkit is its own
+# initiative; M-4 carves out only what M-4 needs.
 #
 # Idempotent: copies are content-checked first; bashrc-style banner notes
 # what happened.

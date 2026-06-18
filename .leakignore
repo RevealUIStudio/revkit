@@ -14,11 +14,9 @@ shell/shellrc.d/70-revcon-personal.sh   private-jv-repo
 
 # By-design: the WSL devkit bootstrap discovers .revealui under the LTS
 # drive mounts (E: → /mnt/e or D: → /mnt/d). Per ~/.claude/rules/wsl.md
-# this is the documented portable-devkit discovery path. Templates in
-# templates/ ship the same logic so derived environments work the same.
+# this is the documented portable-devkit discovery path.
 shell/shellrc.d/00-base.sh              lts-drive   # devkit auto-discovery
 shell/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
-templates/wsl/setup-wsl-boot.sh      lts-drive   # byte-identical to shell/setup-wsl-boot.sh per refactor; same operator-run-this examples
 
 # Windows path docs. These quote real example paths users will see on
 # their own Windows hosts. Could be parameterized to <username>; for now
@@ -26,5 +24,3 @@ templates/wsl/setup-wsl-boot.sh      lts-drive   # byte-identical to shell/setup
 docs/WSL-QuickReference.md                                           abs-windows-user
 powershell/Modules/RevealUI.RevStation/docs/WSL-QuickReference.md    abs-windows-user
 
-# Usage example in CLI help text uses a generic placeholder username.
-scripts/render.sh                                                    abs-home-path
