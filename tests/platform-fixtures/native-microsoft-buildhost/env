@@ -1,0 +1,4 @@
+note=native Linux whose /proc/version build string contains the substring microsoft (e.g. built on a host named microsoft-build). No /run/WSL marker -> linux. Proves the kernel string alone never classifies wsl.
+uname_s=Linux
+wsl_run=absent
+expected=linux
