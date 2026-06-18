@@ -1,4 +1,9 @@
-# Personal Account (joshua-v-dev)
+# RevKit SSH config (linked into ~/.ssh/config). The Host blocks below are
+# examples; put your own accounts / IdentityFile overrides in the machine-local
+# include below (never committed).
+Include ~/.config/revkit/ssh.local
+
+# Personal account (example)
 Host github.com-personal
   HostName github.com
   User git
