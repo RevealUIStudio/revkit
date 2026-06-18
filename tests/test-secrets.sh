@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-secrets.sh — Tests for wsl/bashrc.d/40-secrets.sh (passenv security)
+# test-secrets.sh — Tests for shell/shellrc.d/40-secrets.sh (passenv security)
 set -euo pipefail
 
 PASS=0
@@ -48,7 +48,7 @@ assert_contains() {
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SECRETS_SH="$PROJECT_ROOT/wsl/bashrc.d/40-secrets.sh"
+SECRETS_SH="$PROJECT_ROOT/shell/shellrc.d/40-secrets.sh"
 
 echo "=== test-secrets.sh ==="
 echo "Source:   $SECRETS_SH"
@@ -184,7 +184,7 @@ pf_output="$(
     source "$SECRETS_SH"
     export PASSAGE_DIR="/tmp/fake-passage-store"
 
-    # Stub passage (for the wsl/bashrc.d version which uses passage)
+    # Stub passage (for the shell/shellrc.d version which uses passage)
     passage() {
       # Return content that includes a protected variable
       printf 'SAFE_VAR=good\nPATH=/evil\nANOTHER_SAFE=also_good\n'

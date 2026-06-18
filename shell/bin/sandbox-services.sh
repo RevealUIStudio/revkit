@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-COMPOSE_DIR="${REVEALUI_ROOT:?REVEALUI_ROOT not set — run bootstrap-wsl.sh, then source ~/.bashrc, or set explicitly}/wsl/docker"
+COMPOSE_DIR="${REVEALUI_ROOT:?REVEALUI_ROOT not set — run bootstrap-wsl.sh, then source ~/.bashrc, or set explicitly}/shell/docker"
 COMPOSE_FILE="$COMPOSE_DIR/compose.yml"
 
 # --- Helpers ---

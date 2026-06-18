@@ -10,14 +10,14 @@ _find_revealui_root() {
     fi
     # Primary: any Windows user's .revealui under /mnt/c/Users/* (works for any account name)
     for candidate in /mnt/c/Users/*/.revealui; do
-        if [ -f "$candidate/wsl/bashrc.d/00-base.sh" ]; then
+        if [ -f "$candidate/shell/shellrc.d/00-base.sh" ]; then
             echo "$candidate"
             return
         fi
     done
     # Fallback: scan known SSD locations
     for candidate in /mnt/e/professional/.revealui /mnt/e/.revealui /mnt/d/.revealui; do
-        if [ -f "$candidate/wsl/bashrc.d/00-base.sh" ]; then
+        if [ -f "$candidate/shell/shellrc.d/00-base.sh" ]; then
             echo "$candidate"
             return
         fi
