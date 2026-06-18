@@ -1,6 +1,0 @@
-[wsl2]
-memory={{WSL_MEMORY}}
-processors={{WSL_PROCESSORS}}
-swap={{WSL_SWAP}}
-networkingMode=mirrored
-kernelCommandLine = systemd.firstboot=0

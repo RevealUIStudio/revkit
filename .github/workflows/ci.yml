@@ -102,9 +102,6 @@ jobs:
         with:
           severity: warning
           ignore_paths: tests
-          # Templates are bashrc.d fragments — sourced into a host shell, not
-          # standalone scripts. ShellCheck correctly flags style nits inside
-          # them but they aren't actionable in isolation.
           ignore_names: ""
 
   no-hardcoded-user:
@@ -172,14 +169,6 @@ jobs:
       - name: Scan for private paths and credentials
         run: bash scripts/check-no-private-leaks.sh
 
-  test-render:
-    name: tests/test-render.sh
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - name: Run render tests
-        run: bash tests/test-render.sh
-
   test-secrets:
     name: tests/test-secrets.sh
     runs-on: ubuntu-latest
@@ -230,14 +219,6 @@ jobs:
             fail=1
           fi
           exit "$fail"
-
-  no-bashrc-template-drift:
-    name: No bashrc.d template drift
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - name: Check templates/wsl/bashrc.d/ is empty
-        run: bash scripts/check-no-bashrc-template-drift.sh
 
   pester:
     name: PowerShell Pester tests

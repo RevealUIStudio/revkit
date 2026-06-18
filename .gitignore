@@ -1,9 +1,3 @@
-# Personal config (contains real identity/credentials)
-config.toml
-
-# Rendered output
-output/
-
 # Logs
 scripts/logs/
 *.log
