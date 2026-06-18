@@ -2,9 +2,9 @@
 	fsmonitor = false
 	untrackedCache = false
 	autocrlf = input
-[user]
-	name = RevealUI Studio
-	email = founder@revealui.com
+# Per-user identity is machine-local (never committed); bootstrap seeds it.
+[include]
+	path = ~/.config/revkit/identity.gitconfig
 [credential "https://github.com"]
 	helper =
 	helper = !/usr/bin/gh auth git-credential
