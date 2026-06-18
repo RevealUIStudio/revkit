@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# rfc — RevFleet Claude launcher
+# rfc — RevFleet Claude launcher (WSL / native Linux / macOS)
 #
-# Starts a native-WSL `claude` session rooted in a RevFleet repo, so the
-# claude PROCESS runs inside WSL. That is the entire point: when claude runs
-# in WSL its Bash tool-calls are native (`git status`, not
-# `wsl.exe -d Ubuntu -- bash -lc '... git status'`). That matters because the
-# wsl.exe wrapper is (a) un-allowlistable — the payload is an opaque arbitrary
-# string, so the only rule that covers it is `Bash(wsl.exe *)`, which is
-# equivalent to bypassPermissions; and (b) it slips past the PreToolUse
-# deny-list hook. Launching claude in WSL instead means commands allowlist by
-# real prefix AND the ~/.claude/settings.local.json deny-list + hooks fire.
-# See docs/rfc-launcher.md for the full per-surface rationale.
+# Starts a `claude` session rooted in a RevFleet repo, running in the current
+# POSIX shell. On WSL this is the entire point: claude's Bash tool-calls run
+# native (`git status`, not `wsl.exe -d Ubuntu -- bash -lc '... git status'`) —
+# the wsl.exe wrapper is (a) un-allowlistable (the payload is an opaque string,
+# so only `Bash(wsl.exe *)` covers it, equivalent to bypassPermissions) and
+# (b) slips past the PreToolUse deny-list hook; launching in WSL instead means
+# commands allowlist by real prefix AND the deny-list + hooks fire. On native
+# Linux/macOS there is no wrapper to defeat, so rfc is simply a thin cd + exec
+# convenience. See docs/rfc-launcher.md for the full per-surface rationale.
 #
 # Usage:
 #   rfc                  # use $PWD if it is under ~/revfleet, else list repos
 #   rfc revealui         # cd ~/revfleet/revealui && exec claude
 #   rfc revealui --continue   # trailing args pass through to claude verbatim
 #
-# Reusable across machines: this file is deployed to /usr/local/bin/rfc.sh by
-# bootstrap-wsl.sh step 1; the short `rfc` command + completion come from
-# shell/shellrc.d/50-rfc.sh. Override the fleet root with REVFLEET_ROOT.
+# Reusable across machines: bootstrap installs this to /usr/local/bin (WSL/
+# Linux) or ~/.local/bin (macOS); the short `rfc` command, `rf`/`rfclaude`
+# aliases, and completion come from shell/shellrc.d/50-rfc.sh. Override the
+# fleet root with REVFLEET_ROOT.
 
 set -euo pipefail
 
@@ -27,10 +27,13 @@ FLEET_ROOT="${REVFLEET_ROOT:-$HOME/revfleet}"
 
 die() { echo "rfc: $*" >&2; exit 1; }
 
-# Refuse to run anywhere but a real Linux/WSL shell. If this ever executes on
-# the Windows host (e.g. Git Bash), it would defeat its own purpose, so fail
-# loudly rather than silently wrap.
-[ "$(uname -s 2>/dev/null)" = "Linux" ] || die "must run inside WSL (uname is not Linux)"
+# Run only in a real POSIX shell (WSL/Linux or macOS). Reject Git Bash / cmd
+# on the Windows host (uname MINGW*/CYGWIN*), where launching here would defeat
+# the purpose rather than run claude natively.
+case "$(uname -s 2>/dev/null)" in
+  Linux | Darwin) : ;;
+  *) die "must run in a POSIX shell (WSL, Linux, or macOS); not Git Bash/cmd" ;;
+esac
 [ -d "$FLEET_ROOT" ] || die "fleet root not found: $FLEET_ROOT (set REVFLEET_ROOT)"
 
 # Resolve the claude binary: prefer PATH, then the known override locations.
