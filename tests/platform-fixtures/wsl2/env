@@ -1,0 +1,4 @@
+note=real WSL2: /run/WSL present -> wsl
+uname_s=Linux
+wsl_run=present
+expected=wsl
