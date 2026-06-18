@@ -1,6 +1,7 @@
 [wsl2]
-memory=12GB
-processors=8
-swap=4GB
+# Conservative defaults — tune to your machine.
+memory=8GB
+processors=4
+swap=2GB
 networkingMode=mirrored
 kernelCommandLine = systemd.firstboot=0

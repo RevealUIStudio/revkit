@@ -120,6 +120,34 @@ echo "  RevealUI hook installed in ~/.bashrc"
 echo "[4/9] Linking git and SSH configs..."
 CONFIGS_DIR="$SCRIPT_DIR/shell/config"
 
+# Seed per-user LOCAL overrides (machine-local, never committed). The tracked
+# shell/config/{gitconfig,ssh-config} include these, so no identity is tracked.
+LOCAL_CFG="$HOME/.config/revkit"
+mkdir -p "$LOCAL_CFG"
+if [ ! -f "$LOCAL_CFG/identity.gitconfig" ]; then
+    _gn="$(git config --global user.name 2>/dev/null || true)"
+    _ge="$(git config --global user.email 2>/dev/null || true)"
+    {
+        echo "# RevKit per-user git identity — machine-local, never committed."
+        echo "# The tracked shell/config/gitconfig includes this file. Set name + email:"
+        echo "[user]"
+        printf '\tname = %s\n' "$_gn"
+        printf '\temail = %s\n' "$_ge"
+    } > "$LOCAL_CFG/identity.gitconfig"
+    if [ -n "$_gn" ] && [ -n "$_ge" ]; then
+        echo "  Seeded $LOCAL_CFG/identity.gitconfig from your existing git identity"
+    else
+        echo "  Created $LOCAL_CFG/identity.gitconfig — SET your git name + email there"
+    fi
+fi
+if [ ! -f "$LOCAL_CFG/ssh.local" ]; then
+    {
+        echo "# RevKit per-user SSH overrides — machine-local, never committed."
+        echo "# The tracked shell/config/ssh-config includes this file; add Host blocks here."
+    } > "$LOCAL_CFG/ssh.local"
+    echo "  Created $LOCAL_CFG/ssh.local"
+fi
+
 if [ -f "$CONFIGS_DIR/gitconfig" ]; then
     git config --global include.path "$CONFIGS_DIR/gitconfig"
     echo "  Git config: include.path set to $CONFIGS_DIR/gitconfig"
