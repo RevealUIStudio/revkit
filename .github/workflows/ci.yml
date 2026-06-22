@@ -19,7 +19,7 @@ jobs:
     name: bash -n (all .sh)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Syntax-check every shell script
         run: |
           set -euo pipefail
@@ -42,7 +42,7 @@ jobs:
     name: bash -n + shellcheck (git-hooks/*)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: bash -n every git hook
         run: |
           set -euo pipefail
@@ -72,7 +72,7 @@ jobs:
     name: PowerShell parse (all .ps1/.psm1/.psd1)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Parse every PowerShell file
         shell: pwsh
         run: |
@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
         with:
           severity: warning
@@ -108,7 +108,7 @@ jobs:
     name: GAP-116 anti-regression — no hardcoded "joshu"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Grep for hardcoded "joshu" in scripted files
         run: |
           set -euo pipefail
@@ -143,7 +143,7 @@ jobs:
       # verified before install to close the curl|tar supply-chain gap. Bump with VERSION.
       GITLEAKS_SHA256: "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
       - name: Install gitleaks
@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Scan for private paths and credentials
         run: bash scripts/check-no-private-leaks.sh
 
@@ -173,7 +173,7 @@ jobs:
     name: tests/test-secrets.sh
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Run secrets tests
         run: bash tests/test-secrets.sh
 
@@ -185,7 +185,7 @@ jobs:
     name: tests/test-pre-push-hook.sh
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Run pre-push hook tests
         run: bash tests/test-pre-push-hook.sh
 
@@ -197,7 +197,7 @@ jobs:
     name: bootstrap M-11 wiring intact
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Check bootstrap-wsl.sh references the hook + sets hooksPath
         run: |
           set -euo pipefail
@@ -224,7 +224,7 @@ jobs:
     name: PowerShell Pester tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install Pester 5
         shell: pwsh
         run: |
@@ -244,6 +244,6 @@ jobs:
     name: platform.sh fixture detection
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Run platform detection fixtures
         run: bash tests/test-platform-detect.sh
