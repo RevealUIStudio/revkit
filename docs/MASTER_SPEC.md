@@ -9,7 +9,7 @@ staleness-status: FRESH
 # RevKit — Master Spec
 
 **Last Updated:** 2026-06-22
-**Status:** Pre-1.0 — cross-platform foundation shipped (macOS + Linux + WSL2); surface stable for daily use, external-contributor flow is Phase D
+**Status:** Pre-1.0 — cross-platform foundation shipped (macOS + Linux + WSL2); surface stable for daily use, external-contributor onboarding is Phase C (see MASTER_PLAN)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
 
 > Surface area, architecture, configuration model. Companion to [`MASTER_PLAN.md`](./MASTER_PLAN.md) (status + roadmap).
