@@ -190,24 +190,30 @@ jobs:
         run: bash tests/test-pre-push-hook.sh
 
   bootstrap-m11-wiring:
-    # Sanity-check that bootstrap-wsl.sh + bootstrap.ps1 still reference the
-    # M-11 hook + set core.hooksPath. Catches accidental removal of the
-    # wiring during unrelated refactors. Read-only — does not execute either
+    # Sanity-check that bootstrap.sh (the canonical cross-platform entry point)
+    # still references the M-11 hook dir + sets core.hooksPath; that the
+    # bootstrap-wsl.sh deprecation shim still execs bootstrap.sh; and that
+    # bootstrap.ps1 (Windows host) is intact. Catches accidental removal of the
+    # wiring during unrelated refactors. Read-only — does not execute any
     # bootstrap script.
     name: bootstrap M-11 wiring intact
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Check bootstrap-wsl.sh references the hook + sets hooksPath
+      - name: Check bootstrap.sh (canonical) + shim chain + bootstrap.ps1
         run: |
           set -euo pipefail
           fail=0
-          if ! grep -qF 'git-hooks/pre-push' bootstrap-wsl.sh; then
-            echo "::error file=bootstrap-wsl.sh::M-11 wiring lost: no reference to git-hooks/pre-push"
+          if ! grep -qF 'git-hooks' bootstrap.sh; then
+            echo "::error file=bootstrap.sh::M-11 wiring lost: no reference to git-hooks"
             fail=1
           fi
-          if ! grep -qF 'core.hooksPath' bootstrap-wsl.sh; then
-            echo "::error file=bootstrap-wsl.sh::M-11 wiring lost: no core.hooksPath setup"
+          if ! grep -qF 'core.hooksPath' bootstrap.sh; then
+            echo "::error file=bootstrap.sh::M-11 wiring lost: no core.hooksPath setup"
+            fail=1
+          fi
+          if ! grep -qF 'bootstrap.sh' bootstrap-wsl.sh; then
+            echo "::error file=bootstrap-wsl.sh::deprecation shim chain broken: no exec of bootstrap.sh"
             fail=1
           fi
           if ! grep -qF 'git-hooks' bootstrap.ps1; then
