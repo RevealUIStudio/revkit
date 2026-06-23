@@ -1,10 +1,21 @@
 # RevealUI DevKit
 
-Portable WSL development environment toolkit for RevealUI projects.
+Cross-platform development-environment toolkit (macOS + Linux + WSL2, WSL-first) for RevealUI projects.
 
 ## Quick Start
 
-Clone this repo to your Windows home so WSL can reach it via `/mnt/c/`:
+`bootstrap.sh` is the universal entry point — it detects the OS (macOS, Linux, or WSL2) and runs the platform-appropriate steps. Preview any run with `--dry-run`.
+
+### macOS / native Linux
+
+```bash
+git clone https://github.com/RevealUIStudio/revkit.git
+bash revkit/bootstrap.sh            # add --dry-run to preview
+```
+
+### WSL2 (Windows host)
+
+Clone to your Windows home so WSL can reach it via `/mnt/c/`:
 
 ```powershell
 # From PowerShell
@@ -15,65 +26,44 @@ git clone https://github.com/RevealUIStudio/revkit.git .revealui
 Then bootstrap from WSL:
 
 ```bash
-bash /mnt/c/Users/$USER/.revealui/bootstrap-wsl.sh
+bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 ```
 
-The bootstrap installs helper scripts to `/usr/local/bin`, configures sudoers for passwordless drive mounting, adds a `~/.bashrc` hook that sources `wsl/bashrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path`, applies WSL boot optimization, initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and wires the fleet-wide pre-push git hook via `git config --global core.hooksPath`.
+> `bootstrap-wsl.sh` still works as a backward-compatible alias — it is now a thin shim that execs `bootstrap.sh` (which auto-detects WSL).
 
-Open a new WSL shell — you should see a `● RevealUI: managed` banner. Then `wsl --shutdown` from Windows to apply the boot optimization.
+The bootstrap installs helper scripts (`/usr/local/bin`, or `~/.local/bin` on macOS), configures sudoers for passwordless sandbox-drive mounting (WSL), adds a `~/.bashrc`/`~/.zshrc` hook that sources `shell/shellrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, wires RevFleet Claude rules via `revcon/link.sh`, and wires the fleet-wide pre-push git hook via `git config --global core.hooksPath`.
 
-### Per-machine configuration (optional)
+> **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap.sh` — the rc hook is self-healing and migrates in place. No manual edit needed.
 
-For parameterized configs (`.wslconfig`, `gitconfig`, `wsl.conf`, etc.) render a profile:
+Open a new shell — you should see a `● RevKit: managed` banner. On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.
 
-```bash
-# 1. Pick a profile preset (see "Profile Presets" below)
-cp profiles/solo-dev.toml config.toml
+### Per-machine configuration
 
-# 2. Edit identity / hardware values
-$EDITOR config.toml
+RevKit ships **neutral, identity-free configs** under `shell/config/`. Per-user values are kept machine-local and are **not** committed — on bootstrap they are seeded into `~/.config/revkit/`:
 
-# 3. Render the parameterized configs
-./scripts/render.sh --config config.toml --output ~/.revealui-render
-```
+- `~/.config/revkit/identity.gitconfig` — your git name + email (seeded from your existing git identity if present)
+- `~/.config/revkit/ssh.local` — your SSH host blocks
 
-Then copy or merge the rendered output into the canonical locations (e.g. `cp ~/.revealui-render/wsl/config/wsl.conf /etc/wsl.conf`).
-
-## Profile Presets
-
-| Profile | Tier | RAM | Cores | Docker | Sandbox Drive | Ollama |
-|---------|------|-----|-------|--------|--------------|--------|
-| `solo-dev.toml` | T0 | 8GB | 4 | No | No | No |
-| `full-stack.toml` | T1 | 12GB | 8 | Yes | Yes | No |
-| `ai-studio.toml` | T1+ | 16GB | 8 | Yes | Yes | Yes |
-| `team.toml` | T1 | 16GB | 8 | Yes | Yes | No |
-
-## Render Options
-
-```bash
-# Preview without writing
-./scripts/render.sh --config config.toml --output ~/.revealui --dry-run
-
-# Compare against existing setup
-./scripts/render.sh --config config.toml --output /tmp/rendered --diff ~/.revealui
-
-# Verbose output
-./scripts/render.sh --config config.toml --output ~/.revealui --verbose
-```
+Edit those files directly; the tracked `gitconfig` / `ssh-config` Include them. There is no profile/render step — that subsystem was removed in favor of this model.
 
 ## Structure
 
 ```
 revkit/
-  bootstrap-wsl.sh     # Primary entry point (run once per WSL)
-  bootstrap.ps1        # PowerShell-side prep
-  wsl/                 # Source of truth — bashrc.d/, bin/, config/, docker/, setup-wsl-boot.sh
-  templates/wsl/       # Parameterized templates ({{PLACEHOLDER}} tokens for .wslconfig, gitconfig, etc.)
-  profiles/            # Preset TOML configs (per-tier resource + feature defaults)
-  scripts/render.sh    # Template engine (renders templates/ → output dir using a profile)
+  bootstrap.sh         # Universal entry point (macOS + Linux + WSL2)
+  bootstrap-wsl.sh     # Deprecation shim → execs bootstrap.sh
+  bootstrap.ps1        # Windows-host PowerShell prep
+  lib/platform.sh      # OS detector (REVKIT_OS + capability predicates)
+  shell/               # shellrc.d/, bin/, config/, docker/, setup-wsl-boot.sh
+  scripts/             # backup + private-leak-scan scripts
   powershell/          # RevealUI.RevStation PowerShell module
-  docs/                # Documentation
+  editor-configs/zed/  # portable Zed settings + rfc task
+  git-hooks/           # M-11 fleet-wide pre-push hook
+  docs/                # documentation
+  tests/               # bash + Pester + platform-fixture suites
 ```
+
+See [`docs/MASTER_SPEC.md`](docs/MASTER_SPEC.md) for the full surface area + configuration model, and [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md) for status + roadmap.
 
 ## License
 
@@ -84,9 +74,10 @@ MIT
 `rfc <repo>` starts a Claude Code session whose process runs **inside WSL**,
 rooted in a `~/revfleet/*` repo — the configuration that makes a secure,
 prompt-free session possible (commands stay native instead of being wrapped in
-`wsl.exe`, so they allowlist by real prefix and the deny-list hooks fire).
+`wsl.exe`, so they allowlist by real prefix and the deny-list hooks fire). On
+macOS and native Linux `rfc` runs the session locally in the target repo.
 
-Deployed automatically by `bootstrap-wsl.sh` (`/usr/local/bin/rfc.sh` +
-`wsl/bashrc.d/50-rfc.sh`). Per-surface wiring (WSL terminal, Zed terminal, Zed
+Deployed automatically by `bootstrap.sh` (`/usr/local/bin/rfc.sh` +
+`shell/shellrc.d/50-rfc.sh`). Per-surface wiring (WSL terminal, Zed terminal, Zed
 `claude-acp` extension) and the Claude Desktop limitation are documented in
 [`docs/rfc-launcher.md`](docs/rfc-launcher.md).

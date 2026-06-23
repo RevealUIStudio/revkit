@@ -1,0 +1,4 @@
+note=container on a WSL host: shares the microsoft-standard-WSL2 kernel and may inherit a leaked WSL_DISTRO_NAME, but /run/WSL is absent (fresh per-container /run tmpfs). MUST be linux, never wsl (the destructive-misclassification safety case).
+uname_s=Linux
+wsl_run=absent
+expected=linux
