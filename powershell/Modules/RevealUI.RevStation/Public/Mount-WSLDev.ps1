@@ -160,7 +160,17 @@ function Mount-WSLDev {
     }
 
     if (-not $deviceReady) {
-        Write-DevLog 'Block device did not appear after 10s. Proceeding with mount helper anyway...' -Level WARN -Source 'Mount' -LogFile $logFile
+        # The Sandbox-labeled partition never showed up. Do NOT run the mount
+        # helper anyway: with no "Sandbox" label present, the helper's own
+        # label lookup fails too and it drops to the unlabeled-ext4 fallback —
+        # exactly the path that can attach the wrong drive. Abort instead; a
+        # genuinely-present drive that was just slow is recovered on the next
+        # trigger (logon/usb/periodic) once its label settles.
+        Write-DevLog 'Sandbox-labeled block device did not appear after 10s — aborting rather than risk a wrong-drive fallback mount.' -Level ERROR -Source 'Mount' -LogFile $logFile
+        $err = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new('Sandbox-labeled block device (blkid -L Sandbox) did not appear after 10s; refusing to run the mount helper to avoid an unlabeled-ext4 fallback mount.'),
+            'SandboxDeviceMissing', [System.Management.Automation.ErrorCategory]::ResourceUnavailable, $null)
+        $PSCmdlet.ThrowTerminatingError($err)
     }
 
     # --- Mount the partition inside WSL ---
