@@ -156,15 +156,34 @@ verify_signed_range() {
         rev_args=("${remote_sha}..${local_sha}")
     fi
 
+    # Enumerate the commits up-front so a `git rev-list` failure is detectable.
+    # The old `while read < <(git rev-list ... 2>/dev/null)` form discarded
+    # rev-list's exit status: a bad range / missing object produced no output,
+    # the loop body never ran, and the function returned 0 — fail-OPEN, letting
+    # an unverifiable push to a protected branch through. Capture status and
+    # fail CLOSED instead. (Assignment is set -e-safe via `|| rev_status=$?`.)
+    local commits_raw="" rev_status=0
+    commits_raw="$(git rev-list "${rev_args[@]}" 2>/dev/null)" || rev_status=$?
+    if [[ "$rev_status" -ne 0 ]]; then
+        _err "Could not enumerate commits to verify (git rev-list exit $rev_status); failing closed."
+        _err "  range: ${rev_args[*]}"
+        return 1
+    fi
+
+    # Empty output with a clean exit means there are genuinely no new commits to
+    # verify (e.g. a no-op push) — that is a legitimate pass, not a failure.
+    local -a commits=()
+    [[ -n "$commits_raw" ]] && mapfile -t commits <<< "$commits_raw"
+
     local sha
-    while IFS= read -r sha; do
+    for sha in "${commits[@]}"; do
         [[ -z "$sha" ]] && continue
         if ! git verify-commit "$sha" >/dev/null 2>&1; then
             _err "Unsigned or untrusted-signature commit: $sha"
             _err "Run: git log -1 --format='%H %s' $sha"
             return 1
         fi
-    done < <(git rev-list "${rev_args[@]}" 2>/dev/null)
+    done
     return 0
 }
 
