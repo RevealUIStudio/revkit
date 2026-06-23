@@ -150,23 +150,26 @@ assert_ok "accepts name with numbers" run_passenv "API_KEY_2" "some/path"
 echo ""
 echo "--- REVVAULT_STORE requirement ---"
 
-# Run passenv without REVVAULT_STORE set
+# Run passenv without REVVAULT_STORE set.
+# Capture the real exit code OUTSIDE the command substitution. The previous
+# version put `|| true` INSIDE the `$( … )`, so the substitution always
+# returned 0 and `no_dir_exit=$?` was a dead assertion (always 0). Use the
+# set -e-safe `cmd && rc=0 || rc=$?` idiom so the genuine exit status survives.
 no_dir_result="$(
   (
     source "$SECRETS_SH"
     unset REVVAULT_STORE
     unset PASSAGE_DIR
     passenv "VALID_NAME" "some/path"
-  ) 2>&1 || true
-)"
-no_dir_exit=$?
+  ) 2>&1
+)" && no_dir_exit=0 || no_dir_exit=$?
 
-# The function should fail when REVVAULT_STORE is unset
-if [[ $no_dir_exit -ne 0 ]] || [[ "$no_dir_result" == *"REVVAULT_STORE"* ]] || [[ "$no_dir_result" == *"PASSAGE_DIR"* ]]; then
+# passenv must fail (nonzero) AND explain why when REVVAULT_STORE is unset.
+if [[ $no_dir_exit -ne 0 ]] && [[ "$no_dir_result" == *"REVVAULT_STORE"* ]]; then
   echo "PASS: passenv fails when REVVAULT_STORE is unset"
   PASS=$((PASS + 1))
 else
-  echo "FAIL: passenv should fail when REVVAULT_STORE is unset"
+  echo "FAIL: passenv should fail when REVVAULT_STORE is unset (exit=$no_dir_exit, output: $no_dir_result)"
   FAIL=$((FAIL + 1))
 fi
 
@@ -177,21 +180,13 @@ fi
 echo ""
 echo "--- passenv-file protected variable blocking ---"
 
-# Test that passenv-file skips protected variables in content.
-# We need to stub revvault/passage to return env-file content.
+# passenv-file reads its env-file content via `revvault get` (40-secrets.sh).
+# Stub revvault to return a blob that puts a protected variable (PATH) between
+# two safe ones; passenv-file must export the safe vars and refuse PATH.
 pf_output="$(
   (
     source "$SECRETS_SH"
-    export PASSAGE_DIR="/tmp/fake-passage-store"
 
-    # Stub passage (for the shell/shellrc.d version which uses passage)
-    passage() {
-      # Return content that includes a protected variable
-      printf 'SAFE_VAR=good\nPATH=/evil\nANOTHER_SAFE=also_good\n'
-    }
-    export -f passage
-
-    # Override revvault too (for the templates version)
     revvault() {
       printf 'SAFE_VAR=good\nPATH=/evil\nANOTHER_SAFE=also_good\n'
     }

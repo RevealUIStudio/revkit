@@ -49,9 +49,20 @@ with-secrets() {
         return 1
     fi
 
+    local out
     (
         for ns in "${nses[@]}"; do
-            eval "$("$rv" export-env "revealui/env/$ns" 2>/dev/null)" || true
+            # Fail closed. A nonexistent/typo'd namespace, a locked age key, or
+            # any other revvault error exits nonzero here. Do NOT swallow it
+            # (no 2>/dev/null, no `|| true`): swallowing would let exec run the
+            # command with NO secrets loaded, silently — a prod-shaped command
+            # stripped of its credentials. Abort the subshell so the caller
+            # sees a nonzero status and the command never runs.
+            if ! out="$("$rv" export-env "revealui/env/$ns")"; then
+                printf 'with-secrets: failed to load namespace %s\n' "$ns" >&2
+                exit 1
+            fi
+            eval "$out"
         done
         exec "${cmd[@]}"
     )
