@@ -28,7 +28,7 @@
 ├──────────────────────────────────────────────────────────────────────┤
 │ df -h /mnt/sandbox                  Check Sandbox drive space            │
 │ mount | grep sandbox                Verify Sandbox drive mounted         │
-│ systemctl --user is-system-running  Check systemd status            │
+│ systemctl is-system-running         Check systemd status            │
 │ loginctl user-status $USER          Detailed session info           │
 └──────────────────────────────────────────────────────────────────────┘
 

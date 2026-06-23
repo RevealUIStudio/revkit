@@ -81,7 +81,7 @@ mount | grep sandbox               # Verify mount
 
 ### Check Systemd Status
 ```bash
-systemctl --user is-system-running # Check if running
+systemctl is-system-running # Check if running
 loginctl user-status $USER         # Detailed user session info
 journalctl --user -xe              # User session logs
 ```
