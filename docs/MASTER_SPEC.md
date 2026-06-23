@@ -1,24 +1,24 @@
 ---
 type: master-spec
 repo: revkit
-last-updated: 2026-05-10
+last-updated: 2026-06-22
 owner: RevealUI Studio
 staleness-status: FRESH
 ---
 
 # RevKit — Master Spec
 
-**Last Updated:** 2026-05-10
-**Status:** Pre-1.0 — surface stable for Joshua's primary use; external-contributor flow is Phase 2
+**Last Updated:** 2026-06-22
+**Status:** Pre-1.0 — cross-platform foundation shipped (macOS + Linux + WSL2); surface stable for daily use, external-contributor flow is Phase D
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
 
-> Surface area, architecture, render contract. Companion to [`MASTER_PLAN.md`](./MASTER_PLAN.md) (status + roadmap).
+> Surface area, architecture, configuration model. Companion to [`MASTER_PLAN.md`](./MASTER_PLAN.md) (status + roadmap).
 
 ---
 
 ## Mission
 
-Portable WSL development-environment toolkit. Take a Windows host with WSL2 and turn it into a RevealUI Studio-grade workstation, declaratively, from a TOML profile.
+Cross-platform development-environment toolkit (macOS + Linux + WSL2, WSL-first). Take a fresh workstation and turn it into a RevealUI Studio-grade environment from one detect-then-dispatch bootstrap, with per-machine values kept machine-local (never committed).
 
 ---
 
@@ -27,101 +27,110 @@ Portable WSL development-environment toolkit. Take a Windows host with WSL2 and 
 ```
 revkit/
 ├── README.md
-├── bootstrap.ps1                    # Windows-host entrypoint (PowerShell)
-├── bootstrap-wsl.sh                 # WSL-host entrypoint (bash)
-├── profiles/                        # TOML profile presets
-│   ├── solo-dev.toml                # T0, 8GB RAM, 4 cores
-│   ├── full-stack.toml              # T1, 12GB RAM, 8 cores
-│   ├── ai-studio.toml               # T1+, 16GB RAM, 8 cores, Ollama
-│   ├── team.toml                    # T1, 16GB RAM, 8 cores, no Ollama
-│   └── config.example.toml          # template for custom profiles
-├── scripts/
-│   ├── render.sh                    # TOML profile → ~/.revealui/ tree
-│   └── weekly-wsl-backup.ps1        # scheduled task — exports Ubuntu distro
-├── wsl/
-│   ├── bashrc.d/                    # shell config fragments sourced by .bashrc
-│   │   └── 00-base.sh               # tier detection, PATH, env vars
-│   ├── bin/                         # helper scripts → /usr/local/bin
-│   ├── config/                      # wsl.conf, .wslconfig, gitconfig, ssh-config, systemd drop-ins
+├── bootstrap.sh                     # Universal entry point (macOS + Linux + WSL2); detect-then-dispatch
+├── bootstrap-wsl.sh                 # Deprecation shim → execs bootstrap.sh (legacy invocation path)
+├── bootstrap.ps1                    # Windows-host prep entrypoint (PowerShell)
+├── lib/
+│   └── platform.sh                  # OS detector: sets REVKIT_OS ∈ {wsl,linux,macos}; exports predicates
+├── shell/
+│   ├── shellrc.d/                   # shell config fragments sourced by .bashrc/.zshrc (00-base.sh, 50-rfc.sh, …)
+│   ├── bin/                         # helper scripts → /usr/local/bin (or ~/.local/bin on macOS)
+│   │   ├── rfc.sh                   # WSL-native (and macOS/Linux) Claude launcher
+│   │   ├── mount-sandbox-drive.sh   # WSL-only sandbox-drive mount helper
+│   │   ├── sandbox-services.sh      # WSL-only sandbox service control
+│   │   ├── sandbox-validate.sh      # WSL-only tier consistency check
+│   │   ├── wsl-status.sh            # WSL-only status banner
+│   │   └── m4-sudoers-fs-scanner.js # M-4 Claude Code PreToolUse scanner
+│   ├── config/                      # neutral tracked configs (no per-user identity)
+│   │   ├── wsl.conf                 # WSL distro config
+│   │   ├── wslconfig                # Windows-host WSL global config (.wslconfig)
+│   │   ├── gitconfig                # tracked git config; includes per-user identity.gitconfig
+│   │   ├── ssh-config               # tracked SSH host aliases; Includes per-user ssh.local
+│   │   └── user@-login-barrier.conf # systemd login-barrier drop-in
 │   ├── docker/                      # Docker-related config (T1 services)
-│   ├── setup-wsl-boot.sh            # idempotent boot optimization (--revert supported)
+│   ├── setup-wsl-boot.sh            # idempotent WSL boot optimization (--revert supported)
 │   ├── compact-vhdx.ps1             # VHDx compaction helper
 │   └── Register-VHDxCompactTask.ps1
+├── scripts/
+│   ├── check-no-private-leaks.sh    # private-path / credential scan (CI)
+│   ├── check-backup-staleness.ps1   # weekly-backup staleness guard
+│   └── weekly-wsl-backup.ps1        # scheduled task — exports Ubuntu distro
 ├── powershell/
 │   └── Modules/
 │       └── RevealUI.RevStation/     # PowerShell module (Mount-WSLDev, Sync-RevealUIToWindows, etc.)
-├── editor-configs/                  # portable editor settings (Zed)
-├── templates/
-│   └── hooks/                       # workboard.template.md (file-based coord template)
+├── editor-configs/
+│   └── zed/                         # portable Zed settings.json + tasks.json (rfc task)
+├── git-hooks/                       # M-11 fleet-wide pre-push hook (wired via core.hooksPath)
 ├── docs/                            # this directory
-├── tests/
-└── backups/
+└── tests/                           # bash + Pester + platform-fixture suites
 ```
+
+The TOML-profile + `scripts/render.sh` rendering subsystem (and the `profiles/`
+and `templates/` directories) was removed in #64/#65 in favor of the neutral
+tracked configs + per-user `include.path` model below.
 
 ---
 
-## Profile schema
+## Configuration model
 
-Profiles are TOML. Render-time keys:
+RevKit ships **neutral, committable configs** and keeps every per-machine /
+per-user value machine-local — nothing committed carries personal identity.
 
-```toml
-[identity]
-name = "Joshua Vaughn"
-email = "joshua.v.dev@gmail.com"
-git_signing_key = "..."
+| Layer | Location | Committed? | Purpose |
+|---|---|---|---|
+| Tracked configs | `shell/config/` | Yes | Generic, identity-free git/ssh/wsl config |
+| Per-user git identity | `~/.config/revkit/identity.gitconfig` | No (machine-local) | name + email; seeded from existing git identity on bootstrap |
+| Per-user SSH overrides | `~/.config/revkit/ssh.local` | No (machine-local) | host blocks; Included by the tracked `ssh-config` |
 
-[wsl]
-distro = "Ubuntu"
-ram_gb = 12
-cores = 8
-swap_gb = 4
+Wiring (done by `bootstrap.sh` step 4):
 
-[tier]
-sandbox_drive = true       # T1 if true, T0 if false
-docker = true
-ollama = false             # T1+ if true
+- Git: `git config --global include.path <repo>/shell/config/gitconfig`; the tracked `gitconfig` in turn `[include]`s `~/.config/revkit/identity.gitconfig`.
+- SSH: `~/.ssh/config` gains `Include <repo>/shell/config/ssh-config`; the tracked `ssh-config` Includes `~/.config/revkit/ssh.local`.
 
-[node]
-version = "24"
-package_manager = "pnpm"
+### OS detection (`lib/platform.sh`)
 
-[shell]
-aliases = [
-  "ll = ls -la",
-  "..= cd ..",
-]
+Sourced by `bootstrap.sh` and the shell fragments. Sets `REVKIT_OS` to exactly
+one of `wsl | linux | macos` (honoring a validated `REVKIT_OS` override) and
+exports capability predicates:
 
-[editors]
-zed = true
-vscode = false
-cursor = false
-
-[secrets]
-age_identity_path = "~/.age-identity/keys.txt"  # RevVault expects this
-```
-
-### Render contract
-
-`scripts/render.sh --config <profile> --output <tree>` produces:
-
-| Output path | Source | Purpose |
-|---|---|---|
-| `<tree>/wsl/bashrc.d/*.sh` | `wsl/bashrc.d/` | Shell config fragments (tier-aware) |
-| `<tree>/wsl/bin/*` | `wsl/bin/` | Helper scripts to symlink into `/usr/local/bin` |
-| `<tree>/wsl/config/wsl.conf` | `wsl/config/wsl.conf` | WSL distro config (`appendWindowsPath=false`, etc.) |
-| `<tree>/wsl/config/.wslconfig` | `wsl/config/wslconfig` | Windows-host WSL global config (memory, processors) |
-| `<tree>/wsl/config/.gitconfig` | template + `[identity]` | Git identity + signing |
-| `<tree>/wsl/config/.ssh/config` | template | SSH host aliases (`github.com-revealui` for org-owner key) |
-| `<tree>/editor-configs/*` | `editor-configs/` | Zed/VS Code/Cursor settings |
-| `<tree>/scripts/*` | `scripts/*` | Backup guards, weekly-backup, etc. |
-
-`render.sh` flags:
-
-| Flag | Behavior |
+| Predicate | True when |
 |---|---|
-| `--dry-run` | Preview without writing |
-| `--diff <existing-tree>` | Show diff against an existing render |
-| `--verbose` | Print every file written |
+| `revkit_is_wsl` | running under WSL |
+| `revkit_is_macos` | macOS |
+| `revkit_is_linux` | native (non-WSL) Linux |
+| `revkit_is_posix` | any of wsl/linux/macos |
+| `revkit_has_systemd` | `/run/systemd/system` present |
+| `revkit_has_wsl_interop` | WSL interop available |
+
+Tested by `tests/test-platform-detect.sh` against `tests/platform-fixtures/`
+(runs on the ubuntu CI runner).
+
+---
+
+## Bootstrap (`bootstrap.sh`)
+
+Universal cross-platform entry point. Detect-then-dispatch: platform-agnostic
+steps run unconditionally; WSL-only steps are gated by `revkit_is_wsl`;
+macOS-specific paths are chosen by `revkit_is_macos` (e.g. helpers install to
+`~/.local/bin` without sudo on macOS, `/usr/local/bin` elsewhere). `--dry-run`
+previews every step without writing.
+
+| Step | What | Platform |
+|---|---|---|
+| 1 | Install `shell/bin/*` helpers (WSL-only helpers skipped off WSL) | all |
+| 2 | Sudoers for passwordless sandbox mount (pinned to `--mount-only`) | WSL |
+| 3 | Self-healing rc-hook into `.bashrc`/`.zshrc` (sources `shell/shellrc.d/*.sh`; prints `● RevKit: managed`) | all |
+| 4 | Git + SSH includes (neutral configs + per-user `~/.config/revkit/`) | all |
+| 5 | WSL boot optimization (`shell/setup-wsl-boot.sh`) | WSL |
+| 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL |
+| 7 | Deploy M-4 Claude Code scanner hook | all |
+| 8 | Wire RevFleet Claude rules via `revcon/link.sh` | all |
+| 9 | Fleet-wide M-11 pre-push hook (`git config --global core.hooksPath <repo>/git-hooks`) | all |
+
+`bootstrap-wsl.sh` is a thin deprecation shim that execs `bootstrap.sh` — it
+exists only to keep the legacy `bash ~/.revealui/bootstrap-wsl.sh` invocation
+path (deployed clones, handoff instructions) working. `bootstrap.ps1` is the
+Windows-host prep entrypoint.
 
 ---
 
@@ -129,25 +138,38 @@ age_identity_path = "~/.age-identity/keys.txt"  # RevVault expects this
 
 | Tier | Trigger | Capabilities |
 |---|---|---|
-| **T0** | Sandbox drive not mounted | Shell env, git+SSH, Node (fnm), age secrets, Chrome bridge, `sandbox` CLI partial (help/validate work; `up` blocked) |
+| **T0** | Sandbox drive not mounted | Shell env, git+SSH, Node (fnm), age secrets, Chrome bridge (WSL), `sandbox` CLI partial (help/validate work; `up` blocked) |
 | **T1** | Sandbox drive mounted at `/mnt/sandbox` | All T0 + Docker services, Postgres (5433), Redis (6380), Ollama (11434, T1+ only via `sandbox up --ai`), build/package caches, `sandbox validate` full |
 
-**Tier transitions** are detected automatically on shell login by `00-base.sh`. The `sandbox validate` command verifies tier consistency (no env-var drift between expected + actual).
+**Tier transitions** are detected automatically on shell login by
+`shell/shellrc.d/00-base.sh`. The `sandbox validate` command verifies tier
+consistency (no env-var drift between expected + actual).
 
-Per the internal `project_forge_drive_role` memory entry, the sandbox drive's role changed 2026-04-24 from "primary dev infra" to "product-demo + red-team security-research lab." The T1 capabilities above remain documented for completeness but are NOT the recommended deployment for daily dev infra — `pnpm store`, Docker data-root, Ollama models, build caches, and active ext4 working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive (NTFS/9p hostile + USB unplugability).
+Per the internal `project_forge_drive_role` memory entry, the sandbox drive's
+role changed 2026-04-24 from "primary dev infra" to "product-demo + red-team
+security-research lab." The T1 capabilities above remain documented for
+completeness but are NOT the recommended deployment for daily dev infra —
+`pnpm store`, Docker data-root, Ollama models, build caches, and active ext4
+working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive
+(NTFS/9p hostile + USB unplugability).
 
 ### Env vars
 
 | Variable | T0 | T1 | Purpose |
 |---|---|---|---|
+| `REVKIT_OS` | set | set | Detected OS (`wsl`/`linux`/`macos`) |
 | `DEVKIT_TIER` | `T0` | `T1` | Shell-detectable tier signal |
-| `REVEALUI_ROOT` | set (C:) | set (C:) | Studio root dir on Windows |
+| `REVEALUI_ROOT` | set | set | RevKit repo root (pinned at bootstrap) |
+| `REVEALUI_MODE` | `managed`/`bare` | `managed`/`bare` | Whether the managed shell fragments loaded |
 | `REVEALUI_SANDBOX` | `/mnt/sandbox` | `/mnt/sandbox` | Sandbox-drive mount point (post-revkit#13) |
 | `REVEALUI_SANDBOX_MOUNTED` | unset | `1` | Boolean signal |
 | `SANDBOX_DATABASE_URL` | set (string) | set (string) | Postgres conn string at port 5433 |
 | `SANDBOX_REDIS_URL` | set (string) | set (string) | Redis conn string at port 6380 |
 
-**Drift note:** Joshua's deployed WSL still uses the legacy `forge` names (`/mnt/forge`, `REVEALUI_FORGE`, `mount-forge-drive.sh`). Source repo post-revkit#13 uses `sandbox` names. Rebootstrap pending (no functional impact).
+**Drift note:** Joshua's deployed WSL still uses the legacy `forge` names
+(`/mnt/forge`, `REVEALUI_FORGE`, `mount-forge-drive.sh`). Source repo
+post-revkit#13 uses `sandbox` names. Re-bootstrap pending (no functional impact)
+— tracked in MASTER_PLAN's Owner Action Queue.
 
 ---
 
@@ -160,18 +182,21 @@ Per the internal `project_forge_drive_role` memory entry, the sandbox drive's ro
 | `Compact-VHDx` | Compact the WSL ext4.vhdx file to reclaim disk |
 | `Register-VHDxCompactTask` | Install scheduled task to compact VHDx weekly |
 
-Module discovery: profile chain in `C:\Program Files\PowerShell\7\profile.ps1` → sources `~\.config\shell\profile.ps1` → loads RevealUI.RevStation when E: connected.
+Module discovery: profile chain in `C:\Program Files\PowerShell\7\profile.ps1` →
+sources `~\.config\shell\profile.ps1` → loads RevealUI.RevStation when E:
+connected. The VHDx helpers ship at `shell/compact-vhdx.ps1` +
+`shell/Register-VHDxCompactTask.ps1`.
 
 ---
 
 ## Boot optimization
 
-`wsl/setup-wsl-boot.sh` (idempotent, supports `--revert`):
+`shell/setup-wsl-boot.sh` (idempotent, supports `--revert`):
 
-- Deploys `wsl.conf`, `.wslconfig`, login barrier drop-in
-- Masks 23 hardware/desktop services unnecessary in WSL
+- Deploys `wsl.conf`, `.wslconfig`, login-barrier drop-in
+- Masks hardware/desktop services unnecessary in WSL
 - Disables Docker + snap auto-start (sockets preserved for on-demand activation)
-- Default systemd target: `multi-user.target` (skips graphical/multi-user transitions)
+- Default systemd target: `multi-user.target` (skips graphical transitions)
 - Login barrier: same-name override in `/etc/systemd/system/` required (separate `99-` file does NOT work in systemd 255)
 - WSL 2.7.0 pre-release recommended (`wsl --update --pre-release`)
 
@@ -179,26 +204,23 @@ Module discovery: profile chain in `C:\Program Files\PowerShell\7\profile.ps1` �
 
 ## Backup model
 
-**Weekly WSL `.tar` snapshot** — `weekly-wsl-backup.ps1` runs Sunday 03:00 via scheduled task `RevealUI-WSL-Weekly-Backup`; exports Ubuntu distro to `E:\backups\wsl-snapshots\current\Ubuntu-<date>.tar`; keeps 2 most recent. Recovery: `wsl --import`.
+**Weekly WSL `.tar` snapshot** — `scripts/weekly-wsl-backup.ps1` runs Sunday
+03:00 via scheduled task `RevealUI-WSL-Weekly-Backup`; exports Ubuntu distro to
+`E:\backups\wsl-snapshots\current\Ubuntu-<date>.tar`; keeps 2 most recent.
+Recovery: `wsl --import`. `scripts/check-backup-staleness.ps1` guards against
+silent backup failures.
 
-The previous Windows-side mirror infrastructure (read-only `E:\projects\*` clones synced by the `RevealUI-Repo-Sync` 30-min scheduled task; backup-guard pre-commit/pre-push hooks; `install-backup-guards.ps1` installer) was retired 2026-05-08 (the sync task had been silently broken since 2026-05-01 due to the `RevealUI.DevEnv` → `RevealUI.RevStation` module rename). GitHub remotes + the weekly WSL snapshot above are now the redundancy layer.
-
----
-
-## File-based workboard template
-
-`templates/hooks/workboard.template.md` ships an alternative coord mode for projects that don't run the RevDev daemon. Two legitimate use cases:
-
-1. **Lightweight bootstrap** — greenfield/one-off project; Node + markdown only
-2. **Offline / minimal-dep setup** — no Rust, no socket, no daemon
-
-For RevFleet products: skip the workboard hooks and wire the RevDev daemon instead (see [`hooks-architecture.md`](https://github.com/RevealUIStudio/revealui/blob/main/.claude/rules/hooks-architecture.md)).
+The previous Windows-side mirror infrastructure (read-only `E:\projects\*`
+clones synced by the `RevealUI-Repo-Sync` scheduled task; backup-guard hooks)
+was retired 2026-05-08. GitHub remotes + the weekly WSL snapshot above are now
+the redundancy layer.
 
 ---
 
 ## Versioning
 
-Pre-1.0. Profile schema versioning lives inside the profile itself (`schema_version = 1` in TOML); breaking schema changes bump the schema-version field and add a migration script under `scripts/migrate-profile-vN-to-vN+1.sh`.
+Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
+[`MASTER_PLAN.md`](./MASTER_PLAN.md) for the A/B/C/D phase scheme.
 
 ---
 
@@ -207,9 +229,9 @@ Pre-1.0. Profile schema versioning lives inside the profile itself (`schema_vers
 | Other product | Relationship |
 |---|---|
 | **RevealUI** | Independent — RevealUI runs anywhere with Node 24 + pnpm + Postgres; RevKit is one provisioning option |
-| **RevVault** | RevKit sets up `~/.age-identity/keys.txt` mount path RevVault expects |
+| **RevVault** | RevKit sets up the age-identity mount path RevVault expects |
 | **RevDev** | Independent — RevDev's harness daemon runs on whatever workstation RevKit (or any other tool) provisioned |
-| **RevCon** | Pairs cleanly — RevKit installs portable Zed config; RevCon overlays project-specific configs via symlinks |
+| **RevCon** | Pairs cleanly — RevKit wires RevFleet Claude rules via `revcon/link.sh` (bootstrap step 8) |
 | **RevForge** | Independent — RevForge runs on a workstation; RevKit can provision that workstation |
 | **RevealCoin** | Independent |
 | **RevSkills** | Independent — skills are markdown, work in any RevKit-provisioned env |
@@ -218,9 +240,10 @@ Pre-1.0. Profile schema versioning lives inside the profile itself (`schema_vers
 
 ## See also
 
-- [`docs/MASTER_PLAN.md`](./MASTER_PLAN.md) — current status, phases, owner actions
+- [`docs/MASTER_PLAN.md`](./MASTER_PLAN.md) — current status, A/B/C/D phases, owner actions
+- [`docs/rfc-launcher.md`](./rfc-launcher.md) — the `rfc` secure Claude launcher
 - [`docs/tier-capabilities.md`](./tier-capabilities.md) — full T0/T1 capability matrix
-- [`docs/agent-coordination.md`](./agent-coordination.md) — workboard template + alternative coord mode
+- [`docs/agent-coordination.md`](./agent-coordination.md) — file-based workboard coord (alternative to RevDev daemon)
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt), [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md)
 - [`README.md`](../README.md) — quick start
 - Fleet master index (`MASTER_INDEX.md` in the RevealUI Studio internal coordination hub) — fleet-level navigation
