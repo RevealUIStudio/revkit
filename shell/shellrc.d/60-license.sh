@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# RevealUI Studio Suite — founder license key (sourced from revvault per the secrets hardline rule)
+# RevealUI Studio founder license key (sourced from revvault per the secrets hardline rule)
 #
 # Path: revealui/dev/founder-license-key
 # Format: RVUI-<tier>-<32 hex chars>
