@@ -1,0 +1,25 @@
+# RevKit SSH config (linked into ~/.ssh/config). The Host blocks below are
+# examples; put your own accounts / IdentityFile overrides in the machine-local
+# include below (never committed).
+Include ~/.config/revkit/ssh.local
+
+# Personal account (example)
+Host github.com-personal
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+
+# Agency Account (RevealUIStudio)
+Host github.com-agency
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_revealui
+  IdentitiesOnly yes
+
+# Alias for RevealUI (legacy, same as agency)
+Host github.com-revealui
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_revealui
+  IdentitiesOnly yes

@@ -1,0 +1,15 @@
+[core]
+	fsmonitor = false
+	untrackedCache = false
+	autocrlf = input
+# Per-user identity is machine-local (never committed); bootstrap seeds it.
+[include]
+	path = ~/.config/revkit/identity.gitconfig
+[credential "https://github.com"]
+	helper =
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !/usr/bin/gh auth git-credential
+[init]
+	defaultBranch = main

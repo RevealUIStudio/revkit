@@ -1,6 +1,6 @@
 # M-4 scanner — smoke tests
 
-Smoke tests for `revkit/wsl/bin/m4-sudoers-fs-scanner.js`.
+Smoke tests for `revkit/shell/bin/m4-sudoers-fs-scanner.js`.
 
 ## Spec
 

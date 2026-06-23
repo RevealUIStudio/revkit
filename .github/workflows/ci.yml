@@ -19,7 +19,7 @@ jobs:
     name: bash -n (all .sh)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Syntax-check every shell script
         run: |
           set -euo pipefail
@@ -42,7 +42,7 @@ jobs:
     name: bash -n + shellcheck (git-hooks/*)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: bash -n every git hook
         run: |
           set -euo pipefail
@@ -72,7 +72,7 @@ jobs:
     name: PowerShell parse (all .ps1/.psm1/.psd1)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Parse every PowerShell file
         shell: pwsh
         run: |
@@ -97,21 +97,18 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
         with:
           severity: warning
           ignore_paths: tests
-          # Templates are bashrc.d fragments — sourced into a host shell, not
-          # standalone scripts. ShellCheck correctly flags style nits inside
-          # them but they aren't actionable in isolation.
           ignore_names: ""
 
   no-hardcoded-user:
     name: GAP-116 anti-regression — no hardcoded "joshu"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Grep for hardcoded "joshu" in scripted files
         run: |
           set -euo pipefail
@@ -146,7 +143,7 @@ jobs:
       # verified before install to close the curl|tar supply-chain gap. Bump with VERSION.
       GITLEAKS_SHA256: "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
       - name: Install gitleaks
@@ -168,23 +165,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Scan for private paths and credentials
         run: bash scripts/check-no-private-leaks.sh
-
-  test-render:
-    name: tests/test-render.sh
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - name: Run render tests
-        run: bash tests/test-render.sh
 
   test-secrets:
     name: tests/test-secrets.sh
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Run secrets tests
         run: bash tests/test-secrets.sh
 
@@ -196,29 +185,35 @@ jobs:
     name: tests/test-pre-push-hook.sh
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Run pre-push hook tests
         run: bash tests/test-pre-push-hook.sh
 
   bootstrap-m11-wiring:
-    # Sanity-check that bootstrap-wsl.sh + bootstrap.ps1 still reference the
-    # M-11 hook + set core.hooksPath. Catches accidental removal of the
-    # wiring during unrelated refactors. Read-only — does not execute either
+    # Sanity-check that bootstrap.sh (the canonical cross-platform entry point)
+    # still references the M-11 hook dir + sets core.hooksPath; that the
+    # bootstrap-wsl.sh deprecation shim still execs bootstrap.sh; and that
+    # bootstrap.ps1 (Windows host) is intact. Catches accidental removal of the
+    # wiring during unrelated refactors. Read-only — does not execute any
     # bootstrap script.
     name: bootstrap M-11 wiring intact
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - name: Check bootstrap-wsl.sh references the hook + sets hooksPath
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Check bootstrap.sh (canonical) + shim chain + bootstrap.ps1
         run: |
           set -euo pipefail
           fail=0
-          if ! grep -qF 'git-hooks/pre-push' bootstrap-wsl.sh; then
-            echo "::error file=bootstrap-wsl.sh::M-11 wiring lost: no reference to git-hooks/pre-push"
+          if ! grep -qF 'git-hooks' bootstrap.sh; then
+            echo "::error file=bootstrap.sh::M-11 wiring lost: no reference to git-hooks"
             fail=1
           fi
-          if ! grep -qF 'core.hooksPath' bootstrap-wsl.sh; then
-            echo "::error file=bootstrap-wsl.sh::M-11 wiring lost: no core.hooksPath setup"
+          if ! grep -qF 'core.hooksPath' bootstrap.sh; then
+            echo "::error file=bootstrap.sh::M-11 wiring lost: no core.hooksPath setup"
+            fail=1
+          fi
+          if ! grep -qF 'bootstrap.sh' bootstrap-wsl.sh; then
+            echo "::error file=bootstrap-wsl.sh::deprecation shim chain broken: no exec of bootstrap.sh"
             fail=1
           fi
           if ! grep -qF 'git-hooks' bootstrap.ps1; then
@@ -231,19 +226,11 @@ jobs:
           fi
           exit "$fail"
 
-  no-bashrc-template-drift:
-    name: No bashrc.d template drift
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - name: Check templates/wsl/bashrc.d/ is empty
-        run: bash scripts/check-no-bashrc-template-drift.sh
-
   pester:
     name: PowerShell Pester tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install Pester 5
         shell: pwsh
         run: |
@@ -258,3 +245,73 @@ jobs:
           $config.Run.Exit = $true
           $config.Output.Verbosity = 'Detailed'
           Invoke-Pester -Configuration $config
+
+  platform-detect:
+    name: platform.sh fixture detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Run platform detection fixtures
+        run: bash tests/test-platform-detect.sh
+
+  bootstrap-dry-run:
+    # Phase C — real-OS smoke of the cross-platform bootstrap. The
+    # platform-detect job above only exercises lib/platform.sh against
+    # fixtures; this actually RUNS bootstrap.sh on real macOS + Linux runners
+    # (detect-then-dispatch from #68), proving the dispatch executes per-OS,
+    # not just that detection returns the right string. --dry-run makes no
+    # changes (every mutating step is gated on DRY_RUN); we assert exit 0.
+    # The wsl code path is exercised via the REVKIT_OS override on the ubuntu
+    # runner (GitHub has no hosted WSL runner).
+    name: bootstrap --dry-run smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: bootstrap.sh --dry-run (native OS detection)
+        run: bash bootstrap.sh --dry-run
+      - name: bootstrap.sh --dry-run (wsl code path via REVKIT_OS override)
+        if: runner.os == 'Linux'
+        env:
+          REVKIT_OS: wsl
+        run: bash bootstrap.sh --dry-run
+
+  bootstrap-real-run:
+    # Phase C exit proof: a REAL (non-dry-run) bootstrap on a disposable Linux
+    # runner. The dry-run matrix above proves the dispatch executes; this proves
+    # bootstrap.sh actually PRODUCES a working managed environment (rc hook,
+    # helpers, git/ssh includes, M-4 scanner, M-11 hooksPath). The ephemeral
+    # runner is the safe sandbox — these steps mutate $HOME + /usr/local/bin +
+    # global git config. WSL-only steps (sudoers, boot-opt, sandbox init) are
+    # skipped (REVKIT_OS auto-detects as linux here). revcon/link.sh (step 8) is
+    # absent on the runner and warns-and-skips by design.
+    name: bootstrap real-run smoke (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Run bootstrap.sh (real, non-dry-run)
+        run: bash bootstrap.sh
+      - name: Assert it produced a working managed environment
+        run: |
+          set -uo pipefail   # NOT -e: accumulate all checks, fail at the end
+          fail=0
+          assert() {
+            if [ "$2" -eq 0 ]; then echo "ok   $1"; else echo "::error::FAILED $1"; fail=1; fi
+          }
+          grep -qF '# --- RevealUI environment mode ---' "$HOME/.bashrc"; assert "rc hook installed in ~/.bashrc" $?
+          test -x /usr/local/bin/rfc.sh; assert "helper rfc.sh installed + executable" $?
+          git config --global --get-all include.path | grep -qF 'shell/config/gitconfig'; assert "git include.path -> shell/config/gitconfig" $?
+          test -f "$HOME/.config/revkit/identity.gitconfig"; assert "per-user identity.gitconfig seeded" $?
+          git config --global --get core.hooksPath | grep -qF 'git-hooks'; assert "M-11 core.hooksPath -> repo git-hooks" $?
+          test -f "$HOME/.claude/hooks/m4-sudoers-fs-scanner.js"; assert "M-4 scanner deployed" $?
+          exit "$fail"
+      - name: Re-run is idempotent (self-healing hook, no duplicate)
+        run: |
+          set -euo pipefail
+          bash bootstrap.sh
+          count="$(grep -cF '# --- RevealUI environment mode ---' "$HOME/.bashrc")"
+          test "$count" -eq 1 || { echo "::error::rc hook duplicated on re-run (count=$count)"; exit 1; }
+          echo "ok   idempotent re-run (single rc hook block)"
