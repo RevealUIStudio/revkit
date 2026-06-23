@@ -8,3 +8,7 @@
 
 # Config files use LF (consumed by WSL/Unix tools)
 shell/config/* text eol=lf
+
+# Git hooks are extensionless and run by bash — force LF so they survive a
+# checkout with autocrlf=true (Windows), where CRLF would break the shebang.
+git-hooks/* text eol=lf
