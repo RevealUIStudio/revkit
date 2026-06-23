@@ -135,21 +135,44 @@ MARKER="# --- RevealUI environment mode ---"
 END_MARKER="# --- end RevealUI ---"
 
 for rcfile in "${_rc_files[@]}"; do
-  # Self-healing: remove any stale RevKit block before re-adding.
-  if grep -qF "$MARKER" "$rcfile" 2>/dev/null; then
+  # One-time pristine backup before any in-place rewrite. Guarded so re-runs
+  # never clobber the original snapshot with already-modified content.
+  if [ "$DRY_RUN" -eq 0 ] && [ -f "$rcfile" ] && [ ! -f "$rcfile.revkit.bak" ]; then
+    cp "$rcfile" "$rcfile.revkit.bak"
+  fi
+
+  # Self-healing: remove any stale RevKit block before re-adding. Strip only
+  # when BOTH markers are present — a lone OPEN marker (truncated/hand-edited
+  # rc) would otherwise make awk drop everything to EOF.
+  if grep -qF "$MARKER" "$rcfile" 2>/dev/null && grep -qF "$END_MARKER" "$rcfile" 2>/dev/null; then
     if [ "$DRY_RUN" -eq 0 ]; then
-      _tmp="$(mktemp)"
-      awk -v s="$MARKER" -v e="$END_MARKER" '
+      # Temp beside the target so the final mv is an atomic same-fs rename.
+      _tmp="$(mktemp "${rcfile}.revkit.XXXXXX")"
+      # END guard: if the OPEN block never closed, drop stays set -> exit 3 ->
+      # leave the original untouched rather than truncate it.
+      if awk -v s="$MARKER" -v e="$END_MARKER" '
         $0 == s { drop = 1 }
         drop != 1 { print }
         $0 == e { drop = 0 }
-      ' "$rcfile" > "$_tmp" && mv "$_tmp" "$rcfile"
+        END { if (drop) exit 3 }
+      ' "$rcfile" > "$_tmp"; then
+        mv "$_tmp" "$rcfile"
+        printf '  Removed stale hook from %s (reinstalling)\n' "$rcfile"
+      else
+        rm -f "$_tmp"
+        printf '  WARNING: %s has an unterminated RevKit block; left untouched\n' "$rcfile" >&2
+      fi
+    else
+      printf '  Removed stale hook from %s (reinstalling)\n' "$rcfile"
     fi
-    printf '  Removed stale hook from %s (reinstalling)\n' "$rcfile"
   fi
 
   if [ "$DRY_RUN" -eq 0 ]; then
-    cat >> "$rcfile" << HOOKEOF
+    # Atomic append: assemble (existing + new block) in a sibling temp, then
+    # rename into place so the rc file is never left half-written.
+    _tmp="$(mktemp "${rcfile}.revkit.XXXXXX")"
+    [ -f "$rcfile" ] && cat "$rcfile" > "$_tmp"
+    cat >> "$_tmp" << HOOKEOF
 
 # --- RevealUI environment mode ---
 # REVEALUI_ROOT pinned at bootstrap — update here if you move the revkit repo.
@@ -170,6 +193,7 @@ if [ -z "\${REVEALUI_MODE:-}" ]; then
 fi
 # --- end RevealUI ---
 HOOKEOF
+    mv "$_tmp" "$rcfile"
   else
     printf '  [dry-run] would append hook to %s\n' "$rcfile"
   fi
