@@ -278,3 +278,40 @@ jobs:
         env:
           REVKIT_OS: wsl
         run: bash bootstrap.sh --dry-run
+
+  bootstrap-real-run:
+    # Phase C exit proof: a REAL (non-dry-run) bootstrap on a disposable Linux
+    # runner. The dry-run matrix above proves the dispatch executes; this proves
+    # bootstrap.sh actually PRODUCES a working managed environment (rc hook,
+    # helpers, git/ssh includes, M-4 scanner, M-11 hooksPath). The ephemeral
+    # runner is the safe sandbox — these steps mutate $HOME + /usr/local/bin +
+    # global git config. WSL-only steps (sudoers, boot-opt, sandbox init) are
+    # skipped (REVKIT_OS auto-detects as linux here). revcon/link.sh (step 8) is
+    # absent on the runner and warns-and-skips by design.
+    name: bootstrap real-run smoke (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Run bootstrap.sh (real, non-dry-run)
+        run: bash bootstrap.sh
+      - name: Assert it produced a working managed environment
+        run: |
+          set -uo pipefail   # NOT -e: accumulate all checks, fail at the end
+          fail=0
+          assert() {
+            if [ "$2" -eq 0 ]; then echo "ok   $1"; else echo "::error::FAILED $1"; fail=1; fi
+          }
+          grep -qF '# --- RevealUI environment mode ---' "$HOME/.bashrc"; assert "rc hook installed in ~/.bashrc" $?
+          test -x /usr/local/bin/rfc.sh; assert "helper rfc.sh installed + executable" $?
+          git config --global --get-all include.path | grep -qF 'shell/config/gitconfig'; assert "git include.path -> shell/config/gitconfig" $?
+          test -f "$HOME/.config/revkit/identity.gitconfig"; assert "per-user identity.gitconfig seeded" $?
+          git config --global --get core.hooksPath | grep -qF 'git-hooks'; assert "M-11 core.hooksPath -> repo git-hooks" $?
+          test -f "$HOME/.claude/hooks/m4-sudoers-fs-scanner.js"; assert "M-4 scanner deployed" $?
+          exit "$fail"
+      - name: Re-run is idempotent (self-healing hook, no duplicate)
+        run: |
+          set -euo pipefail
+          bash bootstrap.sh
+          count="$(grep -cF '# --- RevealUI environment mode ---' "$HOME/.bashrc")"
+          test "$count" -eq 1 || { echo "::error::rc hook duplicated on re-run (count=$count)"; exit 1; }
+          echo "ok   idempotent re-run (single rc hook block)"
