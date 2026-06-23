@@ -246,4 +246,4 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 - [`docs/agent-coordination.md`](./agent-coordination.md) — file-based workboard coord (alternative to RevDev daemon)
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt), [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md)
 - [`README.md`](../README.md) — quick start
-- Fleet master index (`MASTER_INDEX.md` in the RevealUI Studio internal coordination hub) — fleet-level navigation
+- Fleet-level navigation lives in RevealUI Studio's separate private planning repository
