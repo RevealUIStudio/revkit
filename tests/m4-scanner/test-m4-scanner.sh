@@ -196,6 +196,8 @@ assert_stderr_contains "no-justification marker" "has no \`# justification:"
 echo "[7] 00-defaults missing required keyword"
 reset_fixtures "07-defaults-missing-key"
 # Overwrite the clean baseline 00-defaults with one missing log_subcmds.
+# rm first: the baseline is mode 0440, which a non-root owner cannot truncate.
+rm -f "$SUDOERS/00-defaults"
 cat > "$SUDOERS/00-defaults" <<'EOF'
 # RevealUI defense-in-depth sudoers defaults.
 # justification: missing log_subcmds intentionally for this test
@@ -316,6 +318,134 @@ chmod 0644 "$SUDOLOG_FIXTURE"
 exit_code=$(run_scanner)
 assert_exit_code "sudolog-mode exit code" 2 "$exit_code"
 assert_stderr_contains "sudolog-mode marker" "sudo.log"
+
+# ============================================================================
+# Test 17 — joined tag form NOPASSWD:SETENV: must not hide ALL
+# ============================================================================
+echo "[17] joined SETENV tag + ALL"
+reset_fixtures "17-joined-setenv-all"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: tag-bypass regression — joined SETENV tag must not hide ALL
+testuser ALL=(ALL) NOPASSWD:SETENV: ALL
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "joined SETENV+ALL exit code" 2 "$exit_code"
+assert_stderr_contains "joined SETENV+ALL marker" "NOPASSWD: ALL is forbidden"
+
+# ============================================================================
+# Test 18 — prefix tag form SETENV:NOPASSWD: must still detect system binary
+# ============================================================================
+echo "[18] prefix SETENV tag + /bin/su"
+reset_fixtures "18-prefix-setenv-su"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: tag-bypass regression — prefix SETENV tag must not hide /bin/su
+testuser ALL=(root) SETENV:NOPASSWD: /bin/su
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "prefix SETENV+su exit code" 2 "$exit_code"
+assert_stderr_contains "prefix SETENV+su marker" "system-binary path /bin/su"
+
+# ============================================================================
+# Test 19 — joined tag form NOPASSWD:NOEXEC: must not hide ALL
+# ============================================================================
+echo "[19] joined NOEXEC tag + ALL"
+reset_fixtures "19-joined-noexec-all"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: tag-bypass regression — joined NOEXEC tag must not hide ALL
+testuser ALL=(ALL) NOPASSWD:NOEXEC: ALL
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "joined NOEXEC+ALL exit code" 2 "$exit_code"
+assert_stderr_contains "joined NOEXEC+ALL marker" "NOPASSWD: ALL is forbidden"
+
+# ============================================================================
+# Test 20 — prefix tag form NOEXEC:NOPASSWD: must still detect NOPASSWD
+# ============================================================================
+echo "[20] prefix NOEXEC tag + ALL"
+reset_fixtures "20-prefix-noexec-all"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: tag-bypass regression — prefix NOEXEC tag must not hide ALL
+testuser ALL=(ALL) NOEXEC:NOPASSWD: ALL
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "prefix NOEXEC+ALL exit code" 2 "$exit_code"
+assert_stderr_contains "prefix NOEXEC+ALL marker" "NOPASSWD: ALL is forbidden"
+
+# ============================================================================
+# Test 21 — joined tag form NOPASSWD:LOG_INPUT: must detect system binary
+# ============================================================================
+echo "[21] joined LOG_INPUT tag + /bin/su"
+reset_fixtures "21-joined-loginput-su"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: tag-bypass regression — joined LOG_INPUT tag must not hide /bin/su
+testuser ALL=(root) NOPASSWD:LOG_INPUT: /bin/su
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "joined LOG_INPUT+su exit code" 2 "$exit_code"
+assert_stderr_contains "joined LOG_INPUT+su marker" "system-binary path /bin/su"
+
+# ============================================================================
+# Test 22 — prefix tag form LOG_INPUT:NOPASSWD: must detect system binary
+# ============================================================================
+echo "[22] prefix LOG_INPUT tag + /bin/su"
+reset_fixtures "22-prefix-loginput-su"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: tag-bypass regression — prefix LOG_INPUT tag must not hide /bin/su
+testuser ALL=(root) LOG_INPUT:NOPASSWD: /bin/su
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "prefix LOG_INPUT+su exit code" 2 "$exit_code"
+assert_stderr_contains "prefix LOG_INPUT+su marker" "system-binary path /bin/su"
+
+# ============================================================================
+# Test 23 — glued-colon split form NOPASSWD :ALL must not drop the cmd spec
+# ============================================================================
+echo "[23] glued-colon split NOPASSWD :ALL"
+reset_fixtures "23-glued-colon-all"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: tag-bypass regression — glued-colon split form must not drop spec
+testuser ALL=(ALL) NOPASSWD :ALL
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "glued-colon ALL exit code" 2 "$exit_code"
+assert_stderr_contains "glued-colon ALL marker" "NOPASSWD: ALL is forbidden"
+
+# ============================================================================
+# Test 24 — value-blind Defaults: a required name inside an env_keep value
+#           must NOT satisfy the requirement
+# ============================================================================
+echo "[24] value-blind Defaults (env_keep value != satisfaction)"
+reset_fixtures "24-value-blind-defaults"
+# use_pty omitted as a real setting but present inside env_keep's value list.
+# rm first: the baseline is mode 0440, which a non-root owner cannot truncate.
+rm -f "$SUDOERS/00-defaults"
+cat > "$SUDOERS/00-defaults" <<'EOF'
+# RevealUI defense-in-depth sudoers defaults.
+# justification: value-blind regression — env_keep value must not satisfy use_pty
+Defaults    timestamp_timeout=10
+Defaults    env_reset
+Defaults    log_subcmds
+Defaults    logfile=/var/log/sudo.log
+Defaults    passwd_tries=3
+Defaults    env_keep += use_pty
+EOF
+chmod 0440 "$SUDOERS/00-defaults"
+exit_code=$(run_scanner)
+assert_exit_code "value-blind exit code" 2 "$exit_code"
+assert_stderr_contains "value-blind marker" "use_pty"
+
+# ============================================================================
+# Test 25 — comment context: a quoted '#' must not truncate a comma Cmnd list
+# ============================================================================
+echo "[25] quoted '#' does not drop comma-list member"
+reset_fixtures "25-comment-in-comma-list"
+cat > "$SUDOERS/testuser" <<'EOF'
+# justification: comment-context regression — quoted # must not truncate the list
+testuser ALL=(root) NOPASSWD: /usr/local/bin/x.sh "#c", /bin/su
+EOF
+exit_code=$(run_scanner)
+assert_exit_code "comment-in-comma-list exit code" 2 "$exit_code"
+assert_stderr_contains "comment-in-comma-list marker" "system-binary path /bin/su"
 
 # ============================================================================
 # Summary
