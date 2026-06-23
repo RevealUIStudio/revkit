@@ -24,7 +24,7 @@ function Get-Secret {
         $PSCmdlet.ThrowTerminatingError($err)
     }
 
-    # Defence in depth: a passage entry name is a store-relative path, so a
+    # Defence in depth: a vault entry name is a store-relative path, so a
     # newline or other control character is never legitimate and could only
     # come from a malformed or hostile caller. Reject it up front with a clear
     # error. The out-of-band env-var hand-off below already makes any value
@@ -56,39 +56,46 @@ function Get-Secret {
     # 'D:\professional\.revealui' (a value Find-RevealUIDrive can return)
     # resolved to the wrong store. ConvertTo-WslPath preserves the whole path.
     $wslRoot = ConvertTo-WslPath $root
-    $passageDir = "$wslRoot/passage-store"
+    $storeDir = "$wslRoot/passage-store"
 
     # Hand the store directory and the secret path to bash out-of-band through
     # the environment (WSLENV forwards named vars into the WSL process) instead
     # of interpolating them into the command string. The values arrive as
     # opaque environment variables, so quotes, semicolons, backticks, or
     # $(...) in either value cannot break out of the quoting and execute as
-    # commands. This is the structural fix for the prior
-    # `bash -lc "... passage show '$Path'"` injection.
+    # commands. (This is the structural fix for the original
+    # `bash -lc "... show '$Path'"` command injection.)
+    #
+    # revvault is the canonical secret backend (see revkit
+    # shell/shellrc.d/40-secrets.sh). `--json` is used deliberately: it returns
+    # {"value": "..."} on success with the FULL multi-line secret (JSON-escaped)
+    # and {"error": "..."} on failure, which is a reliable success/failure
+    # signal. Plain `revvault get` would instead truncate to the first line and
+    # has inconsistent exit codes across error kinds.
     $previous = @{
-        RV_PASSAGE_DIR = $env:RV_PASSAGE_DIR
-        RV_PATH        = $env:RV_PATH
-        WSLENV         = $env:WSLENV
+        RV_STORE = $env:RV_STORE
+        RV_PATH  = $env:RV_PATH
+        WSLENV   = $env:WSLENV
     }
     try {
-        $env:RV_PASSAGE_DIR = $passageDir
+        $env:RV_STORE = $storeDir
         $env:RV_PATH = $Path
-        # Forward both as plain strings: no '/p' path translation. RV_PASSAGE_DIR
-        # is already a WSL path and RV_PATH is an opaque store key; letting
-        # wsl.exe rewrite either as a Windows path would corrupt it.
-        $forward = 'RV_PASSAGE_DIR:RV_PATH'
+        # Forward both as plain strings: no '/p' path translation. RV_STORE is
+        # already a WSL path and RV_PATH is an opaque store key; letting wsl.exe
+        # rewrite either as a Windows path would corrupt it.
+        $forward = 'RV_STORE:RV_PATH'
         $env:WSLENV = if ([string]::IsNullOrEmpty($previous.WSLENV)) {
             $forward
         } else {
             "$($previous.WSLENV):$forward"
         }
 
-        $result = wsl.exe -d $Distribution -- bash -lc 'PASSAGE_DIR="$RV_PASSAGE_DIR" passage show "$RV_PATH"' 2>&1
+        $raw = wsl.exe -d $Distribution -- bash -lc 'REVVAULT_STORE="$RV_STORE" revvault get --json "$RV_PATH"' 2>&1
         $exitCode = $LASTEXITCODE
     } finally {
         # Restore the prior process environment exactly: remove vars that were
         # unset before, otherwise set them back to their previous value.
-        foreach ($name in 'RV_PASSAGE_DIR', 'RV_PATH', 'WSLENV') {
+        foreach ($name in 'RV_STORE', 'RV_PATH', 'WSLENV') {
             $prev = $previous[$name]
             if ($null -eq $prev) {
                 Remove-Item "Env:$name" -ErrorAction SilentlyContinue
@@ -98,14 +105,14 @@ function Get-Secret {
         }
     }
 
-    if ($exitCode -ne 0) {
+    try {
+        $secret = ConvertFrom-RevvaultJson (($raw -join "`n").Trim())
+    } catch {
         $err = [System.Management.Automation.ErrorRecord]::new(
-            [System.Exception]::new("passage show failed for '$Path': $result"),
-            'PassageFailed', [System.Management.Automation.ErrorCategory]::InvalidResult, $Path)
+            [System.Exception]::new("revvault get failed for '$Path' (exit $exitCode): $($_.Exception.Message)"),
+            'RevvaultFailed', [System.Management.Automation.ErrorCategory]::InvalidResult, $Path)
         $PSCmdlet.ThrowTerminatingError($err)
     }
-
-    $secret = ($result -join "`n").Trim()
 
     if ($AsSecureString) {
         return ($secret | ConvertTo-SecureString -AsPlainText -Force)
