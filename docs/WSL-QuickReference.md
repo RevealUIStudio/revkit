@@ -14,8 +14,8 @@
 
 | Item | Path |
 |------|------|
-| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.RevStation\` |
-| PowerShell Profile (pwsh 7+) | `C:\Users\joshu\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
+| Module | `C:\Users\<you>\.revealui\powershell\Modules\RevealUI.RevStation\` |
+| PowerShell Profile (pwsh 7+) | `C:\Users\<you>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
 | Sandbox Drive Mount | `/mnt/sandbox` (inside WSL) |
 
@@ -88,7 +88,7 @@ cd /mnt/sandbox       # Sandbox drive root
   mountFsTab = true
 
 [user]
-  default=joshua-v-dev
+  default=<your-wsl-username>
 ```
 
 ## 🔍 Troubleshooting
