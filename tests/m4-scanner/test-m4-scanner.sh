@@ -130,9 +130,9 @@ assert_stderr_not_contains "clean baseline" "[M-4]"
 # ============================================================================
 echo "[2] NOPASSWD: ALL forbidden"
 reset_fixtures "02-nopasswd-all"
-cat > "$SUDOERS/joshua-v-dev" <<'EOF'
+cat > "$SUDOERS/testuser" <<'EOF'
 # justification: legacy entry that should be flagged
-joshua-v-dev ALL=(ALL) NOPASSWD: ALL
+testuser ALL=(ALL) NOPASSWD: ALL
 EOF
 exit_code=$(run_scanner)
 assert_exit_code "NOPASSWD: ALL exit code" 2 "$exit_code"
@@ -145,7 +145,7 @@ echo "[3] NOPASSWD to system-binary path"
 reset_fixtures "03-system-binary"
 cat > "$SUDOERS/wsl-mount" <<'EOF'
 # justification: legacy mount entry
-joshua-v-dev ALL=(root) NOPASSWD: /usr/bin/mount
+testuser ALL=(root) NOPASSWD: /usr/bin/mount
 EOF
 exit_code=$(run_scanner)
 assert_exit_code "system-binary path exit code" 2 "$exit_code"
@@ -158,7 +158,7 @@ echo "[4] NOPASSWD with glob in args"
 reset_fixtures "04-glob-arg"
 cat > "$SUDOERS/wsl-mount" <<'EOF'
 # justification: glob-arg entry
-joshua-v-dev ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-*
+testuser ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-*
 EOF
 exit_code=$(run_scanner)
 assert_exit_code "glob arg exit code" 2 "$exit_code"
@@ -171,7 +171,7 @@ echo "[5] NOPASSWD to /usr/local/bin/script with no arg"
 reset_fixtures "05-no-arg-pin"
 cat > "$SUDOERS/wsl-mount" <<'EOF'
 # justification: dangling-no-arg entry
-joshua-v-dev ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh
+testuser ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh
 EOF
 exit_code=$(run_scanner)
 assert_exit_code "no-arg-pin exit code" 2 "$exit_code"
@@ -184,7 +184,7 @@ echo "[6] NOPASSWD entry without justification comment"
 reset_fixtures "06-no-justification"
 cat > "$SUDOERS/wsl-mount" <<'EOF'
 # random comment that is not a justification
-joshua-v-dev ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-only
+testuser ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-only
 EOF
 exit_code=$(run_scanner)
 assert_exit_code "no-justification exit code" 2 "$exit_code"
@@ -274,7 +274,7 @@ reset_fixtures "13-clean-nopasswd"
 cat > "$SUDOERS/wsl-mount" <<'EOF'
 # RevealUI Sandbox USB auto-mount (kept per T0-3).
 # justification: USB-insert trigger needs root; arg pinned to --mount-only literal.
-joshua-v-dev ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-only
+testuser ALL=(root) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-only
 EOF
 exit_code=$(run_scanner)
 assert_exit_code "clean-nopasswd exit code" 0 "$exit_code"
@@ -297,9 +297,9 @@ assert_stderr_contains "passage-store-loose marker" "passage-store"
 echo "[15] multiple violations"
 reset_fixtures "15-multiple"
 chmod 0744 "$HOME_FIXTURE/.age-identity/keys.txt"
-cat > "$SUDOERS/joshua-v-dev" <<'EOF'
+cat > "$SUDOERS/testuser" <<'EOF'
 # justification: legacy entry
-joshua-v-dev ALL=(ALL) NOPASSWD: ALL
+testuser ALL=(ALL) NOPASSWD: ALL
 EOF
 exit_code=$(run_scanner)
 assert_exit_code "multiple violations exit code" 2 "$exit_code"
