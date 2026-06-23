@@ -371,9 +371,12 @@ function scanSudoersDir() {
 
     const full = path.join(SUDOERS_DIR, entry);
 
-    let stat;
+    // Open once and read through that single file descriptor so the file we
+    // fstat-check is provably the file we read. There is no TOCTOU re-resolution
+    // of `full` between the check and the read (fixes CodeQL js/file-system-race).
+    let fd;
     try {
-      stat = fs.statSync(full);
+      fd = fs.openSync(full, "r");
     } catch (err) {
       if (err && err.code === "EACCES") {
         eaccesFiles.push(full);
@@ -381,17 +384,20 @@ function scanSudoersDir() {
       }
       continue;
     }
-    if (!stat.isFile()) continue;
 
     let content;
     try {
-      content = fs.readFileSync(full, "utf8");
+      const st = fs.fstatSync(fd);
+      if (!st.isFile()) continue;
+      content = fs.readFileSync(fd, "utf8");
     } catch (err) {
       if (err && err.code === "EACCES") {
         eaccesFiles.push(full);
         continue;
       }
       continue;
+    } finally {
+      fs.closeSync(fd);
     }
 
     const lines = content.split("\n");
