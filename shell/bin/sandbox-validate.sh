@@ -112,7 +112,7 @@ section() {
 section "Universal checks"
 
 # 1. REVEALUI_ROOT set and valid
-if [ -d "${REVEALUI_ROOT:-}/wsl" ]; then
+if [ -f "${REVEALUI_ROOT:-}/shell/shellrc.d/00-base.sh" ]; then
     check_pass "REVEALUI_ROOT set and valid ($REVEALUI_ROOT)"
 else
     check_fail "REVEALUI_ROOT not set or invalid (${REVEALUI_ROOT:-<unset>})"
