@@ -90,7 +90,9 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
     run cp "$script" "$HELPERS_DIR/$name"
     run chmod +x "$HELPERS_DIR/$name"
   else
-    run bash -c "sed 's/\r\$//' \"$script\" | sudo tee \"$HELPERS_DIR/$name\" > /dev/null"
+    # Positional-arg form: $script reaches sed as "$1", never re-parsed by a
+    # second shell (an injection-safe replacement for `bash -c "... $script ..."`).
+    run sh -c 'sed "s/\r$//" "$1" | sudo tee "$2" >/dev/null' _ "$script" "$HELPERS_DIR/$name"
     run sudo chmod +x "$HELPERS_DIR/$name"
   fi
   printf '  Installed: %s/%s\n' "$HELPERS_DIR" "$name"
