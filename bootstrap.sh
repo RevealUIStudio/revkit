@@ -90,7 +90,9 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
     run cp "$script" "$HELPERS_DIR/$name"
     run chmod +x "$HELPERS_DIR/$name"
   else
-    run bash -c "sed 's/\r\$//' \"$script\" | sudo tee \"$HELPERS_DIR/$name\" > /dev/null"
+    # Positional-arg form: $script reaches sed as "$1", never re-parsed by a
+    # second shell (an injection-safe replacement for `bash -c "... $script ..."`).
+    run sh -c 'sed "s/\r$//" "$1" | sudo tee "$2" >/dev/null' _ "$script" "$HELPERS_DIR/$name"
     run sudo chmod +x "$HELPERS_DIR/$name"
   fi
   printf '  Installed: %s/%s\n' "$HELPERS_DIR" "$name"
@@ -133,21 +135,44 @@ MARKER="# --- RevealUI environment mode ---"
 END_MARKER="# --- end RevealUI ---"
 
 for rcfile in "${_rc_files[@]}"; do
-  # Self-healing: remove any stale RevKit block before re-adding.
-  if grep -qF "$MARKER" "$rcfile" 2>/dev/null; then
+  # One-time pristine backup before any in-place rewrite. Guarded so re-runs
+  # never clobber the original snapshot with already-modified content.
+  if [ "$DRY_RUN" -eq 0 ] && [ -f "$rcfile" ] && [ ! -f "$rcfile.revkit.bak" ]; then
+    cp "$rcfile" "$rcfile.revkit.bak"
+  fi
+
+  # Self-healing: remove any stale RevKit block before re-adding. Strip only
+  # when BOTH markers are present — a lone OPEN marker (truncated/hand-edited
+  # rc) would otherwise make awk drop everything to EOF.
+  if grep -qF "$MARKER" "$rcfile" 2>/dev/null && grep -qF "$END_MARKER" "$rcfile" 2>/dev/null; then
     if [ "$DRY_RUN" -eq 0 ]; then
-      _tmp="$(mktemp)"
-      awk -v s="$MARKER" -v e="$END_MARKER" '
+      # Temp beside the target so the final mv is an atomic same-fs rename.
+      _tmp="$(mktemp "${rcfile}.revkit.XXXXXX")"
+      # END guard: if the OPEN block never closed, drop stays set -> exit 3 ->
+      # leave the original untouched rather than truncate it.
+      if awk -v s="$MARKER" -v e="$END_MARKER" '
         $0 == s { drop = 1 }
         drop != 1 { print }
         $0 == e { drop = 0 }
-      ' "$rcfile" > "$_tmp" && mv "$_tmp" "$rcfile"
+        END { if (drop) exit 3 }
+      ' "$rcfile" > "$_tmp"; then
+        mv "$_tmp" "$rcfile"
+        printf '  Removed stale hook from %s (reinstalling)\n' "$rcfile"
+      else
+        rm -f "$_tmp"
+        printf '  WARNING: %s has an unterminated RevKit block; left untouched\n' "$rcfile" >&2
+      fi
+    else
+      printf '  Removed stale hook from %s (reinstalling)\n' "$rcfile"
     fi
-    printf '  Removed stale hook from %s (reinstalling)\n' "$rcfile"
   fi
 
   if [ "$DRY_RUN" -eq 0 ]; then
-    cat >> "$rcfile" << HOOKEOF
+    # Atomic append: assemble (existing + new block) in a sibling temp, then
+    # rename into place so the rc file is never left half-written.
+    _tmp="$(mktemp "${rcfile}.revkit.XXXXXX")"
+    [ -f "$rcfile" ] && cat "$rcfile" > "$_tmp"
+    cat >> "$_tmp" << HOOKEOF
 
 # --- RevealUI environment mode ---
 # REVEALUI_ROOT pinned at bootstrap — update here if you move the revkit repo.
@@ -168,6 +193,7 @@ if [ -z "\${REVEALUI_MODE:-}" ]; then
 fi
 # --- end RevealUI ---
 HOOKEOF
+    mv "$_tmp" "$rcfile"
   else
     printf '  [dry-run] would append hook to %s\n' "$rcfile"
   fi
@@ -352,8 +378,13 @@ fi
 # Step 9: Fleet-wide pre-push hook (M-11)
 # ---------------------------------------------------------------------------
 echo "[9] Wiring fleet-wide pre-push hook (M-11)..."
-HOOKS_DIR="$SCRIPT_DIR/git-hooks"
-PRE_PUSH_HOOK="$HOOKS_DIR/pre-push"
+HOOKS_SRC_DIR="$SCRIPT_DIR/git-hooks"
+PRE_PUSH_HOOK="$HOOKS_SRC_DIR/pre-push"
+# Deploy hooks to a stable, user-owned path OUTSIDE the repo. Pointing
+# core.hooksPath at the in-repo copy would run a CRLF-corrupted hook whenever
+# the tree was checked out with autocrlf=true; deploying an LF-normalized copy
+# here keeps M-11 working regardless of the clone's line-ending settings.
+HOOKS_DIR="$HOME/.config/revkit/git-hooks"
 
 if [ ! -f "$PRE_PUSH_HOOK" ]; then
   printf '  WARNING: %s not found — skipping M-11\n' "$PRE_PUSH_HOOK" >&2
@@ -362,13 +393,16 @@ elif ! bash -n "$PRE_PUSH_HOOK" >/dev/null 2>&1; then
   exit 1
 else
   if [ "$DRY_RUN" -eq 0 ]; then
-    chmod +x "$PRE_PUSH_HOOK"
+    mkdir -p "$HOOKS_DIR"
+    sed 's/\r$//' "$PRE_PUSH_HOOK" > "$HOOKS_DIR/pre-push"
+    chmod +x "$HOOKS_DIR/pre-push"
     EXISTING="$(git config --global --get core.hooksPath 2>/dev/null || true)"
-    if [ -z "$EXISTING" ]; then
+    if [ "$EXISTING" = "$HOOKS_DIR" ]; then
+      echo "  global core.hooksPath already set (no-op)"
+    elif [ -z "$EXISTING" ] || [ "$EXISTING" = "$HOOKS_SRC_DIR" ]; then
+      # Fresh install, or migrating off the legacy in-repo hooks path.
       git config --global core.hooksPath "$HOOKS_DIR"
       printf '  Set: global core.hooksPath = %s\n' "$HOOKS_DIR"
-    elif [ "$EXISTING" = "$HOOKS_DIR" ]; then
-      echo "  global core.hooksPath already set (no-op)"
     else
       printf '  ERROR: global core.hooksPath already points elsewhere:\n' >&2
       printf '    current: %s\n' "$EXISTING" >&2
@@ -378,7 +412,7 @@ else
     fi
     echo "  M-11 active: pre-push rejects direct/force/unsigned pushes to main + test"
   else
-    printf '  [dry-run] would set core.hooksPath = %s\n' "$HOOKS_DIR"
+    printf '  [dry-run] would deploy LF-normalized pre-push to %s and set core.hooksPath\n' "$HOOKS_DIR"
   fi
 fi
 
