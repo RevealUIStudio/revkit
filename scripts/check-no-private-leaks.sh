@@ -53,6 +53,8 @@ PATTERNS=(
   "license-key|RVUI-[a-z]+-[a-f0-9]{16,}|RevealUI license key (looks like a real issued key)"
   "vercel-org-id|team_[A-Za-z0-9]{16,}|Vercel org/team identifier"
   "vercel-project-id|prj_[A-Za-z0-9]{16,}|Vercel project identifier"
+  "fleet-master-index|MASTER""_INDEX|prose reference to the private fleet index file; use a neutral term"
+  "internal-coord-hub|internal coordination ""hub|prose reference to the private planning repo; use a neutral term"
 )
 
 # Directories / file globs to exclude from the scan.

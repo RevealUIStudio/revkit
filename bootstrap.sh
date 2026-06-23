@@ -314,12 +314,13 @@ REVFLEET_ROOT="$HOME/revfleet"
 if [ ! -f "$REVCON_LINK_SH" ]; then
   echo "  WARNING: $REVCON_LINK_SH not found — skipping (clone RevealUIStudio/revcon first)" >&2
 else
+  # Fleet repos to wire (operator-editable). These are this org's public repos;
+  # edit the list for your own fleet. Cancelled/retired products are omitted.
   FLEET_TARGETS=(
     "revealui:revfleet,revealui"
     "revdev:revfleet"
     "revvault:revfleet"
     "revcon:revfleet"
-    "revealcoin:revfleet"
     "revforge:revfleet"
     "revskills:revfleet"
     "revkit:revfleet"

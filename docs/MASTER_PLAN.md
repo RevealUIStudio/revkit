@@ -12,9 +12,9 @@ staleness-status: FRESH
 **Status:** Active — cross-platform (macOS + Linux + WSL2) bootstrap + WSL-native secure sessions shipped; onboarding validation + drift cleanup next
 **Owner:** RevealUI Studio (`founder@revealui.com`)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
-**Fleet master index:** RevealUI Studio internal coordination hub (`MASTER_INDEX.md`, private).
+**Fleet planning:** RevealUI Studio keeps fleet-level plans in a separate private repository (not part of RevKit).
 
-> Fleet-level cross-cutting plans live in the internal coordination hub's `MASTER_PLAN.md`. This file is RevKit-scoped only.
+> Fleet-level cross-cutting plans live in RevealUI Studio's separate private planning repo. This file is RevKit-scoped only.
 >
 > **Phase labels:** This plan is the canonical phase source. Earlier session handoffs used informal letter labels (e.g. "B3", "C + D"); the canonical mapping is spelled out under [Roadmap](#roadmap). The pre-2026-06 numbered scheme (Phase 0/1/2/3) is reconciled into the lettered scheme there.
 
@@ -126,7 +126,7 @@ Pre-1.0 per the fleet versioning convention. Promotion gated on real external co
 
 - Finish the `shellrc.d/` source-vs-deployed reconciliation + rebootstrap deployed env to `/mnt/sandbox` paths (closes the source-vs-deploy drift)
 - macOS boot-equivalent of `setup-wsl-boot.sh` (likely a no-op + Nix install + dotfiles)
-- ~~Resolve **public-vs-internal GitHub** decision (owner)~~ — **DECIDED 2026-06-23: INTERNAL (retracted PUBLIC→PRIVATE).** Rationale + republish preconditions in the internal coordination hub ADR `2026-06-23-revkit-visibility`. Phase C exit re-scoped to *internal* multi-machine onboarding; external-contributor onboarding deferred to a future public re-decision.
+- ~~Resolve **public-vs-internal GitHub** decision (owner)~~ — **DECIDED 2026-06-23: INTERNAL (retracted PUBLIC→PRIVATE).** Rationale + republish preconditions in a private ADR `2026-06-23-revkit-visibility`. Phase C exit re-scoped to *internal* multi-machine onboarding; external-contributor onboarding deferred to a future public re-decision.
 - **Exit:** zero source-vs-deploy drift; macOS/Linux paths first-class; ~~public/internal posture decided~~ posture DECIDED=PRIVATE.
 
 > **Phase order note:** C and D are independent and can run in either order or in parallel (separate PRs). C is forward-looking (validate the cross-platform work); D is cleanup (close the deploy drift). The public/internal decision (previously the only owner-gated item here) is now RESOLVED=PRIVATE; the remaining owner-gated item in D is the deployed `~/.revealui` rebootstrap.
@@ -149,4 +149,4 @@ Pre-1.0 per the fleet versioning convention. Promotion gated on real external co
 - [`docs/agent-coordination.md`](./agent-coordination.md) — file-based workboard coord (alternative to RevDev daemon)
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt) + [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md) — WSL ops reference
 - [`README.md`](../README.md) — quick start
-- Fleet master index (`MASTER_INDEX.md` in the RevealUI Studio internal coordination hub) — fleet-level navigation
+- Fleet-level navigation lives in RevealUI Studio's separate private planning repository
