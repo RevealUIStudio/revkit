@@ -13,13 +13,16 @@ function Register-DevMountTask {
     [OutputType([void])]
     param()
 
+    $taskName = 'WSL-Mount-DevDrive'
+
     if (-not (Test-IsAdmin)) {
+        if (-not $PSCmdlet.ShouldProcess($taskName, 'Elevate to register scheduled task')) {
+            return
+        }
         Write-DevLog 'Elevating to register mount task...' -Level WARN -Source 'TaskReg'
         Invoke-Elevated -Command 'Register-DevMountTask' -Wait
         return
     }
-
-    $taskName = 'WSL-Mount-DevDrive'
 
     # Inline module discovery + Mount-WSLDev command
     $command = @'
