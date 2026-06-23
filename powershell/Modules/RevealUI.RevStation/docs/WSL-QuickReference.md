@@ -24,7 +24,7 @@
 
 | Item | Path |
 |------|------|
-| Module | `C:\Users\joshu\.revealui\powershell\Modules\RevealUI.RevStation\` |
+| Module | `C:\Users\<you>\.revealui\powershell\Modules\RevealUI.RevStation\` |
 | Logs | `<module>\logs\` |
 | PowerShell Profile | `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` |
 | WSL Config | `/etc/wsl.conf` (inside WSL) |
@@ -81,7 +81,7 @@ mount | grep sandbox               # Verify mount
 
 ### Check Systemd Status
 ```bash
-systemctl --user is-system-running # Check if running
+systemctl is-system-running # Check if running
 loginctl user-status $USER         # Detailed user session info
 journalctl --user -xe              # User session logs
 ```
@@ -107,7 +107,7 @@ cd /mnt/sandbox       # Sandbox drive root
   mountFsTab = true
 
 [user]
-  default=joshua-v-dev
+  default=<your-wsl-username>
 ```
 
 ## Troubleshooting

@@ -18,6 +18,9 @@ sandbox() {
     fi
     SANDBOX_DATABASE_URL="postgresql://${_u:-sandbox}:${_p:-sandbox}@localhost:5433/${_d:-sandbox}" \
     SANDBOX_REDIS_URL="redis://localhost:6380" \
+    POSTGRES_USER="${_u:-sandbox}" \
+    POSTGRES_DB="${_d:-sandbox}" \
+    PGPASSWORD="${_p:-sandbox}" \
     "$script" "$@"
 }
 
