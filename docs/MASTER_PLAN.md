@@ -146,7 +146,6 @@ Pre-1.0 per the fleet versioning convention. Promotion gated on real external co
 
 - [`docs/MASTER_SPEC.md`](./MASTER_SPEC.md) — surface area + configuration model
 - [`docs/tier-capabilities.md`](./tier-capabilities.md) — T0/T1 capability matrix
-- [`docs/agent-coordination.md`](./agent-coordination.md) — file-based workboard coord (alternative to RevDev daemon)
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt) + [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md) — WSL ops reference
 - [`README.md`](../README.md) — quick start
 - Fleet master index (`MASTER_INDEX.md` in the RevealUI Studio internal coordination hub) — fleet-level navigation

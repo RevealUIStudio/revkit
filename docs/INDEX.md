@@ -21,7 +21,6 @@ Cross-platform (macOS + Linux + WSL2, WSL-first) development-environment toolkit
 
 - [`rfc-launcher.md`](./rfc-launcher.md) — the `rfc` secure Claude launcher
 - [`tier-capabilities.md`](./tier-capabilities.md) — T0/T1 (sandbox-drive) capabilities
-- [`agent-coordination.md`](./agent-coordination.md) — file-based workboard coord
 - [`WSL-QuickReference.md`](./WSL-QuickReference.md) + [`WSL-CheatSheet.txt`](./WSL-CheatSheet.txt) — WSL ops
 
 ## Fleet coordination
