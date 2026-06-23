@@ -23,3 +23,24 @@ Describe 'Get-Secret argument validation' {
         { Get-Secret -AsPlainText -ErrorAction Stop } | Should -Throw
     }
 }
+
+Describe 'Get-Secret path validation (injection guard)' {
+    It 'throws InvalidPath when the path is whitespace only' {
+        { Get-Secret -Path '   ' -AsPlainText -ErrorAction Stop } | Should -Throw -ErrorId 'InvalidPath,Get-Secret'
+    }
+
+    It 'throws InvalidPath when the path contains a newline' {
+        { Get-Secret -Path "a`nb" -AsPlainText -ErrorAction Stop } | Should -Throw -ErrorId 'InvalidPath,Get-Secret'
+    }
+
+    It 'throws InvalidPath when the path contains a carriage return' {
+        { Get-Secret -Path "a`rb" -AsPlainText -ErrorAction Stop } | Should -Throw -ErrorId 'InvalidPath,Get-Secret'
+    }
+
+    It 'rejects control characters before any WSL drive lookup is attempted' {
+        # REVEALUI_ROOT points nowhere usable; a DriveNotFound error would prove
+        # the control-character guard did NOT run first. InvalidPath proves it did.
+        $env:REVEALUI_ROOT = 'Z:\does-not-exist'
+        { Get-Secret -Path "x`ny" -AsPlainText -ErrorAction Stop } | Should -Throw -ErrorId 'InvalidPath,Get-Secret'
+    }
+}
