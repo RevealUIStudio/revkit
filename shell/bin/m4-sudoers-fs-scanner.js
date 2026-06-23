@@ -59,6 +59,26 @@ const SYSTEM_BINARY_PREFIXES = [
 
 // Glob/wildcard characters that must never appear in a NOPASSWD arg list.
 const GLOB_CHARS = new Set(["*", "?", "[", "]"]);
+// Known sudoers Cmnd_Spec tags. A command spec may carry a chain of these,
+// each terminated by ':', glued together (NOEXEC:NOPASSWD:) or split across
+// whitespace (NOEXEC: NOPASSWD: / NOPASSWD :ALL). The command begins at the
+// first chain element that is NOT a known tag.
+const SUDO_TAGS = new Set([
+  "NOPASSWD",
+  "PASSWD",
+  "NOEXEC",
+  "EXEC",
+  "SETENV",
+  "NOSETENV",
+  "LOG_INPUT",
+  "NOLOG_INPUT",
+  "LOG_OUTPUT",
+  "NOLOG_OUTPUT",
+  "MAIL",
+  "NOMAIL",
+  "FOLLOW",
+  "NOFOLLOW",
+]);
 
 // Required Defaults entries that must be present in /etc/sudoers.d/00-defaults.
 // Stored as a Set for O(1) lookups during file scan. Each entry is the
@@ -149,9 +169,26 @@ function fsInvariants() {
  */
 function stripTrailingComment(line) {
   let out = "";
+  let inQuote = false; // inside a double-quoted span
+  let escaped = false; // previous char was an unescaped backslash
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === "#" && (i === 0 || line[i - 1] !== "\\")) break;
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inQuote = !inQuote;
+      out += ch;
+      continue;
+    }
+    if (ch === "#" && !inQuote) break;
     out += ch;
   }
   return out;
@@ -192,56 +229,71 @@ function containsGlob(s) {
 }
 
 /**
- * Detect whether a tokenized line is a NOPASSWD entry. Returns the index
- * within tokens where "NOPASSWD:" appears, or -1 if not present.
+ * Parse the leading tag chain + command spec of a tokenized sudoers entry.
  *
- * Sudoers shape we care about:
- *   <user> <hostspec>=(<runas>) NOPASSWD: <cmdSpec>...
- * NOPASSWD: may also be combined with a tag list (NOPASSWD:SETENV:); we
- * accept any token that begins with "NOPASSWD" and contains ":".
+ * A Cmnd_Spec is `[Tag_Spec ...] Cmnd`. Tags are colon-terminated and may be
+ * glued (NOEXEC:NOPASSWD:), split across whitespace (NOEXEC: NOPASSWD:), have
+ * the command glued on (NOPASSWD:/bin/su), or carry the colon as its own token
+ * (NOPASSWD :ALL). We walk the chain splitting on ':' and whitespace, strip
+ * every leading element that is a known sudoers tag, and the command begins at
+ * the first non-tag element.
+ *
+ * Returns { found, cmdSpec }: `found` is true iff NOPASSWD appears anywhere in
+ * the leading tag chain; `cmdSpec` is the command(s)+args after the chain,
+ * joined with single spaces. No regex — char scan + Set.
  */
-function findNopasswdIndex(tokens) {
+function parseNopasswdEntry(tokens) {
+  // Start of the tag chain: first token whose first colon-segment is a known
+  // tag. user / host=(runas) tokens never colon-split to a tag
+  // (e.g. "ALL=(ALL:ALL)" -> "ALL=(ALL").
+  let tagStart = -1;
   for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.startsWith("NOPASSWD") && t.includes(":")) return i;
-    // Some configs split as `NOPASSWD :`; treat bare `NOPASSWD` followed
-    // by `:` as a hit too.
-    if (t === "NOPASSWD" && i + 1 < tokens.length && tokens[i + 1].startsWith(":")) {
-      return i;
+    if (SUDO_TAGS.has(tokens[i].split(":")[0])) {
+      tagStart = i;
+      break;
     }
   }
-  return -1;
-}
-
-/**
- * Extract the command + args portion that follows NOPASSWD: in a tokenized
- * sudoers entry. Returns the joined string (single space separator) or "".
- */
-function extractNopasswdCmdSpec(tokens, nopasswdIdx) {
-  const t = tokens[nopasswdIdx];
-  let firstCmdToken;
-  let startIdx;
-  if (t === "NOPASSWD") {
-    // Split form: NOPASSWD : /path/to/cmd arg
-    startIdx = nopasswdIdx + 2;
-    if (tokens[nopasswdIdx + 1] !== ":") return "";
-  } else {
-    // Joined form: NOPASSWD:/path/to/cmd  or  NOPASSWD: /path/to/cmd
-    const colonIdx = t.indexOf(":");
-    const after = t.slice(colonIdx + 1);
-    if (after.length > 0) {
-      firstCmdToken = after;
-      startIdx = nopasswdIdx + 1;
-    } else {
-      startIdx = nopasswdIdx + 1;
+  if (tagStart < 0) return { found: false, cmdSpec: "" };
+  const rest = tokens.slice(tagStart).join(" ");
+  const tags = [];
+  let i = 0;
+  while (i < rest.length) {
+    // Skip separators between tags: whitespace and the colons that join/end them.
+    while (
+      i < rest.length &&
+      (rest[i] === " " || rest[i] === "\t" || rest[i] === ":")
+    ) {
+      i++;
+    }
+    // Read a word up to the next colon or whitespace.
+    let j = i;
+    while (
+      j < rest.length &&
+      rest[j] !== ":" &&
+      rest[j] !== " " &&
+      rest[j] !== "\t"
+    ) {
+      j++;
+    }
+    const word = rest.slice(i, j);
+    if (word.length === 0) break;
+    if (!SUDO_TAGS.has(word)) break; // command starts here
+    // A known-tag word is only a tag if colon-terminated (after optional ws).
+    let k = j;
+    while (k < rest.length && (rest[k] === " " || rest[k] === "\t")) k++;
+    if (rest[k] !== ":") break;
+    tags.push(word);
+    i = k + 1; // consume the terminating colon
+  }
+  const cmdSpec = rest.slice(i).trim();
+  let found = false;
+  for (const tag of tags) {
+    if (tag === "NOPASSWD") {
+      found = true;
+      break;
     }
   }
-  const parts = [];
-  if (firstCmdToken) parts.push(firstCmdToken);
-  for (let i = startIdx; i < tokens.length; i++) {
-    parts.push(tokens[i]);
-  }
-  return parts.join(" ").trim();
+  return { found, cmdSpec };
 }
 
 /**
@@ -309,6 +361,7 @@ function scanSudoersDir() {
   let sawDefaultsFile = false;
   let defaultsHasAllRequired = false;
   let defaultsMissingKeywords = [];
+  let defaultsNegatedKeywords = [];
 
   for (const entry of entries) {
     // Skip backup files matching sudoers conventions (vim ~, dpkg .bak, etc.)
@@ -346,25 +399,47 @@ function scanSudoersDir() {
     if (entry === "00-defaults") {
       sawDefaultsFile = true;
       const seenKeywords = new Set();
+      const negatedRequired = new Set();
       for (const line of lines) {
         const code = stripTrailingComment(line).trim();
         if (!code.startsWith("Defaults")) continue;
-        // After "Defaults" (optionally followed by spec qualifiers like
-        // `Defaults:user` or `Defaults!cmd`) the next token is keyword[=val].
-        // We just scan tokens for any keyword that matches REQUIRED_DEFAULTS.
+        // tokens[0] is "Defaults" (a binding suffix like Defaults:user /
+        // Defaults!cmd / Defaults@host / Defaults>runas is glued on with no
+        // space, so the SETTING is tokens[1]). Only the leading setting NAME
+        // counts; names inside a value list (env_keep += "use_pty") live in
+        // later tokens and must NOT satisfy a requirement.
         const tokens = tokenize(code);
-        for (const t of tokens) {
-          const eqIdx = t.indexOf("=");
-          const keyword = eqIdx >= 0 ? t.slice(0, eqIdx) : t;
-          if (REQUIRED_DEFAULTS.has(keyword)) seenKeywords.add(keyword);
+        if (tokens.length < 2) continue;
+        let setting = tokens[1];
+        // A negated setting (!name) actively disables it — never satisfaction.
+        let negated = false;
+        if (setting.startsWith("!")) {
+          negated = true;
+          setting = setting.slice(1);
         }
+        // Strip a glued operator + value: name / name=v / name+=v / name-=v.
+        // Check += and -= before = (both contain '=').
+        const plusIdx = setting.indexOf("+=");
+        const minusIdx = setting.indexOf("-=");
+        const eqIdx = setting.indexOf("=");
+        let cut = -1;
+        if (plusIdx >= 0) cut = plusIdx;
+        else if (minusIdx >= 0) cut = minusIdx;
+        else if (eqIdx >= 0) cut = eqIdx;
+        const name = cut >= 0 ? setting.slice(0, cut) : setting;
+        if (!REQUIRED_DEFAULTS.has(name)) continue;
+        if (negated) negatedRequired.add(name);
+        else seenKeywords.add(name);
       }
       const missing = [];
       for (const k of REQUIRED_DEFAULTS) {
+        if (negatedRequired.has(k)) continue; // reported separately as negated
         if (!seenKeywords.has(k)) missing.push(k);
       }
-      defaultsHasAllRequired = missing.length === 0;
+      defaultsHasAllRequired =
+        missing.length === 0 && negatedRequired.size === 0;
       defaultsMissingKeywords = missing;
+      defaultsNegatedKeywords = Array.from(negatedRequired);
     }
 
     // Scan every line for NOPASSWD entries.
@@ -374,14 +449,14 @@ function scanSudoersDir() {
       if (code.length === 0) continue;
 
       const tokens = tokenize(raw);
-      const nopasswdIdx = findNopasswdIndex(tokens);
-      if (nopasswdIdx < 0) continue;
+      const np = parseNopasswdEntry(tokens);
+      if (!np.found) continue;
 
       const lineNum = i + 1; // human-readable
 
       // Rule: forbid NOPASSWD: ALL in any form.
       // Check the cmd spec for the literal token "ALL".
-      const cmdSpec = extractNopasswdCmdSpec(tokens, nopasswdIdx);
+      const cmdSpec = np.cmdSpec;
       const cmdTokens = cmdSpec.split(",").map((s) => s.trim()).filter(Boolean);
 
       for (const cmd of cmdTokens) {
@@ -419,17 +494,21 @@ function scanSudoersDir() {
           });
         }
 
-        // Rule: NOPASSWD to /usr/local/bin/* without exact literal arg.
-        // Allowed shape is: /usr/local/bin/<script> <literalArg>
-        // (exactly one arg after the script path).
+        // Rule: NOPASSWD to /usr/local/bin/<script> must pin EXACTLY ONE
+        // literal arg (T0-3 one-script-one-literal-arg hardline). Zero args
+        // OR two-or-more args both violate.
         if (head.startsWith("/usr/local/bin/")) {
           const argsAfter = cmd.slice(head.length).trim();
-          if (argsAfter.length === 0) {
+          const argTokens =
+            argsAfter.length === 0 ? [] : argsAfter.split(" ").filter(Boolean);
+          if (argTokens.length !== 1) {
             findings.push({
               class: "SUDOERS",
               where: `${full}:${lineNum}`,
               ruleDesc:
-                `NOPASSWD to ${head} without a pinned literal arg — every NOPASSWD must be one-script-one-literal-arg`,
+                argTokens.length === 0
+                  ? `NOPASSWD to ${head} without a pinned literal arg — every NOPASSWD must be one-script-one-literal-arg (exactly one literal arg required)`
+                  : `NOPASSWD to ${head} pins ${argTokens.length} args — every NOPASSWD must be one-script-one-literal-arg (exactly one literal arg required)`,
               remediationFile: "T0-3",
             });
           }
@@ -460,13 +539,24 @@ function scanSudoersDir() {
       remediationFile: "T0-2",
     });
   } else if (!defaultsHasAllRequired) {
-    findings.push({
-      class: "SUDOERS",
-      where: `${SUDOERS_DIR}/00-defaults`,
-      ruleDesc:
-        `Required Defaults missing from 00-defaults: ${defaultsMissingKeywords.join(", ")}`,
-      remediationFile: "T0-2",
-    });
+    if (defaultsMissingKeywords.length > 0) {
+      findings.push({
+        class: "SUDOERS",
+        where: `${SUDOERS_DIR}/00-defaults`,
+        ruleDesc:
+          `Required Defaults missing from 00-defaults: ${defaultsMissingKeywords.join(", ")}`,
+        remediationFile: "T0-2",
+      });
+    }
+    if (defaultsNegatedKeywords.length > 0) {
+      findings.push({
+        class: "SUDOERS",
+        where: `${SUDOERS_DIR}/00-defaults`,
+        ruleDesc:
+          `Required Defaults explicitly negated (disabled) in 00-defaults: ${defaultsNegatedKeywords.map((k) => "!" + k).join(", ")}`,
+        remediationFile: "T0-2",
+      });
+    }
   }
 
   return { findings, eaccesFiles };
