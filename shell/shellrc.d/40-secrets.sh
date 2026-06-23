@@ -36,11 +36,13 @@ passenv() {
         return 1
     fi
     local val
-    # Capture the FULL secret. Command substitution already strips the single
-    # trailing newline; do NOT pipe through `head -1`, which silently truncates
-    # multi-line secrets (PEM/SSH private keys, JSON service-account blobs, GPG
-    # armor) to their first line while still returning success.
-    val="$(revvault get "$path" 2>/dev/null)"
+    # Capture the FULL secret. `revvault get` DEFAULTS to first-line-only, so
+    # --full is REQUIRED: without it, multi-line secrets (PEM/SSH private keys,
+    # JSON service-account blobs, GPG armor) are silently truncated to their
+    # first line while the call still returns success. Do NOT pipe through
+    # `head -1` either (same truncation). Command substitution already strips
+    # the single trailing newline.
+    val="$(revvault get --full "$path" 2>/dev/null)"
     if [ -n "$val" ]; then
         export "$varname=$val"
     else
@@ -51,7 +53,10 @@ passenv() {
 passenv-file() {
     local path="$1"
     local content line _pf_varname
-    content=$(revvault get "$path" 2>/dev/null)
+    # --full is REQUIRED here too: passenv-file parses every KEY=value line, so
+    # the secret is inherently multi-line. Without --full, `revvault get` returns
+    # only the first line and every key after the first would be dropped.
+    content=$(revvault get --full "$path" 2>/dev/null)
     if [ -z "$content" ]; then
         echo "WARN: revvault get $path failed" >&2
         return 1
