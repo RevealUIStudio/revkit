@@ -126,10 +126,10 @@ Pre-1.0 per the fleet versioning convention. Promotion gated on real external co
 
 - Finish the `shellrc.d/` source-vs-deployed reconciliation + rebootstrap deployed env to `/mnt/sandbox` paths (closes the source-vs-deploy drift)
 - macOS boot-equivalent of `setup-wsl-boot.sh` (likely a no-op + Nix install + dotfiles)
-- Resolve **public-vs-internal GitHub** decision (owner) — gates Phase C completion
-- **Exit:** zero source-vs-deploy drift; macOS/Linux paths first-class; public/internal posture decided
+- ~~Resolve **public-vs-internal GitHub** decision (owner)~~ — **DECIDED 2026-06-23: INTERNAL (retracted PUBLIC→PRIVATE).** Rationale + republish preconditions in the internal coordination hub ADR `2026-06-23-revkit-visibility`. Phase C exit re-scoped to *internal* multi-machine onboarding; external-contributor onboarding deferred to a future public re-decision.
+- **Exit:** zero source-vs-deploy drift; macOS/Linux paths first-class; ~~public/internal posture decided~~ posture DECIDED=PRIVATE.
 
-> **Phase order note:** C and D are independent and can run in either order or in parallel (separate PRs). C is forward-looking (validate the cross-platform work); D is cleanup (close the deploy drift + decide posture). The public/internal decision in D is the only owner-gated item — flag it rather than block on it.
+> **Phase order note:** C and D are independent and can run in either order or in parallel (separate PRs). C is forward-looking (validate the cross-platform work); D is cleanup (close the deploy drift). The public/internal decision (previously the only owner-gated item here) is now RESOLVED=PRIVATE; the remaining owner-gated item in D is the deployed `~/.revealui` rebootstrap.
 
 ---
 
@@ -138,7 +138,7 @@ Pre-1.0 per the fleet versioning convention. Promotion gated on real external co
 | Item | Unblocks |
 |---|---|
 | Re-bootstrap Joshua's deployed WSL to pick up `/mnt/sandbox` paths | Closes source-vs-deploy drift (Phase D) |
-| Decide whether RevKit is public on GitHub or stays studio-internal | Phase C (external onboarding) completion |
+| ~~Decide whether RevKit is public on GitHub or stays studio-internal~~ — DECIDED 2026-06-23: **PRIVATE** (ADR `2026-06-23-revkit-visibility` in the internal hub) | ✅ resolved |
 
 ---
 
