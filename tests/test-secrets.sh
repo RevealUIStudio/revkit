@@ -184,14 +184,14 @@ pf_output="$(
     source "$SECRETS_SH"
     export PASSAGE_DIR="/tmp/fake-passage-store"
 
-    # Stub passage (for the shell/shellrc.d version which uses passage)
+    # Stub passage too (defensive); 40-secrets.sh actually reads via revvault
     passage() {
       # Return content that includes a protected variable
       printf 'SAFE_VAR=good\nPATH=/evil\nANOTHER_SAFE=also_good\n'
     }
     export -f passage
 
-    # Override revvault too (for the templates version)
+    # revvault is the canonical backend 40-secrets.sh reads (passenv-file)
     revvault() {
       printf 'SAFE_VAR=good\nPATH=/evil\nANOTHER_SAFE=also_good\n'
     }
