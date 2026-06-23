@@ -1,5 +1,10 @@
 # shellcheck shell=bash
-# RevVault (age-encrypted secret store) configuration
+# RevVault (age-encrypted secret store) configuration.
+#
+# CANONICAL SECRET BACKEND: revvault. Every loader here (passenv / passenv-file)
+# reads via `revvault get`, and the Windows PowerShell Get-Secret cmdlet uses the
+# same backend (revkit #91). The PASSAGE_DIR export below is a backward-compat
+# alias only; passage itself is not used.
 if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
     export REVVAULT_STORE="$REVEALUI_ROOT/passage-store"
     export PASSAGE_DIR="$REVVAULT_STORE"
