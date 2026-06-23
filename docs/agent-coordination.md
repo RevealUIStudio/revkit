@@ -13,7 +13,7 @@ The templates and hooks documented below still ship with revkit for two legitima
 1. **Lightweight bootstrap** — a project that doesn't run the RevDev daemon (and doesn't need its memory/RPC features) can still get cross-session conflict prevention and a handoff history from a file-based workboard.
 2. **Offline / minimal-dep setup** — no Rust toolchain, no socket, no daemon process. Just Node + a markdown file.
 
-If you're bootstrapping a RevealUI Suite product, skip the workboard hooks and wire the RevDev daemon instead. If you're bootstrapping a greenfield or one-off project and want a minimal multi-agent coordination layer, read on.
+If you're bootstrapping a RevFleet product, skip the workboard hooks and wire the RevDev daemon instead. If you're bootstrapping a greenfield or one-off project and want a minimal multi-agent coordination layer, read on.
 
 ## What the Workboard Is
 

@@ -10,13 +10,16 @@ function Unregister-DevMountTask {
     [OutputType([void])]
     param()
 
+    $taskName = 'WSL-Mount-DevDrive'
+
     if (-not (Test-IsAdmin)) {
+        if (-not $PSCmdlet.ShouldProcess($taskName, 'Elevate to unregister scheduled task')) {
+            return
+        }
         Write-DevLog 'Elevating to unregister mount task...' -Level WARN -Source 'TaskReg'
         Invoke-Elevated -Command 'Unregister-DevMountTask' -Wait
         return
     }
-
-    $taskName = 'WSL-Mount-DevDrive'
 
     $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     if (-not $existing) {

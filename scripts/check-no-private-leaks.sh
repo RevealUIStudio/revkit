@@ -37,6 +37,7 @@ unset _path
 # Each entry: tag|ERE_regex|reason
 # Anchored where possible to keep false-positive noise low.
 PATTERNS=(
+  "lit-username|joshua[-]v-dev|literal developer username; use a placeholder"
   "abs-home-path|/home/[a-z][a-z0-9_-]+|absolute user home path (/home/<username>/...)"
   "abs-windows-user|[Cc]:[\\\\/]Users[\\\\/][A-Za-z0-9_-]+|absolute Windows user path (C:\\\\Users\\\\<name>)"
   "private-jv-repo|/?revfleet/\\.jv|private repo path (~/revfleet/.jv/...)"
@@ -52,6 +53,8 @@ PATTERNS=(
   "license-key|RVUI-[a-z]+-[a-f0-9]{16,}|RevealUI license key (looks like a real issued key)"
   "vercel-org-id|team_[A-Za-z0-9]{16,}|Vercel org/team identifier"
   "vercel-project-id|prj_[A-Za-z0-9]{16,}|Vercel project identifier"
+  "fleet-master-index|MASTER""_INDEX|prose reference to the private fleet index file; use a neutral term"
+  "internal-coord-hub|internal coordination ""hub|prose reference to the private planning repo; use a neutral term"
 )
 
 # Directories / file globs to exclude from the scan.

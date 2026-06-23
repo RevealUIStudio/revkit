@@ -4,7 +4,7 @@
 
 _find_revealui_root() {
     # Check env var first
-    if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "${REVEALUI_ROOT:-}/wsl" ]; then
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT:-}/shell/shellrc.d/00-base.sh" ]; then
         echo "$REVEALUI_ROOT"
         return
     fi

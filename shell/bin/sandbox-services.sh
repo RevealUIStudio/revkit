@@ -23,8 +23,19 @@ ensure_docker() {
         die "docker not found. Install Docker Engine first."
     fi
     if ! docker info &>/dev/null 2>&1; then
+        # setup-wsl-boot.sh disables docker.service at boot but deliberately
+        # leaves docker.socket ENABLED, so a `docker` call is normally
+        # socket-activated with no manual start. If the socket is not active
+        # (boot optimization not applied), fall back to starting the service,
+        # but never block on an interactive sudo password prompt: use `sudo -n`
+        # and fail fast with remediation when passwordless sudo is unavailable.
         echo "Starting Docker daemon..."
-        sudo systemctl start docker
+        if ! sudo -n systemctl start docker 2>/dev/null; then
+            if [ ! -t 0 ]; then
+                die "Docker is not running and could not be started non-interactively. Enable socket activation once (\`sudo systemctl enable --now docker.socket\`) or start it interactively (\`sudo systemctl start docker\`), then re-run."
+            fi
+            die "Docker is not running and \`sudo -n systemctl start docker\` failed (no passwordless sudo). Start it with \`sudo systemctl start docker\`, or enable socket activation: \`sudo systemctl enable --now docker.socket\`."
+        fi
         # Wait for daemon to be ready
         local retries=10
         while ! docker info &>/dev/null 2>&1; do
@@ -116,7 +127,10 @@ cmd_pull() {
 
 cmd_psql() {
     ensure_docker
-    docker exec -it sandbox-postgres psql -U "${POSTGRES_USER:-sandbox}" -d "${POSTGRES_DB:-sandbox}" "$@"
+    # POSTGRES_USER/DB are exported by the sandbox() wrapper from shell/docker/.env
+    # (point-of-use scoping); forward the password into the container so a
+    # password-auth Postgres accepts the connection (ignored under trust auth).
+    docker exec -e PGPASSWORD="${PGPASSWORD:-sandbox}" -it sandbox-postgres psql -U "${POSTGRES_USER:-sandbox}" -d "${POSTGRES_DB:-sandbox}" "$@"
 }
 
 cmd_redis_cli() {

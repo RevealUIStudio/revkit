@@ -112,7 +112,7 @@ section() {
 section "Universal checks"
 
 # 1. REVEALUI_ROOT set and valid
-if [ -d "${REVEALUI_ROOT:-}/wsl" ]; then
+if [ -f "${REVEALUI_ROOT:-}/shell/shellrc.d/00-base.sh" ]; then
     check_pass "REVEALUI_ROOT set and valid ($REVEALUI_ROOT)"
 else
     check_fail "REVEALUI_ROOT not set or invalid (${REVEALUI_ROOT:-<unset>})"
@@ -185,11 +185,26 @@ else
     check_fail "Compose file missing: $compose_file"
 fi
 
-# 9. Connection string env vars set
-if [ -n "${SANDBOX_DATABASE_URL:-}" ] && [ -n "${SANDBOX_REDIS_URL:-}" ]; then
-    check_pass "Connection string env vars set"
+# 9. Connection strings reachable.
+#    REDIS_URL is exported globally. DATABASE_URL is built at point of use by the
+#    sandbox() shell function so DB credentials are never broadcast into the global
+#    interactive environment. So require REDIS_URL in the environment and verify
+#    DATABASE_URL is constructible: either already set (e.g. inside the sandbox()
+#    wrapper or CI) or its source .env is present with POSTGRES_* keys.
+db_url_state="missing"
+if [ -n "${SANDBOX_DATABASE_URL:-}" ]; then
+    db_url_state="set"
 else
-    check_fail "Connection strings missing (DATABASE_URL=${SANDBOX_DATABASE_URL:+set}, REDIS_URL=${SANDBOX_REDIS_URL:+set})"
+    sandbox_denv="${REVEALUI_ROOT:-}/shell/docker/.env"
+    if [ -f "$sandbox_denv" ] && grep -qF 'POSTGRES_USER=' "$sandbox_denv"; then
+        db_url_state="constructible"
+    fi
+fi
+
+if [ -n "${SANDBOX_REDIS_URL:-}" ] && [ "$db_url_state" != "missing" ]; then
+    check_pass "Connection strings OK (REDIS_URL set, DATABASE_URL $db_url_state)"
+else
+    check_fail "Connection strings missing (REDIS_URL=${SANDBOX_REDIS_URL:+set}, DATABASE_URL=$db_url_state; copy shell/docker/.env.example to .env)"
 fi
 
 # --- Tier-specific checks ---
