@@ -18,9 +18,4 @@ shell/shellrc.d/70-revcon-personal.sh   private-jv-repo
 shell/shellrc.d/00-base.sh              lts-drive   # devkit auto-discovery
 shell/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
 
-# Windows path docs. These quote real example paths users will see on
-# their own Windows hosts. Could be parameterized to <username>; for now
-# allowlist.
-docs/WSL-QuickReference.md                                           abs-windows-user
-powershell/Modules/RevealUI.RevStation/docs/WSL-QuickReference.md    abs-windows-user
 
