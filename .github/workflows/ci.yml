@@ -253,3 +253,28 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Run platform detection fixtures
         run: bash tests/test-platform-detect.sh
+
+  bootstrap-dry-run:
+    # Phase C — real-OS smoke of the cross-platform bootstrap. The
+    # platform-detect job above only exercises lib/platform.sh against
+    # fixtures; this actually RUNS bootstrap.sh on real macOS + Linux runners
+    # (detect-then-dispatch from #68), proving the dispatch executes per-OS,
+    # not just that detection returns the right string. --dry-run makes no
+    # changes (every mutating step is gated on DRY_RUN); we assert exit 0.
+    # The wsl code path is exercised via the REVKIT_OS override on the ubuntu
+    # runner (GitHub has no hosted WSL runner).
+    name: bootstrap --dry-run smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: bootstrap.sh --dry-run (native OS detection)
+        run: bash bootstrap.sh --dry-run
+      - name: bootstrap.sh --dry-run (wsl code path via REVKIT_OS override)
+        if: runner.os == 'Linux'
+        env:
+          REVKIT_OS: wsl
+        run: bash bootstrap.sh --dry-run
