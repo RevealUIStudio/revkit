@@ -377,8 +377,13 @@ fi
 # Step 9: Fleet-wide pre-push hook (M-11)
 # ---------------------------------------------------------------------------
 echo "[9] Wiring fleet-wide pre-push hook (M-11)..."
-HOOKS_DIR="$SCRIPT_DIR/git-hooks"
-PRE_PUSH_HOOK="$HOOKS_DIR/pre-push"
+HOOKS_SRC_DIR="$SCRIPT_DIR/git-hooks"
+PRE_PUSH_HOOK="$HOOKS_SRC_DIR/pre-push"
+# Deploy hooks to a stable, user-owned path OUTSIDE the repo. Pointing
+# core.hooksPath at the in-repo copy would run a CRLF-corrupted hook whenever
+# the tree was checked out with autocrlf=true; deploying an LF-normalized copy
+# here keeps M-11 working regardless of the clone's line-ending settings.
+HOOKS_DIR="$HOME/.config/revkit/git-hooks"
 
 if [ ! -f "$PRE_PUSH_HOOK" ]; then
   printf '  WARNING: %s not found — skipping M-11\n' "$PRE_PUSH_HOOK" >&2
@@ -387,13 +392,16 @@ elif ! bash -n "$PRE_PUSH_HOOK" >/dev/null 2>&1; then
   exit 1
 else
   if [ "$DRY_RUN" -eq 0 ]; then
-    chmod +x "$PRE_PUSH_HOOK"
+    mkdir -p "$HOOKS_DIR"
+    sed 's/\r$//' "$PRE_PUSH_HOOK" > "$HOOKS_DIR/pre-push"
+    chmod +x "$HOOKS_DIR/pre-push"
     EXISTING="$(git config --global --get core.hooksPath 2>/dev/null || true)"
-    if [ -z "$EXISTING" ]; then
+    if [ "$EXISTING" = "$HOOKS_DIR" ]; then
+      echo "  global core.hooksPath already set (no-op)"
+    elif [ -z "$EXISTING" ] || [ "$EXISTING" = "$HOOKS_SRC_DIR" ]; then
+      # Fresh install, or migrating off the legacy in-repo hooks path.
       git config --global core.hooksPath "$HOOKS_DIR"
       printf '  Set: global core.hooksPath = %s\n' "$HOOKS_DIR"
-    elif [ "$EXISTING" = "$HOOKS_DIR" ]; then
-      echo "  global core.hooksPath already set (no-op)"
     else
       printf '  ERROR: global core.hooksPath already points elsewhere:\n' >&2
       printf '    current: %s\n' "$EXISTING" >&2
@@ -403,7 +411,7 @@ else
     fi
     echo "  M-11 active: pre-push rejects direct/force/unsigned pushes to main + test"
   else
-    printf '  [dry-run] would set core.hooksPath = %s\n' "$HOOKS_DIR"
+    printf '  [dry-run] would deploy LF-normalized pre-push to %s and set core.hooksPath\n' "$HOOKS_DIR"
   fi
 fi
 
