@@ -243,7 +243,6 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 - [`docs/MASTER_PLAN.md`](./MASTER_PLAN.md) — current status, A/B/C/D phases, owner actions
 - [`docs/rfc-launcher.md`](./rfc-launcher.md) — the `rfc` secure Claude launcher
 - [`docs/tier-capabilities.md`](./tier-capabilities.md) — full T0/T1 capability matrix
-- [`docs/agent-coordination.md`](./agent-coordination.md) — file-based workboard coord (alternative to RevDev daemon)
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt), [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md)
 - [`README.md`](../README.md) — quick start
 - Fleet-level navigation lives in RevealUI Studio's separate private planning repository
