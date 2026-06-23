@@ -46,6 +46,10 @@ MASK_SERVICES=(
     systemd-remount-fs.service
 )
 
+# docker.service + containerd.service are disabled at boot, but their *.socket
+# units are intentionally NOT listed here: they stay enabled so the first
+# `docker` call is socket-activated on demand (no sudo start needed). This is
+# what sandbox-services.sh:ensure_docker() relies on.
 DISABLE_SERVICES=(
     docker.service
     containerd.service

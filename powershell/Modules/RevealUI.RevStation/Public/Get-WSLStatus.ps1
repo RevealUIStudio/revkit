@@ -31,7 +31,7 @@ function Get-WSLStatus {
     }
 
     Write-Host "`n=== Systemd Status ===" -ForegroundColor Cyan
-    $systemdRaw = wsl.exe -d $Distribution -e systemctl --user is-system-running 2>&1
+    $systemdRaw = wsl.exe -d $Distribution -e systemctl is-system-running 2>&1
     Write-Host "  $systemdRaw"
 
     Write-Host ''

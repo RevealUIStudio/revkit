@@ -29,8 +29,15 @@ function Sync-RevealUIToWindows {
         return
     }
 
-    # Check for uncommitted changes
-    $dirty = git -C $RepoPath status --porcelain 2>&1
+    # Check for uncommitted changes. Capture stdout only: folding stderr in
+    # (CRLF / dubious-ownership warnings) would read as a dirty tree and skip a
+    # clean repo. A non-zero exit is a git error, not a dirty tree.
+    $dirty = git -C $RepoPath status --porcelain
+    if ($LASTEXITCODE -ne 0) {
+        Write-DevLog "git status failed in ${RepoPath} (exit $LASTEXITCODE)" -Level ERROR -Source 'Sync' -LogFile $logFile
+        Write-Warning "Skipping RevealUI sync: git status failed in $RepoPath"
+        return
+    }
     if ($dirty) {
         Write-DevLog "Skipping RevealUI: uncommitted changes" -Level WARN -Source 'Sync' -LogFile $logFile
         Write-Warning "Skipping RevealUI sync — uncommitted changes in $RepoPath"

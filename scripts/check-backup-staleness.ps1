@@ -31,7 +31,11 @@ $ErrorActionPreference = 'Stop'
 # or if the current context lacks admin (it will fall back to Write-Host below).
 try {
   if (-not [System.Diagnostics.EventLog]::SourceExists($EventSource)) {
-    New-EventLog -LogName Application -Source $EventSource -ErrorAction Stop
+    # New-EventLog does not exist in PowerShell 7 (Windows PowerShell 5.1 only),
+    # same as Write-EventLog below; use the .NET API. Requires admin ONCE, so
+    # register the source out-of-band before relying on event-log alerting:
+    #   [System.Diagnostics.EventLog]::CreateEventSource('RevealUI-Health', 'Application')
+    [System.Diagnostics.EventLog]::CreateEventSource($EventSource, 'Application')
   }
 } catch {
   # Source may already exist on another log, or we lack admin. Carry on.
