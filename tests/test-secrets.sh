@@ -199,6 +199,87 @@ pf_output="$(
 assert_contains "passenv-file warns about PATH override attempt" "$pf_output" "protected variable"
 
 # ---------------------------------------------------------------------------
+# 6. Real revvault: multi-line secrets are returned in full (regression)
+# ---------------------------------------------------------------------------
+#
+# Regression witness for the fix shipped alongside revkit #90/#97: `revvault
+# get` DEFAULTS to first-line-only, so passenv / passenv-file MUST pass --full
+# or multi-line secrets (PEM/SSH keys, JSON service-account blobs, multi-key
+# env files) are silently truncated to their first line while still returning
+# success. Unlike the sections above (which stub `revvault`), this exercises
+# the REAL revvault binary against a sandboxed store: a temp HOME plus temp
+# store-dir, so the developer's real ~/.config/age identity and vault are
+# never touched. Skipped (not failed) when revvault is unavailable or the
+# sandbox cannot be initialised.
+
+echo ""
+echo "--- Real revvault multi-line round-trip ---"
+
+if ! command -v revvault >/dev/null 2>&1; then
+  echo "SKIP: revvault not on PATH (multi-line regression test not run)"
+else
+  rv_sandbox="$(mktemp -d "${TMPDIR:-/tmp}/test-secrets-rv.XXXXXX")"
+  rv_rc=0
+  (
+    # Sandbox: override HOME so the real ~/.config/age is never touched.
+    export HOME="$rv_sandbox/home"
+    mkdir -p "$HOME"
+    export REVVAULT_STORE="$rv_sandbox/store"
+    unset REVEALUI_ROOT PASSAGE_DIR
+
+    revvault init --store-dir "$REVVAULT_STORE" >/dev/null 2>&1 || exit 3
+
+    # Multi-line, PEM-shaped secret (no trailing newline).
+    printf -- '-----BEGIN TEST KEY-----\nline-two-abc\nline-three-xyz\n-----END TEST KEY-----' \
+      | revvault set test/multiline >/dev/null 2>&1 || exit 3
+    # Multi-line KEY=value env blob for passenv-file.
+    printf 'FIRST_KEY=first_value\nSECOND_KEY=second_value\nTHIRD_KEY=third_value\n' \
+      | revvault set test/envfile >/dev/null 2>&1 || exit 3
+
+    # Load the real loader (NOT stubbed), pointed at the sandbox store.
+    source "$SECRETS_SH"
+    export REVVAULT_STORE="$rv_sandbox/store"   # re-assert after sourcing
+
+    # passenv must return the FULL multi-line value, not just line 1.
+    passenv MULTILINE_SECRET test/multiline || exit 4
+    case "$MULTILINE_SECRET" in
+      *"line-three-xyz"*"-----END TEST KEY-----"*) : ;;
+      *) exit 5 ;;
+    esac
+
+    # passenv-file must export keys beyond the first line.
+    passenv-file test/envfile || exit 6
+    [ "${SECOND_KEY:-}" = "second_value" ] && [ "${THIRD_KEY:-}" = "third_value" ] || exit 7
+    exit 0
+  ) || rv_rc=$?
+  rm -rf "$rv_sandbox"
+
+  case "$rv_rc" in
+    0)
+      echo "PASS: passenv returns the full multi-line secret (not truncated to line 1)"
+      PASS=$((PASS + 1))
+      echo "PASS: passenv-file exports keys beyond the first line"
+      PASS=$((PASS + 1))
+      ;;
+    3)
+      echo "SKIP: revvault sandbox init/set failed (multi-line regression test not run)"
+      ;;
+    5)
+      echo "FAIL: passenv truncated the multi-line secret to its first line (missing --full in 40-secrets.sh)"
+      FAIL=$((FAIL + 1))
+      ;;
+    7)
+      echo "FAIL: passenv-file dropped keys after the first line (missing --full in 40-secrets.sh)"
+      FAIL=$((FAIL + 1))
+      ;;
+    *)
+      echo "FAIL: multi-line regression subshell failed (rc=$rv_rc)"
+      FAIL=$((FAIL + 1))
+      ;;
+  esac
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 

@@ -156,15 +156,34 @@ verify_signed_range() {
         rev_args=("${remote_sha}..${local_sha}")
     fi
 
+    # Enumerate the commits up-front so a `git rev-list` failure is detectable.
+    # The old `while read < <(git rev-list ... 2>/dev/null)` form discarded
+    # rev-list's exit status: a bad range / missing object produced no output,
+    # the loop body never ran, and the function returned 0 — fail-OPEN, letting
+    # an unverifiable push to a protected branch through. Capture status and
+    # fail CLOSED instead. (Assignment is set -e-safe via `|| rev_status=$?`.)
+    local commits_raw="" rev_status=0
+    commits_raw="$(git rev-list "${rev_args[@]}" 2>/dev/null)" || rev_status=$?
+    if [[ "$rev_status" -ne 0 ]]; then
+        _err "Could not enumerate commits to verify (git rev-list exit $rev_status); failing closed."
+        _err "  range: ${rev_args[*]}"
+        return 1
+    fi
+
+    # Empty output with a clean exit means there are genuinely no new commits to
+    # verify (e.g. a no-op push) — that is a legitimate pass, not a failure.
+    local -a commits=()
+    [[ -n "$commits_raw" ]] && mapfile -t commits <<< "$commits_raw"
+
     local sha
-    while IFS= read -r sha; do
+    for sha in "${commits[@]}"; do
         [[ -z "$sha" ]] && continue
         if ! git verify-commit "$sha" >/dev/null 2>&1; then
             _err "Unsigned or untrusted-signature commit: $sha"
             _err "Run: git log -1 --format='%H %s' $sha"
             return 1
         fi
-    done < <(git rev-list "${rev_args[@]}" 2>/dev/null)
+    done
     return 0
 }
 
@@ -272,12 +291,35 @@ deep_check_protected_ref() {
 }
 
 # ---------------------------------------------------------------------------
+# Content gate -- run the repo's shared CI check-runner pre-push (if present)
+# ---------------------------------------------------------------------------
+#
+# On a feature-branch push, run scripts/ci/green-checks.sh from the repo being
+# pushed (the SAME script CI delegates to), so local and CI run identical logic
+# (parity by construction). Repos without the script skip cleanly. --allow-skip
+# means a missing toolchain degrades to SKIP rather than blocking the push; CI
+# remains the authoritative run. Returns 0 to allow, 1 to block.
+run_content_gate() {
+    local base="$1" head="$2" root gc
+    root="$(git rev-parse --show-toplevel 2>/dev/null)" || return 0
+    gc="$root/scripts/ci/green-checks.sh"
+    [[ -f "$gc" ]] || return 0
+    _info "Local check gate: scripts/ci/green-checks.sh"
+    if bash "$gc" --scope=range --base="$base" --head="$head" --allow-skip; then
+        return 0
+    fi
+    _err "Local check gate failed. Fix the reported checks (CI runs the same ones), or push a WIP branch if not ready."
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 main() {
     local exit_code=0
     local lines_seen=0
+    local feature_seen=0 feature_local_sha="" feature_remote_sha=""
 
     # If the escape hatch is engaged we still want a loud reminder in the
     # output so it never becomes invisible default-behavior.
@@ -314,14 +356,25 @@ main() {
                 fi
             fi
         else
-            # Non-protected branch — feature/*, chore/*, etc. Allow.
-            :
+            # Non-protected branch (feature/*, chore/*, etc.). Allow the push,
+            # and remember it so the content gate runs once after the loop.
+            feature_seen=1
+            feature_local_sha="$local_sha"
+            feature_remote_sha="$remote_sha"
         fi
     done
 
     # If git invoked us with no refs (e.g. nothing to push), exit cleanly.
     if [[ "$lines_seen" -eq 0 ]]; then
         return 0
+    fi
+
+    # Content gate: run the shared check-runner on feature-branch pushes, once,
+    # only if the branch-pipeline checks above did not already reject the push.
+    if [[ "$feature_seen" -eq 1 && "$exit_code" -eq 0 ]]; then
+        if ! run_content_gate "$feature_remote_sha" "$feature_local_sha"; then
+            exit_code=1
+        fi
     fi
 
     return "$exit_code"

@@ -212,9 +212,17 @@ jobs:
             echo "::error file=bootstrap.sh::M-11 wiring lost: no core.hooksPath setup"
             fail=1
           fi
-          if ! grep -qF 'bootstrap.sh' bootstrap-wsl.sh; then
-            echo "::error file=bootstrap-wsl.sh::deprecation shim chain broken: no exec of bootstrap.sh"
+          if ! grep -qF 'pre-push' bootstrap.sh; then
+            echo "::error file=bootstrap.sh::M-11 wiring lost: no pre-push hook deploy"
             fail=1
+          fi
+          # The deprecation shim is optional — only assert the exec chain if it
+          # still exists, so deleting the shim doesn't hard-fail this job.
+          if [ -f bootstrap-wsl.sh ]; then
+            if ! grep -qF 'bootstrap.sh' bootstrap-wsl.sh; then
+              echo "::error file=bootstrap-wsl.sh::deprecation shim chain broken: no exec of bootstrap.sh"
+              fail=1
+            fi
           fi
           if ! grep -qF 'git-hooks' bootstrap.ps1; then
             echo "::error file=bootstrap.ps1::M-11 wiring lost: no reference to git-hooks/"
@@ -257,7 +265,7 @@ jobs:
   bootstrap-dry-run:
     # Phase C — real-OS smoke of the cross-platform bootstrap. The
     # platform-detect job above only exercises lib/platform.sh against
-    # fixtures; this actually RUNS bootstrap.sh on real macOS + Linux runners
+    # fixtures; this actually RUNS bootstrap.sh on real Linux (every PR) + macOS (main + dispatch) runners
     # (detect-then-dispatch from #68), proving the dispatch executes per-OS,
     # not just that detection returns the right string. --dry-run makes no
     # changes (every mutating step is gated on DRY_RUN); we assert exit 0.
@@ -268,7 +276,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macOS runners bill at a 10x minute multiplier on private repos,
+        # which exhausts the monthly free Actions allotment fast. Keep
+        # per-PR runs Linux-only (1x); validate macOS only post-merge
+        # (push to main) and on manual workflow_dispatch.
+        os: ${{ (github.event_name == 'pull_request') && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "macos-latest"]') }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: bootstrap.sh --dry-run (native OS detection)

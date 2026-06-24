@@ -17,12 +17,22 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "[compact-vhdx] Starting VHDx compaction for $Distro..."
 
-# Step 1: fstrim inside WSL (best-effort — WSL may not support it)
+# Step 1: fstrim inside WSL (best-effort — WSL may not support it, and the
+# scheduled task runs non-interactively so `sudo` may have no tty). A native
+# command's non-zero exit does NOT raise a terminating error even under
+# $ErrorActionPreference='Stop', so the try/catch alone cannot see fstrim
+# failing — check $LASTEXITCODE explicitly (same pattern as the diskpart guard
+# below). This stays best-effort: warn and continue, since compaction still
+# works without the trim (just reclaims less). The catch covers the case where
+# `wsl` itself is not launchable, which *does* throw.
+Write-Host "[compact-vhdx] Running fstrim..."
 try {
-    Write-Host "[compact-vhdx] Running fstrim..."
     wsl -d $Distro -- sudo fstrim -av 2>&1 | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "[compact-vhdx] fstrim exited $LASTEXITCODE — skipping trim (compaction continues; less space may be reclaimed). If this persists, add a NOPASSWD sudoers rule for '/usr/sbin/fstrim -av'."
+    }
 } catch {
-    Write-Host "[compact-vhdx] fstrim skipped (not supported or WSL not running)"
+    Write-Host "[compact-vhdx] fstrim skipped ($($_.Exception.Message))"
 }
 
 # Step 2: Shut down WSL

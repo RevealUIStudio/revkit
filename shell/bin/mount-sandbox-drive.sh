@@ -117,29 +117,48 @@ fi
 
 mkdir -p "$MOUNT_POINT"
 
-# --- Primary: find by filesystem label ---
-EXTDEV=$(blkid -L "$DRIVE_LABEL" 2>/dev/null || true)
+# --- Primary: find by filesystem label, with a short retry ---
+# `wsl --mount --bare` can return before udev/blkid has indexed the partition
+# label, so a single lookup can miss a Sandbox drive that is in fact present and
+# fall through to the riskier unlabeled scan below. Retry briefly first so a
+# slow-to-appear label does not push us onto the fallback path unnecessarily.
+EXTDEV=""
 SOURCE="label"
+for _attempt in 1 2 3 4 5; do
+    EXTDEV=$(blkid -L "$DRIVE_LABEL" 2>/dev/null || true)
+    [ -n "$EXTDEV" ] && break
+    sleep 1
+done
 
-# --- Fallback: find first unmounted ext4 partition (label may be missing) ---
+# --- Fallback: first unmounted ext4 partition that is unlabeled or "Sandbox" ---
+# Only ever consider a partition whose label is EMPTY or already "$DRIVE_LABEL".
+# A partition carrying a different non-empty label (LTS, Forge, an external
+# backup) is never the Sandbox drive and must not be grabbed here — the old code
+# mounted the first unmounted ext4 regardless of label, so when the Sandbox label
+# was merely slow to appear it could attach the wrong drive. The downstream
+# marker check is the final guard, but skipping foreign-labeled devices avoids
+# ever mounting them in the first place.
 if [ -z "$EXTDEV" ]; then
     SOURCE="fallback"
-    echo "WARN: Label '$DRIVE_LABEL' not found, falling back to first unmounted ext4."
+    echo "WARN: Label '$DRIVE_LABEL' not found after retries, scanning for an unlabeled ext4 partition."
     log_mount "fallback=label-not-found"
+    ROOT_DEV=$(mount | grep " / " | awk '{print $1}')
     for dev in /dev/sd[a-z]1; do
         [ -b "$dev" ] || continue
         if mount | grep -q "^$dev "; then
             continue
         fi
+        [ "$dev" = "$ROOT_DEV" ] && continue
         FSTYPE=$(blkid -s TYPE -o value "$dev" 2>/dev/null || true)
-        if [ "$FSTYPE" = "ext4" ]; then
-            ROOT_DEV=$(mount | grep " / " | awk '{print $1}')
-            if [ "$dev" = "$ROOT_DEV" ]; then
-                continue
-            fi
-            EXTDEV="$dev"
-            break
+        [ "$FSTYPE" = "ext4" ] || continue
+        DEV_LABEL=$(blkid -s LABEL -o value "$dev" 2>/dev/null || true)
+        if [ -n "$DEV_LABEL" ] && [ "$DEV_LABEL" != "$DRIVE_LABEL" ]; then
+            echo "  skipping $dev — labeled '$DEV_LABEL' (not the Sandbox drive)."
+            log_mount "fallback-skip=labeled-other dev=$dev label=$DEV_LABEL"
+            continue
         fi
+        EXTDEV="$dev"
+        break
     done
 fi
 
