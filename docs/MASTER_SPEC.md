@@ -45,8 +45,7 @@ revkit/
 │   │   ├── wsl.conf                 # WSL distro config
 │   │   ├── wslconfig                # Windows-host WSL global config (.wslconfig)
 │   │   ├── gitconfig                # tracked git config; includes per-user identity.gitconfig
-│   │   ├── ssh-config               # tracked SSH host aliases; Includes per-user ssh.local
-│   │   └── user@-login-barrier.conf # systemd login-barrier drop-in
+│   │   └── ssh-config               # tracked SSH host aliases; Includes per-user ssh.local
 │   ├── docker/                      # Docker-related config (T1 services)
 │   ├── setup-wsl-boot.sh            # idempotent WSL boot optimization (--revert supported)
 │   ├── compact-vhdx.ps1             # VHDx compaction helper
@@ -193,11 +192,10 @@ connected. The VHDx helpers ship at `shell/compact-vhdx.ps1` +
 
 `shell/setup-wsl-boot.sh` (idempotent, supports `--revert`):
 
-- Deploys `wsl.conf`, `.wslconfig`, login-barrier drop-in
+- Deploys `wsl.conf` and `.wslconfig`
 - Masks hardware/desktop services unnecessary in WSL
 - Disables Docker + snap auto-start (sockets preserved for on-demand activation)
 - Default systemd target: `multi-user.target` (skips graphical transitions)
-- Login barrier: same-name override in `/etc/systemd/system/` required (separate `99-` file does NOT work in systemd 255)
 - WSL 2.7.0 pre-release recommended (`wsl --update --pre-release`)
 
 ---
@@ -243,7 +241,6 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 - [`docs/MASTER_PLAN.md`](./MASTER_PLAN.md) — current status, A/B/C/D phases, owner actions
 - [`docs/rfc-launcher.md`](./rfc-launcher.md) — the `rfc` secure Claude launcher
 - [`docs/tier-capabilities.md`](./tier-capabilities.md) — full T0/T1 capability matrix
-- [`docs/agent-coordination.md`](./agent-coordination.md) — file-based workboard coord (alternative to RevDev daemon)
 - [`docs/WSL-CheatSheet.txt`](./WSL-CheatSheet.txt), [`docs/WSL-QuickReference.md`](./WSL-QuickReference.md)
 - [`README.md`](../README.md) — quick start
 - Fleet-level navigation lives in RevealUI Studio's separate private planning repository
