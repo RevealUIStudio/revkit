@@ -38,11 +38,26 @@ unset _path
 # Anchored where possible to keep false-positive noise low.
 PATTERNS=(
   "lit-username|joshua[-]v-dev|literal developer username; use a placeholder"
-  "abs-home-path|/home/[a-z][a-z0-9_-]+|absolute user home path (/home/<username>/...)"
+  # Bare account-name token (the GAP-116 anti-regression target). The CI
+  # no-hardcoded-user job only greps scripted types (*.sh/*.ps1/*.psm1/*.psd1)
+  # and gitleaks uses the default ruleset, so a bare token in docs/config
+  # (*.md/*.yml/*.json/*.toml) slipped all three gates. This scanner runs over
+  # ALL file types, closing that blind spot. Quote-split (j""oshu) so the
+  # GAP-116 workflow — which greps the literal token over *.sh — does not
+  # match this scanner's own source. \b keeps it from matching the full
+  # joshua[-]v-dev form caught by lit-username above.
+  "bare-username|j""oshu\\b|bare developer account-name token; use a placeholder"
+  "abs-home-path|/home/[A-Za-z0-9_][A-Za-z0-9_.-]*|absolute user home path (/home/<username>/...)"
   "abs-windows-user|[Cc]:[\\\\/]Users[\\\\/][A-Za-z0-9_-]+|absolute Windows user path (C:\\\\Users\\\\<name>)"
   "private-jv-repo|/?revfleet/\\.jv|private repo path (~/revfleet/.jv/...)"
   "private-jv-name|revealui-jv|private repo name (revealui-jv)"
-  "lts-drive|/mnt/e/|LTS drive mount path"
+  "lts-drive|/mnt/[Ee]/|LTS drive mount path (WSL /mnt/e or /mnt/E)"
+  # Windows face of the LTS drive (E: -> /mnt/e). This is a cross-platform
+  # repo with a large PowerShell/docs surface where the WSL mount form never
+  # appears; abs-windows-user only covers C:/c:\Users, so E:\ had no fallback.
+  # Tuned to the real private subdirs to bound false positives. Matches either
+  # path separator (E:\backups or E:/backups), case-insensitive drive letter.
+  "lts-drive-win|[Ee]:[\\\\/](backups|projects|professional|media)|LTS drive Windows-form path (E: backups/projects/professional/media)"
   "forge-drive|/mnt/forge/|Forge drive mount path"
   # quote-split below: the literal pattern (j+oshu-devbox) is split by empty
   # quotes so the fleet's GAP-116 anti-regression workflow (which greps the
@@ -50,7 +65,7 @@ PATTERNS=(
   # own source. Bash concatenates the empty-quoted halves into the full
   # pattern at runtime; the array element is unchanged.
   "devbox-host|j""oshu-devbox|internal hostname"
-  "license-key|RVUI-[a-z]+-[a-f0-9]{16,}|RevealUI license key (looks like a real issued key)"
+  "license-key|RVUI-[A-Za-z]+-[A-Fa-f0-9]{16,}|RevealUI license key (looks like a real issued key)"
   "vercel-org-id|team_[A-Za-z0-9]{16,}|Vercel org/team identifier"
   "vercel-project-id|prj_[A-Za-z0-9]{16,}|Vercel project identifier"
   "fleet-master-index|MASTER""_INDEX|prose reference to the private fleet index file; use a neutral term"
@@ -151,10 +166,14 @@ violations=0
 json_entries=()
 
 for entry in "${PATTERNS[@]}"; do
+  # Parse tag|regex|reason. The regex field may itself contain `|`
+  # (ERE alternation, e.g. lts-drive-win), so anchor tag to the FIRST
+  # delimiter and reason to the LAST, and treat everything between as the
+  # regex. Safe because no tag or reason contains a literal `|`.
   tag="${entry%%|*}"
-  rest="${entry#*|}"
-  regex="${rest%%|*}"
-  reason="${rest#*|}"
+  reason="${entry##*|}"
+  regex="${entry#*|}"
+  regex="${regex%|*}"
 
   # grep -rEIn: recursive, extended-regex, skip binary, show line numbers.
   while IFS= read -r hit; do
