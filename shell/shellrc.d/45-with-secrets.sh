@@ -7,7 +7,7 @@
 #
 # Usage examples:
 #   with-secrets stripe -- pnpm dev:api
-#   with-secrets core stripe supabase -- pnpm test:integration
+#   with-secrets core stripe neon -- pnpm test:integration
 #   with-secrets npm -- pnpm changeset:publish
 #   with-secrets core -- pnpm kek:rotate
 with-secrets() {
