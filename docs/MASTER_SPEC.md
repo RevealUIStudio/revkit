@@ -231,7 +231,6 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 | **RevDev** | Independent — RevDev's harness daemon runs on whatever workstation RevKit (or any other tool) provisioned |
 | **RevCon** | Pairs cleanly — RevKit wires RevFleet Claude rules via `revcon/link.sh` (bootstrap step 8) |
 | **RevForge** | Independent — RevForge runs on a workstation; RevKit can provision that workstation |
-| **RevealCoin** | Independent |
 | **RevSkills** | Independent — skills are markdown, work in any RevKit-provisioned env |
 
 ---
