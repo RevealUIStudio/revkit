@@ -168,6 +168,17 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Scan for private paths and credentials
         run: bash scripts/check-no-private-leaks.sh
+      - name: Fail on tracked binary archives
+        run: |
+          # Binary archives evade leak scanning (check-no-private-leaks.sh
+          # excludes *.tar.gz and gitleaks does not unpack them). Keep them out
+          # of version control entirely; pre-rewrite snapshots live on E:.
+          matches=$(git ls-files -- '*.tar.gz' '*.tgz' '*.tar' '*.zip')
+          if [ -n "$matches" ]; then
+            echo "::error title=Tracked archive::Binary archives must not be tracked (they bypass leak scanning):"
+            echo "$matches"
+            exit 1
+          fi
 
   test-secrets:
     name: tests/test-secrets.sh
