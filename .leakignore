@@ -29,7 +29,7 @@ docs/MASTER_SPEC.md                     lts-drive-win   # documents the DR backu
 docs/MASTER_PLAN.md                     lts-drive-win   # documents the weekly backup job
 
 # By-design: the GAP-116 anti-regression CI job must name the bare account
-# token literally in its grep patterns + error strings to scan for it. This
-# is the workflow that enforces the rule, not a leak of it.
-.github/workflows/ci.yml                bare-username
+# token + the /mnt/c/Users literal in its grep patterns + error strings to
+# scan for them. This is the workflow that enforces the rule, not a leak of it.
+.github/workflows/ci.yml                bare-username,abs-wsl-windows-user
 
