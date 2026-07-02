@@ -124,7 +124,7 @@ previews every step without writing.
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL |
 | 7 | Deploy M-4 Claude Code scanner hook | all |
 | 8 | Wire RevFleet Claude rules via `revcon/link.sh` | all |
-| 9 | Fleet-wide M-11 pre-push hook (`git config --global core.hooksPath <repo>/git-hooks`) | all |
+| 9 | Fleet-wide M-11 pre-push hook — `core.hooksPath` at `~/.config/revkit/git-hooks` (Linux/WSL, LF-normalized copy) or `<repo>/git-hooks` (Windows, in-repo) | all |
 
 `bootstrap-wsl.sh` is a thin deprecation shim that execs `bootstrap.sh` — it
 exists only to keep the legacy `bash ~/.revealui/bootstrap-wsl.sh` invocation

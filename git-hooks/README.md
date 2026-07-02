@@ -61,22 +61,32 @@ git config --unset revealui.hooks.no-protection
 
 ## Deployment
 
-Linux/WSL — `bootstrap-wsl.sh` step 8 runs:
+Both platforms are wired by `bootstrap.sh` (which auto-detects WSL via
+`lib/platform.sh`; `bootstrap-wsl.sh` is now a thin deprecation shim that execs
+`bootstrap.sh`). The deployment differs by platform:
+
+**Linux / WSL** — `bootstrap.sh` copies an LF-normalized `pre-push` into
+`~/.config/revkit/git-hooks/` and points `core.hooksPath` there:
 
 ```bash
-git config --global core.hooksPath "$SCRIPT_DIR/git-hooks"
+git config --global core.hooksPath "$HOME/.config/revkit/git-hooks"
 ```
 
-Windows — `bootstrap.ps1` step 6 runs:
+A normalized copy (not the in-repo file) is used because a `core.hooksPath`
+aimed at the checkout would run a CRLF-corrupted hook if the working tree ever
+carried CRLF endings. **Consequence:** on Linux/WSL, editing `pre-push` in the
+revkit checkout does NOT take effect until the next `bootstrap.sh` run — a
+`git pull` alone is not enough. Re-running bootstrap is idempotent and safe.
+
+**Windows** — `bootstrap.ps1` points `core.hooksPath` directly at THIS in-repo
+directory (the `.gitattributes` `git-hooks/* text eol=lf` rule keeps the tracked
+hook LF-clean, so no copy is needed):
 
 ```powershell
 git config --global core.hooksPath "$revealRoot\git-hooks"
 ```
 
-Both write the path as the absolute location of THIS directory inside the
-revkit checkout. There is no copy step: updates to the hook land on the next
-`git pull` of revkit, without re-running bootstrap. Re-running bootstrap is
-idempotent and safe.
+On Windows the hook tracks the checkout live — a `git pull` of revkit is enough.
 
 ### Conflict handling
 
@@ -106,9 +116,11 @@ in CI (no real push surface) — only their parse + lint cleanliness is gated.
 - **No tactical shortcuts.** Hook is universal across all repos in the dev env.
   Failure mode is loud + clear remediation pointer. Per-repo opt-out is the
   ONLY escape and it's auditable.
-- **No per-clone hook copies.** Deployment is via global `core.hooksPath`
-  pointing at this directory. Per-clone `.git/hooks/pre-push` is the anti-
-  pattern the spec explicitly rejects (per-machine fragility — machine A has
-  the hook, machine B doesn't).
+- **No per-clone hook copies.** Deployment is via global `core.hooksPath` — on
+  Windows pointing at this directory, on Linux/WSL at a single bootstrap-managed
+  normalized copy under `~/.config/revkit/git-hooks` (one per machine, shared
+  across all clones — not per-clone). Per-clone `.git/hooks/pre-push` is the
+  anti-pattern the spec rejects (per-machine fragility — machine A has the hook,
+  machine B doesn't).
 - **Read-only on existing system files.** The hook only reads git plumbing
   output; it mutates nothing.
