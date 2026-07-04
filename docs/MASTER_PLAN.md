@@ -33,7 +33,7 @@ staleness-status: FRESH
 - **Boot optimization** — `shell/setup-wsl-boot.sh` masks hardware/desktop services, disables Docker/snap auto-start (sockets preserved); supports `--revert`.
 - **Editor configs** — portable Zed settings at `editor-configs/zed/` (`settings.json` + `tasks.json`).
 - **PowerShell module** `RevealUI.RevStation` — `Mount-WSLDev`, `Compact-VHDx`, `Sync-RevealUIToWindows` helpers (VHDx helpers at `shell/compact-vhdx.ps1` + `shell/Register-VHDxCompactTask.ps1`).
-- **Sandbox-drive support** — optional ext4 USB at `/mnt/sandbox` for product-demo + red-team work (NOT primary dev infra per `project_forge_drive_role`).
+- **Sandbox-drive support** — optional ext4 USB at `/mnt/sandbox` for product-demo + security-research work (NOT primary dev infra).
 - **Weekly WSL backup** — `scripts/weekly-wsl-backup.ps1` scheduled via `RevealUI-WSL-Weekly-Backup` (Sunday 03:00) → `E:\backups\wsl-snapshots\current\`; `scripts/check-backup-staleness.ps1` guards silent failures.
 - **Security scanning** — CodeQL (security-and-quality) on the repo (#69); plus Gitleaks (full history), Private Leak Scan, GAP-116 anti-regression, PowerShell Pester + parse, ShellCheck + `bash -n` in CI.
 
@@ -60,7 +60,7 @@ staleness-status: FRESH
 | Drive mount label + path | `Sandbox` / `/mnt/sandbox` (post-#13, MERGED 2026-05-02) | **Still `Forge` / `/mnt/forge`** — `/mnt/forge` is what's mounted |
 | Env var | `REVEALUI_SANDBOX` | **`REVEALUI_FORGE`** — refs in `~/.revealui/wsl/bashrc.d/00-base.sh` + `wsl/docker/{compose.yml,.env.example}` |
 
-**Action:** rebootstrap deployed environment to pick up `/mnt/sandbox` (Phase D). Memory `project_forge_drive_role` documents this split. Note: #71 installed updated `shellrc.d` copies into `~/.revealui/wsl/bashrc.d/`, so parts of the deployed tree are in sync; the **drive-path drift is confirmed still open** as of 2026-06-23.
+**Action:** rebootstrap deployed environment to pick up `/mnt/sandbox` (Phase D). Note: #71 installed updated `shellrc.d` copies into `~/.revealui/wsl/bashrc.d/`, so parts of the deployed tree are in sync; the **drive-path drift is confirmed still open** as of 2026-06-23.
 
 ---
 

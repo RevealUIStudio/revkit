@@ -1,4 +1,4 @@
-# RevealUI Studio — Centralized Git Hooks (M-11)
+# RevealUI Studio — Centralized Git Hooks
 
 This directory is the deploy target for `git config --global core.hooksPath`.
 Every git operation in a dev environment provisioned by revkit's bootstrap
@@ -8,21 +8,18 @@ during `pnpm install`, taking precedence over the global value).
 
 ## Provenance
 
-Implements **M-11** from the fleet-security-hardening meta-durability lane —
-the class-killer for "absent server-side branch protection on private repos"
-(T0-15). GitHub Free rejects branch-protection API calls on private repos
-and the owner has rejected the GitHub Team upgrade (2026-05-16). The next-best
-durable enforcement is a uniformly-installed local hook that can't be
-sidestepped per-machine because deployment is part of the dev-env bootstrap.
-
-See the internal fleet-security-hardening lane (meta-durability-fixes §M-11)
-for the full design rationale and the anti-patterns explicitly rejected.
+These hooks are installed as part of revkit's dev-environment bootstrap so that
+branch-pipeline discipline (PR-only flow; no force-push or unsigned commits on
+protected branches) is enforced consistently on every provisioned machine.
+Installing them centrally through `core.hooksPath` — rather than per-clone —
+keeps the policy uniform and makes it part of the standard setup rather than a
+per-repo afterthought.
 
 ## Hooks
 
 | Hook       | Enforces                                                                 |
 |------------|--------------------------------------------------------------------------|
-| `pre-push` | Branch-pipeline discipline on private repos lacking GitHub protection.  |
+| `pre-push` | Branch-pipeline discipline (direct-push / force-push / unsigned-commit guards on protected branches).  |
 
 ### `pre-push` rules
 
@@ -99,7 +96,7 @@ Bootstrap reads `git config --global --get core.hooksPath` before writing:
 | pointing elsewhere                   | **Fail loudly.** Owner-decision: unset existing, then re-run bootstrap. |
 
 The "fail loudly" path is intentional. Silent overwrite would clobber another
-tool's setup; silent skip would silently disable M-11 enforcement. Neither is
+tool's setup; silent skip would silently disable hook enforcement. Neither is
 acceptable — the user picks.
 
 ## CI
