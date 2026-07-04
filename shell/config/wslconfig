@@ -1,5 +1,10 @@
+# managed-by-revkit — deployed by setup-wsl-boot.sh. While this marker line is
+# present, re-running the boot setup overwrites this file with the template.
+# Remove the marker to take ownership: bootstrap and --revert will then leave
+# the file alone.
 [wsl2]
-# Conservative defaults — tune to your machine.
+# Conservative defaults — tune to your machine (then remove the marker above
+# so your tuning survives re-runs).
 memory=8GB
 processors=4
 swap=2GB

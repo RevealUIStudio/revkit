@@ -108,13 +108,13 @@ if ($addedCfa) {
 
 # --- Step 5: Register scheduled task for auto-mount ---
 Write-Host "[5/6] Registering auto-mount scheduled task..."
-$taskScript = Join-Path $revealRoot "scripts\create-mount-task.ps1"
-if (Test-Path $taskScript) {
-    & $taskScript
-} else {
-    Write-Host "  Task script not found at: $taskScript" -ForegroundColor Yellow
-    Write-Host "  Skipping scheduled task registration" -ForegroundColor Yellow
-}
+# create-mount-task.ps1 was folded into the RevStation module as
+# Register-DevMountTask. Call the cmdlet directly and fail loudly — the old
+# warn-and-skip on the missing script left fresh hosts without the
+# WSL-Mount-DevDrive task while still printing "Bootstrap Complete".
+Import-Module (Join-Path $revealRoot 'powershell\Modules\RevealUI.RevStation') -Force
+Register-DevMountTask
+Write-Host "  WSL-Mount-DevDrive task registered (logon + USB + 30-min triggers)" -ForegroundColor Green
 
 # --- Step 6: Wire fleet-wide pre-push hook (M-11) ---
 # Spec: internal fleet-security-hardening lane, meta-durability-fixes §M-11

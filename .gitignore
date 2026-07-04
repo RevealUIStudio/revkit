@@ -35,3 +35,12 @@ shell/docker/.env
 # can't bypass the Private Leak Scan gate (per Codex P2 finding on
 # revdev#55 → revskills#9).
 .claude/
+
+# Backups / binary archives — never track snapshots. check-no-private-leaks.sh
+# excludes *.tar.gz and gitleaks does not unpack archives, so a tracked archive
+# silently bypasses every leak gate. Keep snapshots in the offline LTS archive.
+backups/
+*.tar.gz
+*.tgz
+*.tar
+*.zip

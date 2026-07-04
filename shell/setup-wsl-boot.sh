@@ -135,8 +135,12 @@ if [ "${1:-}" = "--revert" ]; then
     # --- Step 4: Remove .wslconfig from Windows home ---
     echo "[4/5] Removing .wslconfig from Windows home..."
     if [ -f "$WINDOWS_HOME/.wslconfig" ]; then
-        rm "$WINDOWS_HOME/.wslconfig"
-        echo "  Removed $WINDOWS_HOME/.wslconfig"
+        if grep -qF "managed-by-revkit" "$WINDOWS_HOME/.wslconfig"; then
+            rm "$WINDOWS_HOME/.wslconfig"
+            echo "  Removed $WINDOWS_HOME/.wslconfig"
+        else
+            echo "  Left in place: user-authored (no managed-by-revkit marker)"
+        fi
     else
         echo "  Not present, skipping"
     fi
@@ -188,10 +192,20 @@ systemctl set-default multi-user.target > /dev/null 2>&1
 echo "  Default target: multi-user.target"
 
 # --- Step 5: Deploy .wslconfig to Windows home ---
+# Only revkit-managed files (carrying the managed-by-revkit marker) are ever
+# overwritten. A user-authored .wslconfig — hand-tuned memory/networking — is
+# preserved untouched; the old unconditional deploy silently clobbered it on
+# every bootstrap re-run.
 echo "[5/6] Deploying .wslconfig → Windows home..."
 if [ -d "$WINDOWS_HOME" ]; then
-    deploy_config "$CONFIG_DIR/wslconfig" "$WINDOWS_HOME/.wslconfig"
-    echo "  Copied to $WINDOWS_HOME/.wslconfig"
+    if [ -f "$WINDOWS_HOME/.wslconfig" ] && ! grep -qF "managed-by-revkit" "$WINDOWS_HOME/.wslconfig"; then
+        echo "  SKIPPED: $WINDOWS_HOME/.wslconfig is user-authored (no managed-by-revkit marker)."
+        echo "  Your tuned config is preserved. To adopt the revkit template instead,"
+        echo "  move your file aside and re-run."
+    else
+        deploy_config "$CONFIG_DIR/wslconfig" "$WINDOWS_HOME/.wslconfig"
+        echo "  Copied to $WINDOWS_HOME/.wslconfig"
+    fi
 else
     echo "  WARNING: $WINDOWS_HOME not found, skipping .wslconfig deploy" >&2
 fi

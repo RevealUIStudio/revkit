@@ -18,4 +18,18 @@ shell/shellrc.d/70-revcon-personal.sh   private-jv-repo
 shell/shellrc.d/00-base.sh              lts-drive   # devkit auto-discovery
 shell/setup-wsl-boot.sh                lts-drive   # documented operator-run-this examples
 
+# By-design: the Windows-host DR backup tooling targets the LTS drive's
+# Windows path. These are committed operational scripts whose default
+# SnapshotDir param IS the backup target, plus the architecture docs that
+# describe it. The lts-drive-win pattern is meant to catch stray refs in
+# other files, not these canonical ones.
+scripts/weekly-wsl-backup.ps1           lts-drive-win
+scripts/check-backup-staleness.ps1      lts-drive-win
+docs/MASTER_SPEC.md                     lts-drive-win   # documents the DR backup architecture
+docs/MASTER_PLAN.md                     lts-drive-win   # documents the weekly backup job
+
+# By-design: the GAP-116 anti-regression CI job must name the bare account
+# token + the /mnt/c/Users literal in its grep patterns + error strings to
+# scan for them. This is the workflow that enforces the rule, not a leak of it.
+.github/workflows/ci.yml                bare-username,abs-wsl-windows-user
 
