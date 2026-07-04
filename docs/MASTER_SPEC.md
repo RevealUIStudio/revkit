@@ -144,10 +144,10 @@ Windows-host prep entrypoint.
 `shell/shellrc.d/00-base.sh`. The `sandbox validate` command verifies tier
 consistency (no env-var drift between expected + actual).
 
-Per the internal `project_forge_drive_role` memory entry, the sandbox drive's
-role changed 2026-04-24 from "primary dev infra" to "product-demo + red-team
-security-research lab." The T1 capabilities above remain documented for
-completeness but are NOT the recommended deployment for daily dev infra —
+The sandbox drive's role changed 2026-04-24 from "primary dev infra" to
+"product-demo + security-research use." The T1 capabilities above remain
+documented for completeness but are NOT the recommended deployment for daily
+dev infra —
 `pnpm store`, Docker data-root, Ollama models, build caches, and active ext4
 working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive
 (NTFS/9p hostile + USB unplugability).
