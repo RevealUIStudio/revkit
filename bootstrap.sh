@@ -299,9 +299,98 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 7: Claude Code M-4 scanner hook
+# Step 7: Claude global config (~/.claude) via the claude-config repo
 # ---------------------------------------------------------------------------
-echo "[7] Deploying Claude Code M-4 scanner hook..."
+# Durable replacement for the RETIRED symlink-into-worktree mechanism: ~/.claude
+# is a real-file git clone of claude-config (layer L1); reusable skills come from
+# the revskills plugin (layer L2, declared in claude-config's settings.json).
+# NEVER symlink ~/.claude entries into a revfleet worktree — that outage is what
+# this step exists to prevent.
+echo "[7] Wiring Claude global config (~/.claude) from claude-config..."
+CC_REMOTE="git@github.com-revealui:RevealUIStudio/claude-config.git"
+CC_DIR="$HOME/.claude"
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "  WARNING: git not in PATH — skipping claude-config" >&2
+elif [ -d "$CC_DIR/.git" ]; then
+  _cc_origin="$(git -C "$CC_DIR" remote get-url origin 2>/dev/null || true)"
+  case "$_cc_origin" in
+    *claude-config*)
+      # Already our repo — fast-forward only. Never resets/clobbers: machine-local
+      # runtime state (projects/, sessions/, history.jsonl, settings.local.json)
+      # is untracked + gitignored and is left exactly as-is.
+      if [ "$DRY_RUN" -eq 0 ]; then
+        git -C "$CC_DIR" fetch --quiet origin main || true
+        if git -C "$CC_DIR" merge --ff-only origin/main >/dev/null 2>&1; then
+          echo "  claude-config: fast-forwarded ~/.claude to origin/main"
+        else
+          echo "  claude-config: local main diverged from origin/main; left as-is (reconcile manually)"
+        fi
+      else
+        printf '  [dry-run] would fetch + ff-only merge %s\n' "$CC_REMOTE"
+      fi
+      ;;
+    *)
+      printf '  WARNING: %s is a git repo with a different origin (%s); left untouched\n' \
+        "$CC_DIR" "${_cc_origin:-none}" >&2
+      ;;
+  esac
+else
+  # Fresh machine: initialize ~/.claude as a claude-config clone IN PLACE so any
+  # pre-existing runtime state is preserved. checkout WITHOUT -f aborts rather
+  # than overwrite an existing real config file — non-clobbering by construction.
+  if [ "$DRY_RUN" -eq 0 ]; then
+    mkdir -p "$CC_DIR"
+    git -C "$CC_DIR" init --quiet
+    git -C "$CC_DIR" remote add origin "$CC_REMOTE" 2>/dev/null || \
+      git -C "$CC_DIR" remote set-url origin "$CC_REMOTE"
+    if git -C "$CC_DIR" fetch --quiet origin main && \
+       git -C "$CC_DIR" checkout -B main origin/main >/dev/null 2>&1; then
+      git -C "$CC_DIR" branch --set-upstream-to=origin/main main >/dev/null 2>&1 || true
+      echo "  claude-config: initialized ~/.claude from origin/main (real files, no symlinks)"
+    else
+      echo "  WARNING: could not populate ~/.claude from claude-config" >&2
+      echo "           (pre-existing config files or fetch failed); left untouched — reconcile manually" >&2
+    fi
+  else
+    printf '  [dry-run] would git init %s + fetch/checkout %s\n' "$CC_DIR" "$CC_REMOTE"
+  fi
+fi
+
+# Assertion: the retired anti-pattern must never return. Fail loudly if any
+# ~/.claude entry is a symlink pointing into a revfleet worktree.
+if [ -d "$CC_DIR" ]; then
+  _cc_bad="$(find "$CC_DIR" -maxdepth 2 -type l -lname '*revfleet*' 2>/dev/null || true)"
+  if [ -n "$_cc_bad" ]; then
+    printf '  ERROR: symlink-into-worktree detected under ~/.claude (retired mechanism):\n' >&2
+    printf '%s\n' "$_cc_bad" >&2
+    exit 1
+  fi
+fi
+
+# revskills skills plugin (L2): declare the marketplace so `claude` can resolve
+# the enabledPlugins entry already present in claude-config's settings.json.
+# Idempotent — only adds when absent.
+if command -v claude >/dev/null 2>&1; then
+  if claude plugin marketplace list 2>/dev/null | grep -q "revskills"; then
+    echo "  revskills marketplace already present"
+  elif [ "$DRY_RUN" -eq 0 ]; then
+    if claude plugin marketplace add RevealUIStudio/revskills >/dev/null 2>&1; then
+      echo "  revskills marketplace added"
+    else
+      echo "  WARNING: could not add revskills marketplace (add manually if needed)" >&2
+    fi
+  else
+    printf '  [dry-run] would run: claude plugin marketplace add RevealUIStudio/revskills\n'
+  fi
+else
+  echo "  claude CLI not in PATH — skipping revskills marketplace add (settings.json still declares it)"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 8: Claude Code M-4 scanner hook
+# ---------------------------------------------------------------------------
+echo "[8] Deploying Claude Code M-4 scanner hook..."
 CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
 M4_SRC="$SCRIPT_DIR/shell/bin/m4-sudoers-fs-scanner.js"
 M4_DEST="$CLAUDE_HOOKS_DIR/m4-sudoers-fs-scanner.js"
@@ -331,9 +420,9 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 8: RevFleet Claude rules via revcon/link.sh
+# Step 9: RevFleet Claude rules via revcon/link.sh
 # ---------------------------------------------------------------------------
-echo "[8] Wiring RevFleet Claude rules via revcon/link.sh..."
+echo "[9] Wiring RevFleet Claude rules via revcon/link.sh..."
 REVCON_LINK_SH="$HOME/revfleet/revcon/link.sh"
 REVFLEET_ROOT="$HOME/revfleet"
 
@@ -375,9 +464,9 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 9: Fleet-wide pre-push hook (M-11)
+# Step 10: Fleet-wide pre-push hook (M-11)
 # ---------------------------------------------------------------------------
-echo "[9] Wiring fleet-wide pre-push hook (M-11)..."
+echo "[10] Wiring fleet-wide pre-push hook (M-11)..."
 HOOKS_SRC_DIR="$SCRIPT_DIR/git-hooks"
 PRE_PUSH_HOOK="$HOOKS_SRC_DIR/pre-push"
 # Deploy hooks to a stable, user-owned path OUTSIDE the repo. Pointing
