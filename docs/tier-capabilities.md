@@ -28,7 +28,7 @@ Everything in T0, plus persistent infrastructure services.
 | Redis (port 6380) | Available | Data in `/mnt/sandbox/databases/redis` |
 | Ollama (port 11434) | Available | `sandbox up --ai`; models in `/mnt/sandbox/models` |
 | Build/package caches | Available | `/mnt/sandbox/cache` |
-| `sandbox validate` | Full | Runs all 21 checks including container health |
+| `sandbox validate` | Full | Runs up to 18 checks (9 universal + 9 T1-specific, `shell/bin/sandbox-validate.sh`) including container health |
 
 ## Environment Variables
 
@@ -38,8 +38,10 @@ Everything in T0, plus persistent infrastructure services.
 | `REVEALUI_ROOT` | Set (C: drive) | Set (C: drive) |
 | `REVEALUI_SANDBOX` | `/mnt/sandbox` | `/mnt/sandbox` |
 | `REVEALUI_SANDBOX_MOUNTED` | Unset | `1` |
-| `SANDBOX_DATABASE_URL` | Set (connection string) | Set (connection string) |
+| `SANDBOX_DATABASE_URL` | Built on demand* | Built on demand* |
 | `SANDBOX_REDIS_URL` | Set (connection string) | Set (connection string) |
+
+\* Not exported into the interactive shell. `SANDBOX_DATABASE_URL` is constructed only at the point of use, inside the `sandbox()` wrapper function (`shell/shellrc.d/15-docker.sh:19`), so DB credentials are never broadcast into the global environment. `SANDBOX_REDIS_URL` is exported globally at shell startup (`shell/shellrc.d/15-docker.sh:27`).
 
 ## Tier Transitions
 
