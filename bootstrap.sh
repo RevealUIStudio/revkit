@@ -431,8 +431,11 @@ if [ ! -f "$REVCON_LINK_SH" ]; then
 else
   # Fleet repos to wire (operator-editable). These are this org's public repos;
   # edit the list for your own fleet. Cancelled/retired products are omitted.
+  # Entry format: repo:profiles_csv[:mode] — mode is symlink (default) or
+  # copy. Copy mode materializes tracked files with a .revcon-manifest.json
+  # (revealui gates them via validate:rules-lockstep).
   FLEET_TARGETS=(
-    "revealui:revfleet,revealui"
+    "revealui:revfleet,revealui:copy"
     "revdev:revfleet"
     "revvault:revfleet"
     "revcon:revfleet"
@@ -442,7 +445,12 @@ else
   )
   for entry in "${FLEET_TARGETS[@]}"; do
     repo="${entry%%:*}"
-    profiles_csv="${entry#*:}"
+    rest="${entry#*:}"
+    profiles_csv="${rest%%:*}"
+    mode="symlink"
+    case "$rest" in
+      *:*) mode="${rest#*:}" ;;
+    esac
     target_dir="$REVFLEET_ROOT/$repo"
     if [ ! -d "$target_dir" ]; then
       printf '  [skip] %s not found at %s\n' "$repo" "$target_dir"
@@ -453,9 +461,9 @@ else
     for p in "${_profiles[@]}"; do
       profile_args+=("--profile" "$p")
     done
-    printf '  [%s] profiles: %s\n' "$repo" "$profiles_csv"
+    printf '  [%s] profiles: %s (mode: %s)\n' "$repo" "$profiles_csv" "$mode"
     if [ "$DRY_RUN" -eq 0 ]; then
-      bash "$REVCON_LINK_SH" --target "$target_dir" --editor claude "${profile_args[@]}" 2>&1 | sed 's/^/    /'
+      bash "$REVCON_LINK_SH" --target "$target_dir" --editor claude --mode "$mode" "${profile_args[@]}" 2>&1 | sed 's/^/    /'
     else
       printf '  [dry-run] would run revcon/link.sh for %s\n' "$repo"
     fi
