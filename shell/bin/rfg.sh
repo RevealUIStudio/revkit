@@ -124,21 +124,34 @@ list_repos() {
   done
 }
 
+# Resolve a fleet helper installed next to rfg.sh or still in the revkit tree.
+_resolve_helper() {
+  local name="$1"
+  local d c
+  d="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  for c in \
+    "$d/$name" \
+    "/usr/local/bin/$name" \
+    "$HOME/.local/bin/$name" \
+    "$HOME/revfleet/revkit/shell/bin/$name" \
+    "${REVEALUI_ROOT:-}/shell/bin/$name"
+  do
+    [ -n "$c" ] && [ -x "$c" ] && { echo "$c"; return 0; }
+  done
+  return 1
+}
+
 cmd="${1:-}"
 case "$cmd" in
   mint)
     shift || true
-    if [ -x "$HOME/.grok/bin/revealui-mcp-mint" ]; then
-      exec "$HOME/.grok/bin/revealui-mcp-mint" "$@"
-    fi
-    die "mint helper missing (~/.grok/bin/revealui-mcp-mint)"
+    helper="$(_resolve_helper revealui-mcp-mint.sh)" || die "revealui-mcp-mint.sh not installed (re-run revkit bootstrap)"
+    exec "$helper" "$@"
     ;;
   smoke)
     shift || true
-    if [ -x "$HOME/.grok/bin/revealui-mcp-smoke" ]; then
-      exec "$HOME/.grok/bin/revealui-mcp-smoke" "$@"
-    fi
-    die "smoke helper missing (~/.grok/bin/revealui-mcp-smoke)"
+    helper="$(_resolve_helper revealui-mcp-smoke.sh)" || die "revealui-mcp-smoke.sh not installed (re-run revkit bootstrap)"
+    exec "$helper" "$@"
     ;;
   env)
     REVEALUI_MCP_ENV_STRICT=1

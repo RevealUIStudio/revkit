@@ -1,46 +1,62 @@
-# `rfg` — RevFleet Grok launcher (MCP attach built in)
+# `rfg` — RevFleet Grok launcher (durable)
 
-`rfg` starts a **Grok** session rooted in a RevFleet repo with the Level 1
-RevealUI MCP environment already loaded from **revvault**. You should not need
-to run `eval "$(…/revealui-mcp-env)"` by hand.
+`rfg` is the **only supported** way to start Grok against the fleet with
+RevealUI MCP attached. It is the Grok sibling of `rfc` (Claude).
 
-Sibling of [`rfc`](./rfc-launcher.md) (Claude). Same fleet-root resolution.
+No manual `eval`, no home-directory scripts as source of truth.
 
-## Why this exists
+## Contract (long-term)
 
-Grok’s MCP client expands `${REVEALUI_MCP_TOKEN}` from the process environment
-at load time (`~/.grok/config.toml` → `[mcp_servers.revealui]`). If you launch
-`grok` without that env, the RevealUI server never authenticates.
+| Piece | Owner | Durable location |
+|-------|-------|------------------|
+| Launcher | **RevKit** | `shell/bin/rfg.sh` |
+| Mint / smoke | **RevKit** | `shell/bin/revealui-mcp-{mint,smoke}.sh` |
+| Env loader | **RevKit** | `shell/lib/revealui-mcp-env.sh` (+ embedded fallback in `rfg.sh`) |
+| Shell aliases | **RevKit** | `shell/shellrc.d/55-rfg.sh` → `rfg`, `rfgrok`, `grok-rv` |
+| MCP server config | **Repo** | `<repo>/.grok/config.toml` `[mcp_servers.revealui]` env refs only |
+| Secret | **RevVault** | `revealui/dev/mcp/cli-token` |
+| Global Grok prefs | User home | `~/.grok/config.toml` (permissions/UI only; optional MCP duplicate) |
 
-`rfg` loads the token from the canonical vault path and then `exec`s Grok.
+**Not durable:** one-off `eval "$(…)"` lines, secrets in chat, home-only mint scripts as the canonical path.
 
 ## Usage
 
 ```bash
-rfg                  # use $PWD if under ~/revfleet, else list repos
-rfg revealui         # cd ~/revfleet/revealui && load MCP env && exec grok
-rfg revealui --help  # trailing args pass through to grok
-rfg mint             # OTP device-token mint → revvault
-rfg smoke            # auth/MCP health check (no secret print)
-eval "$(rfg env)"    # export only (rare; for non-rfg tools)
+rfg revealui          # load token + cd + exec grok
+rfg                   # already under ~/revfleet/<repo>
+rfg smoke             # auth + MCP health (no secret print)
+rfg mint              # OTP → revvault
+eval "$(rfg env)"     # rare: export for non-rfg tools
 ```
 
-Aliases (interactive shells via `shellrc.d/55-rfg.sh`):
+## Install
 
-| Alias | Same as |
-|-------|---------|
-| `rfgrok` | `rfg` |
-| `grok-rv` | `rfg` |
+Bootstrap deploys all `shell/bin/*.sh` (including `rfg` helpers):
 
-## Secrets
+```bash
+cd ~/revfleet/revkit && bash bootstrap.sh
+source ~/.bashrc
+```
 
-| Item | Location |
-|------|----------|
-| Device token | revvault `revealui/dev/mcp/cli-token` |
-| Grok MCP config | `~/.grok/config.toml` — `Bearer ${REVEALUI_MCP_TOKEN}` only |
-| Loader | `shell/lib/revealui-mcp-env.sh` |
+Or symlink until bootstrap:
 
-Never put the token in git or `config.toml`.
+```bash
+ln -sfn ~/revfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh
+ln -sfn ~/revfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg
+ln -sfn ~/revfleet/revkit/shell/bin/revealui-mcp-mint.sh ~/.local/bin/revealui-mcp-mint.sh
+ln -sfn ~/revfleet/revkit/shell/bin/revealui-mcp-smoke.sh ~/.local/bin/revealui-mcp-smoke.sh
+source ~/revfleet/revkit/shell/shellrc.d/55-rfg.sh
+```
+
+## RevCon / RevSkills
+
+| Product | Durable role |
+|---------|----------------|
+| **RevKit** | Runtime entrypoint + secrets load |
+| **RevCon** | Editor/agent *content* generators only — does not own shell launch |
+| **RevSkills** | Skills document `rfg`; no second secret store |
+
+Future Level 2 (`GrokAdapter` in `@revealui/harnesses`) extends the same data plane; it does not replace `rfg` for interactive Grok.
 
 ## Env overrides
 
@@ -49,43 +65,4 @@ Never put the token in git or `config.toml`.
 | `REVFLEET_ROOT` | `$HOME/revfleet` |
 | `REVEALUI_MCP_URL` | `https://api.revealui.com/api/mcp` |
 | `REVEALUI_MCP_TOKEN_VAULT_PATH` | `revealui/dev/mcp/cli-token` |
-| `REVEALUI_MCP_ENV_SKIP=1` | skip vault load (debug) |
-| `REVEALUI_MCP_ENV_STRICT=0` | launch even if token missing |
-
-Local API:
-
-```bash
-REVEALUI_MCP_URL=http://localhost:3004/api/mcp rfg revealui
-```
-
-## Install
-
-Shipped with RevKit. Bootstrap deploys `shell/bin/*.sh` to `/usr/local/bin`
-(or `~/.local/bin` on macOS) and sources `shellrc.d/*.sh` from `.bashrc`:
-
-```bash
-# from revkit checkout
-bash bootstrap.sh
-source ~/.bashrc
-```
-
-Immediate without full bootstrap:
-
-```bash
-ln -sfn ~/revfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh
-# ensure shellrc.d is sourced (revkit rc hook) or:
-source ~/revfleet/revkit/shell/shellrc.d/55-rfg.sh
-```
-
-## RevCon / RevSkills
-
-| Product | Role |
-|---------|------|
-| **RevKit** | Launcher + shell aliases (this doc) |
-| **RevCon** | Editor/agent *content* generators — not the shell entrypoint |
-| **RevSkills** | Skills (`revealui-mcp`, doctor) document `rfg`; no second secret path |
-
-## Related
-
-- `~/.grok/REVEALUI-MCP-ATTACH.md` — Level 1 attach design
-- GAP-371 OpenCode — same data-plane (device token + `/api/mcp`)
+| `REVEALUI_MCP_ENV_SKIP=1` | skip vault (debug) |
