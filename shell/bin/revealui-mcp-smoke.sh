@@ -26,10 +26,8 @@ API_BASE="${API_BASE%/}"
 
 pass=0
 fail=0
-warn=0
 ok() { echo "PASS  $1"; pass=$((pass + 1)); }
 bad() { echo "FAIL  $1"; fail=$((fail + 1)); }
-wrn() { echo "WARN  $1"; warn=$((warn + 1)); }
 
 ok "token shape (from revvault via rfg env)"
 
@@ -41,7 +39,7 @@ STATUS_CODE="$(curl -sS -o "$STATUS_BODY" -w "%{http_code}" \
 if [[ "$STATUS_CODE" != "200" ]]; then
   bad "studio-auth/status HTTP $STATUS_CODE"
   rm -f "$STATUS_BODY"
-  echo "summary pass=$pass fail=$fail warn=$warn"
+  echo "summary pass=$pass fail=$fail"
   exit 2
 fi
 
@@ -73,6 +71,6 @@ esac
 
 echo "---"
 echo "url=$URL"
-echo "summary pass=$pass fail=$fail warn=$warn"
+echo "summary pass=$pass fail=$fail"
 [[ "$fail" -eq 0 ]] || exit 1
 exit 0

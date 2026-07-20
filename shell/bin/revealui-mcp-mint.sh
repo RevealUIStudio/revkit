@@ -54,8 +54,8 @@ fi
 
 [[ -n "$EMAIL" && "$EMAIL" == *@* ]] || die "valid email required"
 
-export EMAIL DEVICE_ID DEVICE_NAME
-LINK_BODY="$(python3 -c "import json,os; print(json.dumps({'email':os.environ['EMAIL'],'deviceId':os.environ['DEVICE_ID'],'deviceName':os.environ['DEVICE_NAME'],'deviceType':'cli'}))")"
+export EMAIL DEVICE_ID DEVICE_NAME DEVICE_TYPE
+LINK_BODY="$(python3 -c "import json,os; print(json.dumps({'email':os.environ['EMAIL'],'deviceId':os.environ['DEVICE_ID'],'deviceName':os.environ['DEVICE_NAME'],'deviceType':os.environ['DEVICE_TYPE']}))")"
 RESP="$(mktemp)"
 CODE="$(curl -sS -o "$RESP" -w "%{http_code}" \
   -H "Content-Type: application/json" \
