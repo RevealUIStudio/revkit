@@ -9,6 +9,7 @@
 #   rfg                  # use $PWD if under ~/revfleet, else list repos
 #   rfg revealui         # cd + load MCP env + exec grok
 #   rfg revealui --help  # trailing args pass through to grok
+#   rfg revealui --worktree=label "…"  # worktree base = integration ref
 #   rfg mint             # interactive device-token mint → revvault
 #   rfg smoke            # auth/MCP health (no secret print)
 #   rfg env              # print export lines for eval
@@ -16,6 +17,8 @@
 # Override fleet root: REVFLEET_ROOT
 # Skip MCP load: REVEALUI_MCP_ENV_SKIP=1
 # Non-strict (launch even if token missing): REVEALUI_MCP_ENV_STRICT=0
+# Skip worktree-ref inject: RFG_WORKTREE_REF_SKIP=1
+# Force worktree base ref: RFG_WORKTREE_REF=test
 
 set -euo pipefail
 
@@ -116,6 +119,96 @@ resolve_grok() {
   return 1
 }
 
+# Integration base for new worktrees: origin/test when present, else origin/main.
+# Owner hardline 2026-07-21: never inherit a feature-branch HEAD as the worktree parent.
+_resolve_integration_ref() {
+  local repo="$1"
+  if [ -n "${RFG_WORKTREE_REF:-}" ]; then
+    echo "$RFG_WORKTREE_REF"
+    return 0
+  fi
+  if [ -d "$repo/.git" ] || [ -f "$repo/.git" ]; then
+    if git -C "$repo" rev-parse --verify --quiet origin/test >/dev/null 2>&1; then
+      echo "test"
+      return 0
+    fi
+    if git -C "$repo" rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
+      echo "main"
+      return 0
+    fi
+  fi
+  # revealui and most fleet product repos use test even before first fetch
+  case "${repo##*/}" in
+    revealui) echo "test"; return 0 ;;
+  esac
+  echo "main"
+}
+
+# If argv requests a worktree and no --ref/--worktree-ref is set, inject --ref <integration>.
+# Grok defaults worktree base to the source checkout HEAD; that is wrong on feature branches.
+_inject_worktree_ref() {
+  if [ "${RFG_WORKTREE_REF_SKIP:-0}" = 1 ]; then
+    RFG_GROK_ARGS=("$@")
+    return 0
+  fi
+
+  local has_worktree=0 has_ref=0
+  local -a out=()
+  local arg next
+
+  while [ "$#" -gt 0 ]; do
+    arg="$1"
+    shift
+    case "$arg" in
+      -w | --worktree)
+        has_worktree=1
+        out+=("$arg")
+        # optional name: next token if not a flag
+        if [ "$#" -gt 0 ]; then
+          next="$1"
+          case "$next" in
+            -*) ;;
+            *)
+              out+=("$next")
+              shift
+              ;;
+          esac
+        fi
+        ;;
+      --worktree=* | -w=*)
+        has_worktree=1
+        out+=("$arg")
+        ;;
+      --ref | --worktree-ref)
+        has_ref=1
+        out+=("$arg")
+        if [ "$#" -gt 0 ]; then
+          out+=("$1")
+          shift
+        fi
+        ;;
+      --ref=* | --worktree-ref=*)
+        has_ref=1
+        out+=("$arg")
+        ;;
+      *)
+        out+=("$arg")
+        ;;
+    esac
+  done
+
+  if [ "$has_worktree" -eq 1 ] && [ "$has_ref" -eq 0 ]; then
+    local ref
+    ref="$(_resolve_integration_ref "$target")"
+    set -- --ref "$ref" "${out[@]}"
+  else
+    set -- "${out[@]}"
+  fi
+
+  # Export reconstructed argv via global array for the caller (bash cannot return arrays).
+  RFG_GROK_ARGS=("$@")
+}
+
 list_repos() {
   local d
   for d in "$FLEET_ROOT"/*/ "$FLEET_ROOT"/.*/; do
@@ -200,6 +293,10 @@ fi
 grok_bin="$(resolve_grok)" || die "grok not found on PATH or in ~/.grok/bin / ~/.local/bin"
 
 load_mcp_strict || die "MCP env not ready (mint with: rfg mint)"
+
+RFG_GROK_ARGS=("$@")
+_inject_worktree_ref "$@"
+set -- "${RFG_GROK_ARGS[@]}"
 
 cd "$target"
 exec "$grok_bin" "$@"

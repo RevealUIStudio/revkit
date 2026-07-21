@@ -27,6 +27,12 @@ rfg                   # already under ~/revfleet/<repo>
 rfg smoke             # auth + MCP health (no secret print)
 rfg mint              # OTP → revvault
 eval "$(rfg env)"     # rare: export for non-rfg tools
+
+# Worktrees (owner hardline 2026-07-21: never inherit a feature-branch HEAD)
+rfg revealui --worktree=fix-gap-xxx "…"
+# → rfg injects `--ref test` when you omit --ref / --worktree-ref
+# Prefer origin/test when present, else origin/main. Override with RFG_WORKTREE_REF=…
+# Disable inject: RFG_WORKTREE_REF_SKIP=1
 ```
 
 ## Install
@@ -66,3 +72,5 @@ Future Level 2 (`GrokAdapter` in `@revealui/harnesses`) extends the same data pl
 | `REVEALUI_MCP_URL` | `https://api.revealui.com/api/mcp` |
 | `REVEALUI_MCP_TOKEN_VAULT_PATH` | `revealui/dev/mcp/cli-token` |
 | `REVEALUI_MCP_ENV_SKIP=1` | skip vault (debug) |
+| `RFG_WORKTREE_REF` | auto: `test` if `origin/test` else `main` |
+| `RFG_WORKTREE_REF_SKIP=1` | do not inject `--ref` on `--worktree` |
