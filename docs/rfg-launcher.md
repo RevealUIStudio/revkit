@@ -5,6 +5,8 @@ RevealUI MCP attached. It is the Grok sibling of `rfc` (Claude).
 
 No manual `eval`, no home-directory scripts as source of truth.
 
+**Project manager** = `./.revealui` (`manager.json` + content; equal vendor adapters).
+
 ## Contract (long-term)
 
 | Piece | Owner | Durable location |
