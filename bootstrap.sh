@@ -100,6 +100,32 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
 done
 printf '  %d helper(s) installed.\n' "$_installed"
 
+# Shared shell libs (rfg worktree-env, mcp-env, …) next to helpers so installed
+# rfg.sh can source them without requiring a revkit git checkout on PATH.
+_lib_installed=0
+_lib_dest="$(dirname "$HELPERS_DIR")/lib/revkit"
+if [ "$DRY_RUN" -eq 0 ]; then
+  if revkit_is_macos; then
+    mkdir -p "$_lib_dest"
+  else
+    sudo mkdir -p "$_lib_dest"
+  fi
+fi
+for lib in "$SCRIPT_DIR/shell/lib/"*.sh; do
+  [ -f "$lib" ] || continue
+  name="$(basename "$lib")"
+  if revkit_is_macos; then
+    run cp "$lib" "$_lib_dest/$name"
+    run chmod 644 "$_lib_dest/$name"
+  else
+    run sh -c 'sed "s/\r$//" "$1" | sudo tee "$2" >/dev/null' _ "$lib" "$_lib_dest/$name"
+    run sudo chmod 644 "$_lib_dest/$name"
+  fi
+  printf '  Installed lib: %s/%s\n' "$_lib_dest" "$name"
+  _lib_installed=$((_lib_installed + 1))
+done
+printf '  %d shell lib(s) installed.\n' "$_lib_installed"
+
 # ---------------------------------------------------------------------------
 # Step 2: Sudoers — WSL only (passwordless mount for sandbox drive)
 # ---------------------------------------------------------------------------

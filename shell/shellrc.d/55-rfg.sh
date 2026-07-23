@@ -33,7 +33,7 @@ if [ -n "${BASH_VERSION:-}" ] && command -v complete >/dev/null 2>&1; then
   _rfg_complete() {
     [ "${COMP_CWORD:-0}" -eq 1 ] || return 0
     local root="${REVFLEET_ROOT:-$HOME/revfleet}" cur="${COMP_WORDS[COMP_CWORD]}"
-    local d repos=(mint smoke env help)
+    local d repos=(mint smoke env bootstrap claim open help)
     for d in "$root"/*/ "$root"/.*/; do
       [ -e "${d}.git" ] || continue
       d="${d%/}"; repos+=("${d##*/}")
