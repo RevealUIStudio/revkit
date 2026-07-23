@@ -62,3 +62,104 @@ wb() {
     watch -n3 "glow '$_wb' 2>/dev/null || cat '$_wb'"
   fi
 }
+
+# Keep local integration branch at origin tip (fetch + ff-only).
+# Usage:
+#   sync-test                  # REVFLEET_ROOT/revealui
+#   sync-test revkit           # REVFLEET_ROOT/revkit
+#   sync-test /path/to/repo    # absolute path
+#   sync-test --status         # fetch + report behind counts (no merge)
+# Does not auto-stash or reset. Refuses dirty trees and non-ff histories.
+sync-test() {
+  local status_only=0
+  local target=""
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      --status|-s) status_only=1 ;;
+      -h|--help)
+        echo "usage: sync-test [--status] [repo|path]" >&2
+        echo "  default repo: \$REVFLEET_ROOT/revealui" >&2
+        return 0
+        ;;
+      *)
+        if [ -n "$target" ]; then
+          echo "sync-test: unexpected argument: $arg" >&2
+          return 2
+        fi
+        target="$arg"
+        ;;
+    esac
+  done
+
+  local repo
+  if [ -z "$target" ]; then
+    repo="${REVFLEET_ROOT}/revealui"
+  elif [ -d "$target/.git" ] || [ -f "$target/.git" ]; then
+    repo="$target"
+  elif [ -d "${REVFLEET_ROOT}/${target}/.git" ] || [ -f "${REVFLEET_ROOT}/${target}/.git" ]; then
+    repo="${REVFLEET_ROOT}/${target}"
+  else
+    echo "sync-test: not a git repo: ${target} (tried \$REVFLEET_ROOT/${target})" >&2
+    return 1
+  fi
+
+  if ! git -C "$repo" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "sync-test: not a git repo: $repo" >&2
+    return 1
+  fi
+
+  # Prefer integration ref "test"; fall back to remote default branch name.
+  local ref="test"
+  if ! git -C "$repo" rev-parse --verify --quiet "origin/${ref}" >/dev/null 2>&1 \
+    && ! git -C "$repo" ls-remote --exit-code --heads origin "$ref" >/dev/null 2>&1; then
+    ref="$(git -C "$repo" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##')"
+    ref="${ref:-main}"
+  fi
+
+  echo "sync-test: fetching origin/${ref} in $repo" >&2
+  if ! git -C "$repo" fetch origin "$ref"; then
+    echo "sync-test: fetch failed" >&2
+    return 1
+  fi
+
+  local behind ahead
+  behind="$(git -C "$repo" rev-list --count "HEAD..origin/${ref}" 2>/dev/null || echo 0)"
+  ahead="$(git -C "$repo" rev-list --count "origin/${ref}..HEAD" 2>/dev/null || echo 0)"
+  local branch
+  branch="$(git -C "$repo" branch --show-current 2>/dev/null || echo detached)"
+  local tip
+  tip="$(git -C "$repo" rev-parse --short "origin/${ref}" 2>/dev/null || echo unknown)"
+
+  echo "sync-test: branch=${branch}  origin/${ref}=${tip}  behind=${behind}  ahead=${ahead}" >&2
+
+  if [ "$status_only" = 1 ]; then
+    return 0
+  fi
+
+  if [ "$branch" != "$ref" ]; then
+    echo "sync-test: switching to ${ref}" >&2
+    if ! git -C "$repo" switch "$ref"; then
+      echo "sync-test: cannot switch to ${ref} (create it with: git switch -c ${ref} origin/${ref})" >&2
+      return 1
+    fi
+  fi
+
+  if [ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ]; then
+    echo "sync-test: working tree dirty — commit, stash, or clean before ff-only merge" >&2
+    return 1
+  fi
+
+  if [ "$ahead" != "0" ]; then
+    echo "sync-test: local ${ref} is ahead of origin/${ref} by ${ahead} — not fast-forwardable; open a PR or reset deliberately" >&2
+    return 1
+  fi
+
+  if [ "$behind" = "0" ]; then
+    echo "sync-test: already at origin/${ref}" >&2
+    return 0
+  fi
+
+  git -C "$repo" merge --ff-only "origin/${ref}"
+  echo "sync-test: fast-forwarded ${ref} to $(git -C "$repo" rev-parse --short HEAD)" >&2
+}
