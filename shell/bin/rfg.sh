@@ -13,6 +13,11 @@
 #   rfg mint             # interactive device-token mint → revvault
 #   rfg smoke            # auth/MCP health (no secret print)
 #   rfg env              # print export lines for eval
+#   rfg bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
+#   rfg claim …          # claim acquire|release|list|check|sweep
+#   rfg open <repo> <label> [--claim surface] [--no-agent]
+#                        # create ~/revfleet/.wt/<label> from integration ref,
+#                        # bootstrap env, optional claim, optional grok
 #
 # Override fleet root: REVFLEET_ROOT
 # Skip MCP load: REVEALUI_MCP_ENV_SKIP=1
@@ -234,6 +239,23 @@ _resolve_helper() {
   return 1
 }
 
+_load_worktree_env_lib() {
+  local candidates=(
+    "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/lib/worktree-env.sh"
+    "$HOME/revfleet/revkit/shell/lib/worktree-env.sh"
+    "${REVEALUI_ROOT:-}/shell/lib/worktree-env.sh"
+  )
+  local f
+  for f in "${candidates[@]}"; do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      # shellcheck disable=SC1090
+      . "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+
 cmd="${1:-}"
 case "$cmd" in
   mint)
@@ -255,8 +277,141 @@ case "$cmd" in
     printf 'export REVEALUI_MCP_TOKEN_VAULT_PATH=%q\n' "$REVEALUI_MCP_TOKEN_VAULT_PATH"
     exit 0
     ;;
+  bootstrap)
+    shift || true
+    _load_worktree_env_lib || die "worktree-env.sh not found (re-run revkit bootstrap)"
+    path="${1:-$PWD}"
+    label="${2:-}"
+    envf="$(rfg_write_worktree_env "$path" "$label")"
+    echo "rfg: wrote $envf"
+    # shellcheck disable=SC1090
+    set -a
+    # shellcheck disable=SC1090
+    . "$envf"
+    set +a
+    echo "rfg: RFG_PORT_BASE=${RFG_PORT_BASE:-?} MARKETING_PORT=${MARKETING_PORT:-?} API_PORT=${API_PORT:-?}"
+    exit 0
+    ;;
+  claim)
+    shift || true
+    _load_worktree_env_lib || die "worktree-env.sh not found (re-run revkit bootstrap)"
+    sub="${1:-list}"
+    shift || true
+    case "$sub" in
+      acquire | take)
+        repo="${1:-}"; surface="${2:-}"; ttl="${3:-24}"
+        [ -n "$repo" ] && [ -n "$surface" ] || die "usage: rfg claim acquire <repo> <surface> [ttl_hours]"
+        rfg_claim_acquire "$repo" "$surface" "$ttl"
+        ;;
+      release | drop)
+        repo="${1:-}"; surface="${2:-}"
+        [ -n "$repo" ] && [ -n "$surface" ] || die "usage: rfg claim release <repo> <surface>"
+        rfg_claim_release "$repo" "$surface"
+        ;;
+      list)
+        rfg_claim_list "${1:-}"
+        ;;
+      check)
+        repo="${1:-}"; surface="${2:-}"
+        [ -n "$repo" ] && [ -n "$surface" ] || die "usage: rfg claim check <repo> <surface>"
+        rfg_claim_check "$repo" "$surface"
+        ;;
+      sweep)
+        rfg_claim_sweep
+        ;;
+      *)
+        die "usage: rfg claim acquire|release|list|check|sweep …"
+        ;;
+    esac
+    exit 0
+    ;;
+  open)
+    # rfg open <repo> <label> [--claim surface] [--no-agent] [extra grok args…]
+    shift || true
+    _load_worktree_env_lib || die "worktree-env.sh not found (re-run revkit bootstrap)"
+    open_repo="${1:-}"
+    open_label="${2:-}"
+    [ -n "$open_repo" ] && [ -n "$open_label" ] || die "usage: rfg open <repo> <label> [--claim surface] [--no-agent] [grok-args…]"
+    shift 2 || true
+    claim_surface=""
+    no_agent=0
+    open_extra=()
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --claim)
+          claim_surface="${2:-}"
+          [ -n "$claim_surface" ] || die "--claim requires a surface id"
+          shift 2
+          ;;
+        --claim=*)
+          claim_surface="${1#--claim=}"
+          shift
+          ;;
+        --no-agent)
+          no_agent=1
+          shift
+          ;;
+        *)
+          open_extra+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    source_repo="$FLEET_ROOT/$open_repo"
+    [ -d "$source_repo" ] || die "no such fleet repo: $open_repo"
+    wt_root="${RFG_WT_ROOT:-$HOME/revfleet/.wt}"
+    wt_path="$wt_root/$open_label"
+    ref="$(_resolve_integration_ref "$source_repo")"
+
+    if [ -e "$wt_path" ]; then
+      echo "rfg: worktree path exists: $wt_path (bootstrap only)" >&2
+    else
+      mkdir -p "$wt_root"
+      echo "rfg: fetching origin/$ref …" >&2
+      git -C "$source_repo" fetch origin "$ref" 2>/dev/null || git -C "$source_repo" fetch origin || true
+      base="origin/$ref"
+      if ! git -C "$source_repo" rev-parse --verify --quiet "$base" >/dev/null 2>&1; then
+        base="$ref"
+      fi
+      branch="feat/${open_label}"
+      # If branch exists, attach worktree to it; else create.
+      if git -C "$source_repo" show-ref --verify --quiet "refs/heads/$branch"; then
+        git -C "$source_repo" worktree add "$wt_path" "$branch"
+      else
+        git -C "$source_repo" worktree add -b "$branch" "$wt_path" "$base"
+      fi
+      echo "rfg: created $wt_path ($branch from $base)" >&2
+    fi
+
+    envf="$(rfg_write_worktree_env "$wt_path" "$open_label")"
+    echo "rfg: bootstrap $envf" >&2
+
+    if [ -n "$claim_surface" ]; then
+      RFG_CLAIM_WORKTREE="$wt_path"
+      RFG_CLAIM_AGENT="${RFG_CLAIM_AGENT:-grok}"
+      export RFG_CLAIM_WORKTREE RFG_CLAIM_AGENT
+      claim_file="$(rfg_claim_acquire "$open_repo" "$claim_surface")" || die "claim failed for $claim_surface"
+      echo "rfg: claimed $claim_file" >&2
+    fi
+
+    if [ "$no_agent" -eq 1 ]; then
+      echo "$wt_path"
+      exit 0
+    fi
+
+    grok_bin="$(resolve_grok)" || die "grok not found on PATH or in ~/.grok/bin / ~/.local/bin"
+    load_mcp_strict || die "MCP env not ready (mint with: rfg mint)"
+    cd "$wt_path"
+    # shellcheck disable=SC1090
+    set -a
+    # shellcheck disable=SC1090
+    . "$envf"
+    set +a
+    exec "$grok_bin" "${open_extra[@]}"
+    ;;
   -h | --help | help)
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
 esac
