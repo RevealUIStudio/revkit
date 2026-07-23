@@ -240,12 +240,17 @@ _resolve_helper() {
 }
 
 _load_worktree_env_lib() {
-  local candidates=(
-    "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/lib/worktree-env.sh"
+  local here d candidates f
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  candidates=(
+    # Installed layout: /usr/local/bin/rfg.sh → /usr/local/lib/revkit/worktree-env.sh
+    "$(dirname "$here")/lib/revkit/worktree-env.sh"
+    # Source layout: shell/bin/rfg.sh → shell/lib/worktree-env.sh
+    "$here/../lib/worktree-env.sh"
     "$HOME/revfleet/revkit/shell/lib/worktree-env.sh"
     "${REVEALUI_ROOT:-}/shell/lib/worktree-env.sh"
+    "$HOME/.local/lib/revkit/worktree-env.sh"
   )
-  local f
   for f in "${candidates[@]}"; do
     if [ -n "$f" ] && [ -f "$f" ]; then
       # shellcheck disable=SC1090
