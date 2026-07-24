@@ -10,6 +10,12 @@
 #   with-secrets core stripe neon -- pnpm test:integration
 #   with-secrets npm -- pnpm changeset:publish
 #   with-secrets core -- pnpm kek:rotate
+#   with-secrets license -- pnpm test          # public license key only (GAP-260 P2-2)
+#   REVVAULT_ALLOW_PRIVATE=1 with-secrets license-signing -- pnpm tsx scripts/setup/issue-revforge-license.ts
+#
+# GAP-260 P2-2 license namespaces:
+#   license          → revealui/env/license (public SPKI only) via export-env --public-only
+#   license-signing  → revealui/env/license-signing (private PKCS#8); requires REVVAULT_ALLOW_PRIVATE=1
 with-secrets() {
     if [[ $# -eq 0 ]]; then
         printf 'usage: with-secrets <ns...> -- <cmd> [args...]\n' >&2
@@ -58,10 +64,31 @@ with-secrets() {
             # command with NO secrets loaded, silently — a prod-shaped command
             # stripped of its credentials. Abort the subshell so the caller
             # sees a nonzero status and the command never runs.
-            if ! out="$("$rv" export-env "revealui/env/$ns")"; then
-                printf 'with-secrets: failed to load namespace %s\n' "$ns" >&2
-                exit 1
-            fi
+            case "$ns" in
+                license-signing)
+                    if [[ "${REVVAULT_ALLOW_PRIVATE:-}" != "1" ]]; then
+                        printf 'with-secrets: namespace license-signing requires REVVAULT_ALLOW_PRIVATE=1 (GAP-260 P2-2)\n' >&2
+                        exit 1
+                    fi
+                    if ! out="$("$rv" export-env "revealui/env/license-signing")"; then
+                        printf 'with-secrets: failed to load namespace %s\n' "$ns" >&2
+                        exit 1
+                    fi
+                    ;;
+                license)
+                    # Public-only: refuses private PEM even if the vault path is mis-filled.
+                    if ! out="$("$rv" export-env --public-only "revealui/env/license")"; then
+                        printf 'with-secrets: failed to load namespace %s (public-only)\n' "$ns" >&2
+                        exit 1
+                    fi
+                    ;;
+                *)
+                    if ! out="$("$rv" export-env "revealui/env/$ns")"; then
+                        printf 'with-secrets: failed to load namespace %s\n' "$ns" >&2
+                        exit 1
+                    fi
+                    ;;
+            esac
             eval "$out"
         done
         exec "${cmd[@]}"
