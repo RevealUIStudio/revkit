@@ -203,6 +203,16 @@ jobs:
       - name: Run secrets tests
         run: bash tests/test-secrets.sh
 
+  test-local-ai-shell:
+    name: tests/test-local-ai-shell.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run local-ai shell auto-load tests
+        run: bash tests/test-local-ai-shell.sh
+
   test-pre-push-hook:
     # M-11 hook smoke test. Builds a throwaway git repo with real commits,
     # invokes the hook with various ref combinations, asserts exit codes +

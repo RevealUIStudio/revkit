@@ -33,7 +33,7 @@ revkit/
 ├── lib/
 │   └── platform.sh                  # OS detector: sets REVKIT_OS ∈ {wsl,linux,macos}; exports predicates
 ├── shell/
-│   ├── shellrc.d/                   # shell config fragments sourced by .bashrc/.zshrc (00-base.sh, 50-rfc.sh, …)
+│   ├── shellrc.d/                   # shell config fragments sourced by .bashrc/.zshrc (00-base.sh, 25-local-ai.sh, 50-rfc.sh, …)
 │   ├── bin/                         # helper scripts → /usr/local/bin (or ~/.local/bin on macOS)
 │   │   ├── rfc.sh                   # WSL-native (and macOS/Linux) Claude launcher
 │   │   ├── mount-sandbox-drive.sh   # WSL-only sandbox-drive mount helper
