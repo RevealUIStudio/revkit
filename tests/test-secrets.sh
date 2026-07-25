@@ -174,6 +174,65 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 4b. Store resolution — canonical data-dir store wins over stale dotfile
+#     exports (GAP-413 split-store regression)
+# ---------------------------------------------------------------------------
+#
+# The old guard looked for "$REVEALUI_ROOT/passage-store", but bootstrap pins
+# REVEALUI_ROOT to the revkit REPO checkout, so the guard never matched and a
+# stale `export PASSAGE_DIR=~/.passage/store` from an earlier dotfile silently
+# won — interactive shells on the legacy store, clean-env units on the
+# canonical one. These tests pin the fixed contract.
+
+echo ""
+echo "--- Store resolution (GAP-413) ---"
+
+sr_sandbox="$(mktemp -d "${TMPDIR:-/tmp}/test-secrets-sr.XXXXXX")"
+mkdir -p "$sr_sandbox/home/.revealui/passage-store" "$sr_sandbox/repo" "$sr_sandbox/legacy"
+
+# A. Canonical store exists + stale legacy PASSAGE_DIR + repo-pinned
+#    REVEALUI_ROOT (no passage-store under it): resolution must land on the
+#    canonical data-dir store and correct the stale alias.
+sr_resolved="$(
+  (
+    export HOME="$sr_sandbox/home"
+    export REVEALUI_ROOT="$sr_sandbox/repo"
+    export PASSAGE_DIR="$sr_sandbox/legacy"
+    unset REVVAULT_STORE
+    source "$SECRETS_SH"
+    printf '%s|%s' "${REVVAULT_STORE:-}" "${PASSAGE_DIR:-}"
+  )
+)"
+sr_expect="$sr_sandbox/home/.revealui/passage-store"
+if [[ "$sr_resolved" == "$sr_expect|$sr_expect" ]]; then
+  echo "PASS: canonical data-dir store overrides stale legacy PASSAGE_DIR"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL: expected $sr_expect for both, got: $sr_resolved"
+  FAIL=$((FAIL + 1))
+fi
+
+# B. Explicit REVVAULT_STORE wins over the canonical default.
+sr_explicit="$(
+  (
+    export HOME="$sr_sandbox/home"
+    export REVVAULT_STORE="$sr_sandbox/legacy"
+    unset PASSAGE_DIR
+    source "$SECRETS_SH"
+    printf '%s|%s' "${REVVAULT_STORE:-}" "${PASSAGE_DIR:-}"
+  )
+)"
+if [[ "$sr_explicit" == "$sr_sandbox/legacy|$sr_sandbox/legacy" ]]; then
+  echo "PASS: explicit REVVAULT_STORE wins and PASSAGE_DIR follows it"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL: expected explicit store for both, got: $sr_explicit"
+  FAIL=$((FAIL + 1))
+fi
+
+rm -rf "$sr_sandbox"
+
+# ---------------------------------------------------------------------------
 # 5. passenv-file also blocks protected variables
 # ---------------------------------------------------------------------------
 

@@ -5,8 +5,21 @@
 # reads via `revvault get`, and the Windows PowerShell Get-Secret cmdlet uses the
 # same backend (revkit #91). The PASSAGE_DIR export below is a backward-compat
 # alias only; passage itself is not used.
-if [ -n "${REVEALUI_ROOT:-}" ] && [ -d "$REVEALUI_ROOT/passage-store" ]; then
-    export REVVAULT_STORE="$REVEALUI_ROOT/passage-store"
+#
+# Store resolution (GAP-413 fix): the canonical store lives in the REVEALUI
+# DATA dir (~/.revealui/passage-store, per the fleet secrets rule), NOT under
+# REVEALUI_ROOT — bootstrap pins REVEALUI_ROOT to the revkit REPO checkout, so
+# the old "$REVEALUI_ROOT/passage-store" guard never matched and shells fell
+# through to whatever stale PASSAGE_DIR an earlier dotfile exported (the
+# split-store drift: interactive shells on the legacy ~/.passage/store while
+# clean-env systemd units read the canonical store). Resolution order:
+# explicit REVVAULT_STORE wins; otherwise the canonical data-dir store when it
+# exists. This file is sourced late in shell init, so it also overrides any
+# stale legacy export from earlier dotfiles.
+if [ -z "${REVVAULT_STORE:-}" ] && [ -d "$HOME/.revealui/passage-store" ]; then
+    export REVVAULT_STORE="$HOME/.revealui/passage-store"
+fi
+if [ -n "${REVVAULT_STORE:-}" ]; then
     export PASSAGE_DIR="$REVVAULT_STORE"
 fi
 passenv() {
