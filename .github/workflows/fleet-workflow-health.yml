@@ -1,0 +1,47 @@
+name: fleet-workflow-health
+
+# Watcher-of-watchers (GAP-420). The status repo's Update Template CI workflow
+# failed every run for 3+ weeks (2026-07-05 through 2026-07-25) before anyone
+# noticed -- nothing was watching the watcher. This workflow closes that class
+# fleet-wide: scripts/fleet-workflow-health.sh scans every fleet repo's GitHub
+# Actions runs and fails if any workflow's 3 most recent COMPLETED runs were
+# ALL failures (a single red run never trips it).
+#
+# Alert channel: a failing run of THIS workflow generates GitHub's own
+# workflow-failure notification email to the repo owner -- that email IS the
+# alert. There is no separate notification wiring here.
+#
+# Token scope (verified empirically 2026-07-25 via `gh repo view --json
+# visibility` against every repo below): the default GITHUB_TOKEN is scoped to
+# THIS repo, but GitHub's Actions REST API serves run data for any repository
+# marked public to any caller -- authenticated or not -- the same visibility
+# as the public "Actions" tab. All fleet repos except revforge are PUBLIC
+# (RevealUIStudio/revforge is PRIVATE), so this token can see:
+#   revealui, revdev, revkit, revskills, revvault, revcon, agency, status
+# and cannot see revforge (403/404 -- the script marks it SKIPPED and prints a
+# note that it relies on GitHub's own per-repo failure emails instead).
+
+on:
+  schedule:
+    # Sunday 08:00 UTC -- clear of the other fleet crons (status Uptime CI
+    # runs every 5 min; this repo's own ci.yml runs on push/PR; the WSL
+    # weekly backup task runs host-local Sunday 03:00).
+    - cron: "0 8 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan fleet workflow health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run fleet workflow health scan
+        run: bash scripts/fleet-workflow-health.sh
