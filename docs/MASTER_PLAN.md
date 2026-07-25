@@ -1,6 +1,6 @@
 ---
 title: "RevKit Master Plan"
-description: "Retired public snapshot. Planning lives in the internal coordination hub."
+description: "Retired public snapshot. Detailed planning is tracked privately, not in this repo."
 visibility: internal
 status: verified
 audience: maintainer
@@ -14,7 +14,7 @@ owner: RevealUI Studio
 
 **This snapshot is retired (2026-07-25).**
 
-Detailed planning for RevKit lives in the internal coordination hub. Release
+Detailed planning for RevKit is tracked privately by the maintainers. Release
 timelines and phase tracking are business-sensitive and are not mirrored into
 this repo.
 
