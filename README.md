@@ -33,6 +33,8 @@ bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 
 The bootstrap installs helper scripts (`/usr/local/bin`, or `~/.local/bin` on macOS), configures sudoers for passwordless sandbox-drive mounting (WSL), adds a `~/.bashrc`/`~/.zshrc` hook that sources `shell/shellrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, wires RevFleet Claude rules via `revcon/link.sh`, and wires the fleet-wide pre-push git hook via `git config --global core.hooksPath`.
 
+Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md)).
+
 > **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap.sh` — the rc hook is self-healing and migrates in place. No manual edit needed.
 
 Open a new shell — you should see a `● RevKit: managed` banner. On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.

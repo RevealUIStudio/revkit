@@ -1,14 +1,14 @@
 ---
 type: master-plan
 repo: revkit
-last-updated: 2026-06-23
+last-updated: 2026-07-23
 owner: RevealUI Studio
 staleness-status: FRESH
 ---
 
 # RevKit — Master Plan
 
-**Last Updated:** 2026-06-23
+**Last Updated:** 2026-07-23
 **Status:** Active — cross-platform (macOS + Linux + WSL2) bootstrap + WSL-native secure sessions shipped; onboarding validation + drift cleanup next
 **Owner:** RevealUI Studio (`founder@revealui.com`)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
@@ -20,7 +20,7 @@ staleness-status: FRESH
 
 ---
 
-## Current Reality (2026-06-23)
+## Current Reality (2026-07-23)
 
 ### What exists
 
@@ -83,6 +83,11 @@ RevKit is the workstation. Other RevFleet products run on top of what RevKit pro
 **Next lane: Phase C + D** (see Roadmap) — branch off `revkit` `origin/test`.
 
 ### Recently shipped (2026-06)
+
+### Recently shipped (2026-07)
+
+- **#139** (MERGED) — `rfg` Rift-inspired worktree ports + claim registry (see `docs/rfg-launcher.md`).
+- Manager / TRACKER pointer docs for Grok attach path (see `docs/rfg-launcher.md`).
 
 - **#74** (MERGED 2026-06-23) — reconcile MASTER_SPEC + README to cross-platform reality (drop dead `profiles/`/`render.sh` docs; lead with `bootstrap.sh`).
 - **#72** (MERGED 2026-06-23) — `bootstrap.sh` M-11 CI coverage; `bootstrap-wsl.sh` → deprecation shim.

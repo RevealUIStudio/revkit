@@ -1,7 +1,7 @@
 ---
 type: repo-doc-index
 repo: revkit
-updated: 2026-06-23
+updated: 2026-07-23
 ---
 
 # RevKit — Documentation Index

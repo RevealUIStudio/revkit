@@ -1,20 +1,58 @@
 # weekly-wsl-backup.ps1
 # Exports the Ubuntu WSL distro to E:\backups\wsl-snapshots\current\, rotating
-# older snapshots (keeps the 2 most recent). Designed to be run by a weekly
-# Windows scheduled task.
+# older snapshots (keeps the $KeepCount most recent). Designed to be run by a
+# weekly Windows scheduled task (RevealUI-WSL-Weekly-Backup, Sunday 03:00).
 #
 # Created 2026-04-24 during storage-recovery session.
 # Replaces the dead RevealUI-Repo-Sync scheduled task role.
+#
+# GAP-301 (2026-07-24 re-verify): LastTaskResult 0x40 (64) on the 2026-07-19
+# 03:00 run with NO backup.log lines is the host-sleep kill class. The installed
+# operator copy already carried ES_SYSTEM_REQUIRED during export; this SSOT
+# port keeps that + logs a TEMP bootstrap line before any E: I/O so a kill
+# still leaves a fingerprint. Owner should also set WakeToRun=true on the
+# scheduled task (currently false) so a sleeping host actually wakes for 03:00.
 
 [CmdletBinding()]
 param(
   [string]$Distro = 'Ubuntu',
   [string]$SnapshotDir = 'E:\backups\wsl-snapshots\current',
-  [int]$KeepCount = 2
+  [int]$KeepCount = 4
 )
 
 $ErrorActionPreference = 'Stop'
 $logFile = Join-Path $SnapshotDir 'backup.log'
+$fallbackLog = Join-Path $env:TEMP 'wsl-backup-fallback.log'
+
+# Keep the host awake for the duration of the export. The unattended Sunday 03:00
+# run has been interrupted by system sleep on the large (150 GB+) export - the
+# process dies mid-write before the size-check/catch can run, leaving a truncated
+# tar with no error line (task result 0x40). ES_SYSTEM_REQUIRED resets the idle
+# timer so the machine cannot sleep while wsl --export streams.
+Add-Type -Namespace Win32 -Name Power -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+public static extern uint SetThreadExecutionState(uint esFlags);
+'@ -ErrorAction SilentlyContinue
+$script:ES_CONTINUOUS      = [uint32]0x80000000L  # L-suffix required: bare 0x80000000 parses as Int32 -2147483648 and fails the [uint32] cast at runtime
+$script:ES_SYSTEM_REQUIRED = [uint32]0x00000001
+function Set-SystemKeepAwake {
+  try { [void][Win32.Power]::SetThreadExecutionState([uint32]($script:ES_CONTINUOUS -bor $script:ES_SYSTEM_REQUIRED)) } catch {}
+}
+function Clear-SystemKeepAwake {
+  try { [void][Win32.Power]::SetThreadExecutionState([uint32]$script:ES_CONTINUOUS) } catch {}
+}
+
+function Write-Bootstrap {
+  # Always-on TEMP fingerprint so a kill before E: is writable still leaves a trail.
+  param([string]$Message)
+  $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [BOOT] $Message"
+  Write-Host $line
+  try {
+    Add-Content -Path $fallbackLog -Value $line -ErrorAction SilentlyContinue
+  } catch {
+    # last-resort: ignore
+  }
+}
 
 function Write-Log {
   param([string]$Level, [string]$Message)
@@ -23,7 +61,6 @@ function Write-Log {
   # Try the primary log on E:. If that fails (drive asleep, disconnected, locked),
   # fall back to %TEMP%. Silent drops are how this script went 3 weeks without
   # surfacing the truncated-tar failure on 2026-05-10. Never lose an error line.
-  $fallbackLog = Join-Path $env:TEMP 'wsl-backup-fallback.log'
   try {
     if (Test-Path (Split-Path $logFile -Parent)) {
       Add-Content -Path $logFile -Value $line -ErrorAction Stop
@@ -58,6 +95,11 @@ function Move-ToFailed {
 }
 
 try {
+  # TEMP bootstrap BEFORE any E: / WSL work so 0x40 kills still leave evidence.
+  Write-Bootstrap "weekly-wsl-backup starting (pid=$PID distro=$Distro keep=$KeepCount)"
+  Set-SystemKeepAwake
+  Write-Bootstrap 'Sleep inhibited (ES_SYSTEM_REQUIRED) for entire backup run'
+
   # Ensure destination exists
   if (-not (Test-Path $SnapshotDir)) {
     New-Item -ItemType Directory -Force -Path $SnapshotDir | Out-Null
@@ -66,6 +108,7 @@ try {
 
   # Verify destination drive has enough space (need ~1.5x vhdx size for headroom)
   $vhdxPath = "C:\WSL\$Distro\ext4.vhdx"
+  $vhdxSizeGB = 0
   if (Test-Path $vhdxPath) {
     $vhdxSizeGB = (Get-Item $vhdxPath).Length / 1GB
     $destDrive = (Get-Item $SnapshotDir).PSDrive
@@ -81,6 +124,19 @@ try {
   Write-Log 'INFO' 'Shutting down WSL for clean snapshot'
   & wsl.exe --shutdown
   Start-Sleep -Seconds 5
+
+  # Pre-export sweep: a prior run KILLED mid-export (host sleep / power loss) never
+  # reaches the post-export size-check/catch below, so its truncated tar is left in
+  # place and would be picked as "newest" by the freshness monitor AND count toward
+  # KeepCount during rotation, evicting a good snapshot. Quarantine any existing
+  # sub-floor tar (same 25%-of-vhdx / 1 GB floor the size-check uses) first.
+  $preSweepFloorGB = [math]::Max(1.0, $vhdxSizeGB * 0.25)
+  Get-ChildItem $SnapshotDir -Filter "$Distro-*.tar" -ErrorAction SilentlyContinue |
+    Where-Object { ($_.Length / 1GB) -lt $preSweepFloorGB } |
+    ForEach-Object {
+      Write-Log 'WARN' "Pre-export sweep: quarantining sub-floor tar $($_.Name) ($([math]::Round($_.Length/1GB,2)) GB < $([math]::Round($preSweepFloorGB,2)) GB)"
+      Move-ToFailed $_.FullName
+    }
 
   # Export with timestamp
   $stamp = Get-Date -Format 'yyyy-MM-dd-HHmm'
@@ -128,10 +184,15 @@ try {
   }
 
   Write-Log 'INFO' "SUCCESS - backup rotation complete, $($snapshots.Count - $toDelete.Count) snapshots retained"
+  Write-Bootstrap 'weekly-wsl-backup SUCCESS'
   exit 0
 }
 catch {
+  Write-Bootstrap "weekly-wsl-backup FAILED: $($_.Exception.Message)"
   Write-Log 'ERROR' "Backup failed: $($_.Exception.Message)"
   Write-Log 'ERROR' $_.ScriptStackTrace
   exit 1
+}
+finally {
+  Clear-SystemKeepAwake
 }
