@@ -466,7 +466,7 @@ else
     "revvault:revfleet:copy"
     "revcon:revfleet:copy"
     "revforge:revfleet:copy"
-    "revskills:revfleet"
+    "revskills:revfleet:copy"
     "revkit:revfleet"
   )
   for entry in "${FLEET_TARGETS[@]}"; do
