@@ -462,7 +462,7 @@ else
   # (revealui gates them via validate:rules-lockstep).
   FLEET_TARGETS=(
     "revealui:revfleet,revealui:copy"
-    "revdev:revfleet"
+    "revdev:revfleet:copy"
     "revvault:revfleet"
     "revcon:revfleet"
     "revforge:revfleet"
