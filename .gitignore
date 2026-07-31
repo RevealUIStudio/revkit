@@ -31,10 +31,13 @@ shell/docker/.env
 .vscode/
 
 # Claude Code per-developer state (settings.local.json, session caches,
-# worktrees). Keep out of git so accidentally-committed local settings
-# can't bypass the Private Leak Scan gate (per Codex P2 finding on
-# revdev#55 → revskills#9).
-.claude/
+# worktrees). Materialized rules/agents/skills are tracked (GAP-372 copy-mode);
+# keep local state ignored so it cannot bypass the Private Leak Scan gate.
+.claude/*
+!.claude/rules/
+!.claude/agents/
+!.claude/skills/
+!.claude/.revcon-manifest.json
 
 # Backups / binary archives — never track snapshots. check-no-private-leaks.sh
 # excludes *.tar.gz and gitleaks does not unpack archives, so a tracked archive
