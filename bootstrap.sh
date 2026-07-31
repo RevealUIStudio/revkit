@@ -463,7 +463,7 @@ else
   FLEET_TARGETS=(
     "revealui:revfleet,revealui:copy"
     "revdev:revfleet:copy"
-    "revvault:revfleet"
+    "revvault:revfleet:copy"
     "revcon:revfleet:copy"
     "revforge:revfleet"
     "revskills:revfleet"
