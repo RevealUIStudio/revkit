@@ -464,7 +464,7 @@ else
     "revealui:revfleet,revealui:copy"
     "revdev:revfleet:copy"
     "revvault:revfleet"
-    "revcon:revfleet"
+    "revcon:revfleet:copy"
     "revforge:revfleet"
     "revskills:revfleet"
     "revkit:revfleet"
