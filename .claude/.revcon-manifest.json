@@ -41,7 +41,7 @@
     },
     "rules/planning.md": {
       "source": "profiles/revfleet/claude/rules/planning.md",
-      "sha256": "b489fbf16bb2513d37a540474653ab70fe45f7fe704d69d7306dfde3128fd7fd"
+      "sha256": "338133fa1ca5296e131236b320484dc0dc969665dce6bc4426583374f665ec0e"
     },
     "rules/secrets.md": {
       "source": "profiles/revfleet/claude/rules/secrets.md",
