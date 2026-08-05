@@ -3,7 +3,8 @@
 #
 # Runs <cmd> with revvault secrets from the given revealui/env/<ns> namespaces
 # loaded into the child process environment only. Nothing leaks back to the
-# calling shell.
+# calling shell. Prefer this (or `revvault run`) on stream — never
+# $(revvault get) inside CLI flags (pnpm prints argv).
 #
 # Usage examples:
 #   with-secrets stripe -- pnpm dev:api
@@ -12,6 +13,9 @@
 #   with-secrets core -- pnpm kek:rotate
 #   with-secrets license -- pnpm test          # public license key only (GAP-260 P2-2)
 #   REVVAULT_ALLOW_PRIVATE=1 with-secrets license-signing -- pnpm tsx scripts/setup/issue-revforge-license.ts
+#
+# When `revvault run` supports --namespace (stream-safe secrets), prefer:
+#   revvault run --namespace stripe --namespace neon -- pnpm …
 #
 # GAP-260 P2-2 license namespaces:
 #   license          → revealui/env/license (public SPKI only) via export-env --public-only
@@ -53,6 +57,16 @@ with-secrets() {
     if [[ -z "$rv" ]]; then
         printf 'with-secrets: revvault not found in PATH\n' >&2
         return 1
+    fi
+
+    # Prefer native revvault run when it accepts --namespace (stream-safe path).
+    if "$rv" run --help 2>&1 | grep -q -- '--namespace'; then
+        local run_args=()
+        local ns
+        for ns in "${nses[@]}"; do
+            run_args+=(--namespace "$ns")
+        done
+        exec "$rv" run "${run_args[@]}" -- "${cmd[@]}"
     fi
 
     local out
