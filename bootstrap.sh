@@ -462,12 +462,12 @@ else
   # (revealui gates them via validate:rules-lockstep).
   FLEET_TARGETS=(
     "revealui:revfleet,revealui:copy"
-    "revdev:revfleet"
-    "revvault:revfleet"
-    "revcon:revfleet"
-    "revforge:revfleet"
-    "revskills:revfleet"
-    "revkit:revfleet"
+    "revdev:revfleet:copy"
+    "revvault:revfleet:copy"
+    "revcon:revfleet:copy"
+    "revforge:revfleet:copy"
+    "revskills:revfleet:copy"
+    "revkit:revfleet:copy"
   )
   for entry in "${FLEET_TARGETS[@]}"; do
     repo="${entry%%:*}"
