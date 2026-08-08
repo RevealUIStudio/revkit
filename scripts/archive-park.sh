@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# archive-park.sh — move a path into ~/revfleet/archive/<bucket>/ with a dated name.
+# archive-park.sh — move a path into ~/revfleet/archive/cold/<bucket>/ with a dated name.
 #
 # Usage:
 #   archive-park.sh <source-path> <bucket> [slug]
@@ -15,7 +15,7 @@ SRC="${1:-}"
 BUCKET="${2:-}"
 SLUG="${3:-}"
 
-ARCHIVE_ROOT="${REVFLEET_ARCHIVE:-$HOME/revfleet/archive}"
+ARCHIVE_ROOT="${REVFLEET_ARCHIVE:-$HOME/revfleet/archive/cold}"
 
 usage() {
   echo "Usage: $0 <source-path> <bucket> [slug]" >&2
