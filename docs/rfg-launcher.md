@@ -37,6 +37,12 @@ rfg revealui --worktree=fix-gap-xxx "…"
 # Prefer origin/test when present, else origin/main. Override with RFG_WORKTREE_REF=…
 # Disable inject: RFG_WORKTREE_REF_SKIP=1
 
+Before launch and worktree create, `rfg` runs the fleet integration-ref
+sync (`sync-test` / `fleet-sync-integration --auto`) so the local
+integration branch (`test` or `main`) is not left behind origin. That
+script never switches the current branch. SessionStart (Claude + Grok)
+runs the same tool across the fleet.
+
 # Rift-inspired isolation (runtime ports + claim registry)
 rfg open revealui ves-fo-managed --claim marketing/ves-fo-managed
 # → git worktree at ~/revfleet/.wt/ves-fo-managed from origin/test
