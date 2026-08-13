@@ -31,6 +31,18 @@ FLEET_ROOT="${REVFLEET_ROOT:-$HOME/revfleet}"
 
 die() { echo "rfg: $*" >&2; exit 1; }
 
+# Fast-forward idle local integration refs (test/main). Never switches branches.
+_sync_integration() {
+  local repo="${1:-}"
+  local script="$FLEET_ROOT/.jv/scripts/fleet-sync-integration.js"
+  [ -f "$script" ] || return 0
+  if [ -n "$repo" ]; then
+    node "$script" --auto "$repo" >/dev/null || true
+  else
+    node "$script" --auto >/dev/null || true
+  fi
+}
+
 case "$(uname -s 2>/dev/null)" in
   Linux | Darwin) : ;;
   *) die "must run in a POSIX shell (WSL, Linux, or macOS)" ;;
@@ -373,7 +385,8 @@ case "$cmd" in
       echo "rfg: worktree path exists: $wt_path (bootstrap only)" >&2
     else
       mkdir -p "$wt_root"
-      echo "rfg: fetching origin/$ref …" >&2
+      echo "rfg: syncing origin/$ref …" >&2
+      _sync_integration "$source_repo"
       git -C "$source_repo" fetch origin "$ref" 2>/dev/null || git -C "$source_repo" fetch origin || true
       base="origin/$ref"
       if ! git -C "$source_repo" rev-parse --verify --quiet "$base" >/dev/null 2>&1; then
@@ -451,6 +464,8 @@ else
 fi
 
 grok_bin="$(resolve_grok)" || die "grok not found on PATH or in ~/.grok/bin / ~/.local/bin"
+
+_sync_integration "$target"
 
 load_mcp_strict || die "MCP env not ready (mint with: rfg mint)"
 
