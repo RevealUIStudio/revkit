@@ -1,10 +1,24 @@
 # RevealUI DevKit
 
-Cross-platform development-environment toolkit (macOS + Linux + WSL2, WSL-first) for RevealUI projects.
+Operator machine kit for RevealUI Studio workstations (macOS + Linux + WSL2, WSL-first).
+This is **not** a customer runtime, product SDK, or end-user installer.
+
+`bootstrap.sh` provisions the machine that runs the fleet: helper scripts, sudoers, global git hooks, and Claude/Grok launchers. Do not treat a clone of this repo as something to ship to a customer host.
+
+## Privilege warning
+
+A default `bootstrap.sh` run is a privileged install. Preview first (`--dry-run`). It will:
+
+- install helpers to `/usr/local/bin` on Linux/WSL (uses `sudo`; `~/.local/bin` on macOS)
+- write WSL sudoers for passwordless sandbox-drive mounting (`/etc/sudoers.d/wsl-revealui`)
+- set `git config --global core.hooksPath` to the fleet pre-push hook
+- wire fleet Claude rules when `revcon` is present
+
+Do not run this on a customer machine or any host you do not want those changes on.
 
 ## Quick Start
 
-`bootstrap.sh` is the universal entry point — it detects the OS (macOS, Linux, or WSL2) and runs the platform-appropriate steps. Preview any run with `--dry-run`.
+`bootstrap.sh` is the universal entry point. It detects the OS (macOS, Linux, or WSL2) and runs the platform-appropriate steps.
 
 ### macOS / native Linux
 
@@ -29,9 +43,9 @@ Then bootstrap from WSL:
 bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 ```
 
-> `bootstrap-wsl.sh` still works as a backward-compatible alias — it is now a thin shim that execs `bootstrap.sh` (which auto-detects WSL).
+> `bootstrap-wsl.sh` still works as a backward-compatible alias. It is now a thin shim that execs `bootstrap.sh` (which auto-detects WSL).
 
-The bootstrap installs helper scripts (`/usr/local/bin`, or `~/.local/bin` on macOS), configures sudoers for passwordless sandbox-drive mounting (WSL), adds a `~/.bashrc`/`~/.zshrc` hook that sources `shell/shellrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, wires RevFleet Claude rules via `revcon/link.sh`, and wires the fleet-wide pre-push git hook via `git config --global core.hooksPath`.
+In more detail, the bootstrap also adds a `~/.bashrc`/`~/.zshrc` hook that sources `shell/shellrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and clones/wires `claude-config` into `~/.claude`.
 
 Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md)).
 
