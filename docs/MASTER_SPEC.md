@@ -1,14 +1,14 @@
 ---
 type: master-spec
 repo: revkit
-last-updated: 2026-06-22
+last-updated: 2026-08-19
 owner: RevealUI Studio
 staleness-status: FRESH
 ---
 
 # RevKit — Master Spec
 
-**Last Updated:** 2026-06-22
+**Last Updated:** 2026-08-19
 **Status:** Pre-1.0 — cross-platform foundation shipped (macOS + Linux + WSL2); surface stable for daily use, external-contributor onboarding is Phase C (see MASTER_PLAN)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
 
@@ -18,7 +18,10 @@ staleness-status: FRESH
 
 ## Mission
 
-Cross-platform development-environment toolkit (macOS + Linux + WSL2, WSL-first). Take a fresh workstation and turn it into a RevealUI Studio-grade environment from one detect-then-dispatch bootstrap, with per-machine values kept machine-local (never committed).
+Operator machine kit (macOS + Linux + WSL2, WSL-first). Not a customer runtime.
+Take a fresh operator workstation and turn it into a RevealUI Studio-grade
+environment from one detect-then-dispatch bootstrap, with per-machine values
+kept machine-local (never committed).
 
 ---
 
@@ -108,11 +111,16 @@ Tested by `tests/test-platform-detect.sh` against `tests/platform-fixtures/`
 
 ## Bootstrap (`bootstrap.sh`)
 
-Universal cross-platform entry point. Detect-then-dispatch: platform-agnostic
-steps run unconditionally; WSL-only steps are gated by `revkit_is_wsl`;
-macOS-specific paths are chosen by `revkit_is_macos` (e.g. helpers install to
-`~/.local/bin` without sudo on macOS, `/usr/local/bin` elsewhere). `--dry-run`
-previews every step without writing.
+Universal cross-platform entry point for **operator machines only**.
+Detect-then-dispatch: platform-agnostic steps run unconditionally; WSL-only
+steps are gated by `revkit_is_wsl`; macOS-specific paths are chosen by
+`revkit_is_macos` (e.g. helpers install to `~/.local/bin` without sudo on
+macOS, `/usr/local/bin` elsewhere). `--dry-run` previews every step without
+writing.
+
+A default run is privileged. It writes WSL sudoers, installs helpers to
+`/usr/local/bin` on Linux/WSL, sets `git config --global core.hooksPath`, and
+wires fleet Claude rules when `revcon` is present.
 
 | Step | What | Platform |
 |---|---|---|
@@ -122,9 +130,10 @@ previews every step without writing.
 | 4 | Git + SSH includes (neutral configs + per-user `~/.config/revkit/`) | all |
 | 5 | WSL boot optimization (`shell/setup-wsl-boot.sh`) | WSL |
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL |
-| 7 | Deploy M-4 Claude Code scanner hook | all |
-| 8 | Wire RevFleet Claude rules via `revcon/link.sh` | all |
-| 9 | Fleet-wide M-11 pre-push hook — `core.hooksPath` at `~/.config/revkit/git-hooks` (Linux/WSL, LF-normalized copy) or `<repo>/git-hooks` (Windows, in-repo) | all |
+| 7 | Clone/wire `claude-config` into `~/.claude` + revskills marketplace | all |
+| 8 | Deploy M-4 Claude Code scanner hook | all |
+| 9 | Wire RevFleet Claude rules via `revcon/link.sh` | all |
+| 10 | Fleet-wide M-11 pre-push hook. `core.hooksPath` at `~/.config/revkit/git-hooks` (Linux/WSL, LF-normalized copy) or `<repo>/git-hooks` (Windows, in-repo) | all |
 
 `bootstrap-wsl.sh` is a thin deprecation shim that execs `bootstrap.sh` — it
 exists only to keep the legacy `bash ~/.revealui/bootstrap-wsl.sh` invocation
@@ -229,7 +238,7 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 | **RevealUI** | Independent — RevealUI runs anywhere with Node 24 + pnpm + Postgres; RevKit is one provisioning option |
 | **RevVault** | RevKit sets up the age-identity mount path RevVault expects |
 | **RevDev** | Independent — RevDev's harness daemon runs on whatever workstation RevKit (or any other tool) provisioned |
-| **RevCon** | Pairs cleanly — RevKit wires RevFleet Claude rules via `revcon/link.sh` (bootstrap step 8) |
+| **RevCon** | Pairs cleanly — RevKit wires RevFleet Claude rules via `revcon/link.sh` (bootstrap step 9) |
 | **RevForge** | Independent — RevForge runs on a workstation; RevKit can provision that workstation |
 | **RevSkills** | Independent — skills are markdown, work in any RevKit-provisioned env |
 

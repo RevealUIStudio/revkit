@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # bootstrap.sh — cross-platform RevKit bootstrap (macOS + Linux + WSL2).
+# Operator machine kit (not a customer runtime): writes sudoers (WSL), sets git config --global core.hooksPath, installs to /usr/local/bin, wires fleet hooks.
 #
 # Replaces bootstrap-wsl.sh as the universal entry point. Detect-then-dispatch:
 # everything that is platform-agnostic runs unconditionally; WSL-only steps are
