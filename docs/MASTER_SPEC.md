@@ -52,11 +52,14 @@ revkit/
 │   ├── docker/                      # Docker-related config (T1 services)
 │   ├── setup-wsl-boot.sh            # idempotent WSL boot optimization (--revert supported)
 │   ├── compact-vhdx.ps1             # VHDx compaction helper
-│   └── Register-VHDxCompactTask.ps1
+│   └── Register-VHDxCompactTask.ps1 # conhost --headless wrap (Sunday 04:00)
 ├── scripts/
 │   ├── check-no-private-leaks.sh    # private-path / credential scan (CI)
 │   ├── check-backup-staleness.ps1   # weekly-backup staleness guard
-│   └── weekly-wsl-backup.ps1        # scheduled task — exports Ubuntu distro
+│   ├── weekly-wsl-backup.ps1        # scheduled task — exports Ubuntu distro
+│   ├── Register-WeeklyBackupTask.ps1 # conhost --headless + WakeToRun (Sunday 03:00)
+│   ├── Move-WslVhdx.ps1             # wsl --manage --move C:\WSL -> E:\WSL
+│   └── Apply-WslHostFix.ps1         # elevated: register backup wrap, then move VHD
 ├── powershell/
 │   └── Modules/
 │       └── RevealUI.RevStation/     # PowerShell module (Mount-WSLDev, Sync-RevealUIToWindows, etc.)
@@ -214,8 +217,13 @@ connected. The VHDx helpers ship at `shell/compact-vhdx.ps1` +
 **Weekly WSL `.tar` snapshot** — `scripts/weekly-wsl-backup.ps1` runs Sunday
 03:00 via scheduled task `RevealUI-WSL-Weekly-Backup`; exports Ubuntu distro to
 `E:\backups\wsl-snapshots\current\Ubuntu-<date>.tar`; keeps 2 most recent.
-Recovery: `wsl --import`. `scripts/check-backup-staleness.ps1` guards against
-silent backup failures.
+Task action is `conhost.exe --headless pwsh.exe ...` (bare `pwsh.exe` flashes
+when Windows Terminal is the default console) with `WakeToRun=true` so a
+sleeping host actually runs 03:00. Register with
+`scripts/Register-WeeklyBackupTask.ps1`. Recovery: `wsl --import`.
+`scripts/check-backup-staleness.ps1` guards against silent backup failures.
+The live VHD lives at `E:\WSL\Ubuntu\ext4.vhdx` after `Move-WslVhdx.ps1`;
+scripts fall back from `C:\WSL\` to `E:\WSL\` when the C: file is gone.
 
 The previous Windows-side mirror infrastructure (read-only `E:\projects\*`
 clones synced by the `RevealUI-Repo-Sync` scheduled task; backup-guard hooks)
