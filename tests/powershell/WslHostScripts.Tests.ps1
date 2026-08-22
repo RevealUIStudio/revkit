@@ -23,6 +23,13 @@ Describe 'Register-WeeklyBackupTask source contract' {
         $src.Contains("-Execute 'pwsh.exe'") | Should -BeFalse
         $src.Contains('-Execute "pwsh.exe"') | Should -BeFalse
     }
+
+    It 'puts S4U on New-ScheduledTaskPrincipal and replaces with -Force' {
+        $src = Get-Content -Raw (Join-Path $script:Scripts 'Register-WeeklyBackupTask.ps1')
+        $src.Contains('New-ScheduledTaskPrincipal') | Should -BeTrue
+        $src.Contains('-Force') | Should -BeTrue
+        $src.Contains('Unregister-ScheduledTask') | Should -BeFalse
+    }
 }
 
 Describe 'Move-WslVhdx source contract' {

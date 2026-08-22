@@ -30,10 +30,6 @@ if (-not (Test-Path -LiteralPath $ScriptPath)) {
   throw "Backup script not found: $ScriptPath"
 }
 
-if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
-  Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-}
-
 $action = New-ScheduledTaskAction `
   -Execute 'conhost.exe' `
   -Argument "--headless pwsh.exe -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
@@ -47,15 +43,20 @@ $settings = New-ScheduledTaskSettingsSet `
   -WakeToRun `
   -ExecutionTimeLimit (New-TimeSpan -Hours 4)
 
+# LogonType lives on the principal, not Register-ScheduledTask (PS 7 ScheduledTasks).
+$principal = New-ScheduledTaskPrincipal `
+  -UserId $env:USERNAME `
+  -LogonType S4U `
+  -RunLevel Highest
+
 Register-ScheduledTask `
   -TaskName $TaskName `
   -Action $action `
   -Trigger $trigger `
   -Settings $settings `
+  -Principal $principal `
   -Description 'Weekly wsl --export of Ubuntu distro to E:\backups\wsl-snapshots\current\. Headless conhost; WakeToRun for the 03:00 sleep-kill class.' `
-  -RunLevel Highest `
-  -User $env:USERNAME `
-  -LogonType S4U | Out-Null
+  -Force | Out-Null
 
 $t = Get-ScheduledTask -TaskName $TaskName
 Write-Host "Registered $TaskName"
