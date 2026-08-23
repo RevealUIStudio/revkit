@@ -20,7 +20,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 if (-not $LogPath) {
-  $LogPath = Join-Path $Destination 'move-vhdx.log'
+  # Never log under $Destination: Write-MoveLog creates the parent directory,
+  # which would re-create an empty dest and make `wsl --manage --move` fail.
+  $LogPath = Join-Path $env:TEMP 'move-vhdx.log'
 }
 $fallbackLog = Join-Path $env:TEMP 'move-vhdx.log'
 
@@ -39,6 +41,11 @@ function Write-MoveLog {
       # keep going; at least one log target should work
     }
   }
+}
+
+trap {
+  Write-MoveLog "ERROR: $($_.Exception.Message)"
+  break
 }
 
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
@@ -75,14 +82,26 @@ Write-MoveLog 'Shutting down WSL (all distros stop here)'
 & wsl.exe --shutdown
 Start-Sleep -Seconds 8
 
-if (-not (Test-Path -LiteralPath $Destination)) {
-  New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+# wsl --manage --move creates the destination directory. Pre-creating it
+# (or leaving an empty leftover from an aborted run) makes the move fail
+# immediately with the VHD still on C:. 2026-08-22: E:\WSL\Ubuntu was empty
+# and move-vhdx.log stopped at the --manage line.
+if (Test-Path -LiteralPath $Destination) {
+  $leftover = @(Get-ChildItem -LiteralPath $Destination -Force)
+  if ($leftover.Count -eq 0) {
+    Write-MoveLog "Removing empty leftover $Destination"
+    Remove-Item -LiteralPath $Destination -Force
+  } else {
+    throw "Destination exists and is not empty: $Destination"
+  }
 }
 
 Write-MoveLog "wsl --manage $Distro --move $Destination"
-& wsl.exe --manage $Distro --move $Destination
-if ($LASTEXITCODE -ne 0) {
-  throw "wsl --manage --move failed with exit $LASTEXITCODE"
+$manageOut = & wsl.exe --manage $Distro --move $Destination 2>&1 | Out-String
+$manageExit = $LASTEXITCODE
+if ($manageOut.Trim()) { Write-MoveLog "wsl --manage output: $($manageOut.Trim())" }
+if ($manageExit -ne 0) {
+  throw "wsl --manage --move failed with exit $manageExit"
 }
 
 $destVhd = Join-Path $Destination 'ext4.vhdx'

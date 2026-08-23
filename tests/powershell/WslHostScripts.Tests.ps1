@@ -50,6 +50,17 @@ Describe 'Move-WslVhdx source contract' {
         $src.Contains('--import') | Should -BeFalse
         $src.Contains('--export') | Should -BeFalse
     }
+
+    It 'does not pre-create the destination directory before --move' {
+        $src = Get-Content -Raw (Join-Path $script:Scripts 'Move-WslVhdx.ps1')
+        $moveIdx = $src.IndexOf('wsl.exe --manage')
+        ($moveIdx -ge 0) | Should -BeTrue
+        $before = $src.Substring(0, $moveIdx)
+        $before.Contains('New-Item -ItemType Directory -Force -Path $Destination') | Should -BeFalse
+        $before.Contains('Removing empty leftover') | Should -BeTrue
+        $src.Contains('Join-Path $Destination ''move-vhdx.log''') | Should -BeFalse
+        $src.Contains('Join-Path $Destination "move-vhdx.log"') | Should -BeFalse
+    }
 }
 
 Describe 'Apply-WslHostFix source contract' {
