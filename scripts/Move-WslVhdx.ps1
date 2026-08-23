@@ -9,10 +9,19 @@
 param(
   [string]$Distro = 'Ubuntu',
   [string]$Destination = 'E:\WSL\Ubuntu',
-  [string]$LogPath = 'E:\backups\wsl-snapshots\current\move-vhdx.log'
+  [string]$LogPath = $(
+    if ($env:REVEALUI_WSL_SNAPSHOT_DIR) {
+      Join-Path $env:REVEALUI_WSL_SNAPSHOT_DIR 'move-vhdx.log'
+    } else {
+      $null
+    }
+  )
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $LogPath) {
+  $LogPath = Join-Path $Destination 'move-vhdx.log'
+}
 $fallbackLog = Join-Path $env:TEMP 'move-vhdx.log'
 
 function Write-MoveLog {

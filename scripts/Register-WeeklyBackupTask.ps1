@@ -55,7 +55,7 @@ Register-ScheduledTask `
   -Trigger $trigger `
   -Settings $settings `
   -Principal $principal `
-  -Description 'Weekly wsl --export of Ubuntu distro to E:\backups\wsl-snapshots\current\. Headless conhost; WakeToRun for the 03:00 sleep-kill class.' `
+  -Description 'Weekly wsl --export of Ubuntu distro to the SnapshotDir used by weekly-wsl-backup.ps1. Headless conhost; WakeToRun for the 03:00 sleep-kill class.' `
   -Force | Out-Null
 
 $t = Get-ScheduledTask -TaskName $TaskName
