@@ -224,6 +224,10 @@ sleeping host actually runs 03:00. Register with
 `scripts/check-backup-staleness.ps1` guards against silent backup failures.
 The live VHD lives at `E:\WSL\Ubuntu\ext4.vhdx` after `Move-WslVhdx.ps1`;
 scripts fall back from `C:\WSL\` to `E:\WSL\` when the C: file is gone.
+`wsl --manage --move` creates the destination. Do not pre-create it. An empty
+leftover directory from an aborted move is removed first. After `wsl --shutdown`,
+wait until the source VHD opens with `FileShare.None` before `--move`; retry on
+`WSL_E_DISTRO_NOT_STOPPED`. One named mutex serializes concurrent launches.
 
 The previous Windows-side mirror infrastructure (read-only `E:\projects\*`
 clones synced by the `RevealUI-Repo-Sync` scheduled task; backup-guard hooks)
