@@ -96,9 +96,10 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
 if (-not $isAdmin) {
   Write-MoveLog 'Not elevated; re-launching with UAC'
   $launch = @{
-    FilePath     = 'pwsh.exe'
-    Verb         = 'RunAs'
-    ArgumentList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
+    FilePath          = 'pwsh.exe'
+    Verb              = 'RunAs'
+    WorkingDirectory  = $env:TEMP
+    ArgumentList      = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
   }
   # Do not -Wait from inside the distro being moved: shutdown kills the waiter.
   if (-not $env:WSL_DISTRO_NAME) {

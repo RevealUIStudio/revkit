@@ -68,6 +68,7 @@ Describe 'Move-WslVhdx source contract' {
         $src.Contains('[System.IO.FileShare]::None') | Should -BeTrue
         $src.Contains('DISTRO_NOT_STOPPED') | Should -BeTrue
         $src.Contains('VHD handle released') | Should -BeTrue
+        $src.Contains('WorkingDirectory') | Should -BeTrue
     }
 }
 
