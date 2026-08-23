@@ -1,7 +1,8 @@
 # Move-WslVhdx.ps1
 # Relocates the Ubuntu WSL2 VHD from C:\WSL\<distro> to E:\WSL\<distro>
 # using `wsl --manage --move` (updates the distro path; does not export/import).
-# Run elevated. Shuts WSL down. A 200 GB move across volumes takes a while.
+# Run elevated from Windows, not from the distro being moved.
+# Shuts WSL down. A 200 GB move across volumes takes a while.
 
 #Requires -Version 7.0
 
@@ -25,6 +26,8 @@ if (-not $LogPath) {
   $LogPath = Join-Path $env:TEMP 'move-vhdx.log'
 }
 $fallbackLog = Join-Path $env:TEMP 'move-vhdx.log'
+$mutex = $null
+$heldMutex = $false
 
 function Write-MoveLog {
   param([string]$Message)
@@ -43,8 +46,48 @@ function Write-MoveLog {
   }
 }
 
+function Unlock-MoveMutex {
+  if ($heldMutex -and $mutex) {
+    try { $mutex.ReleaseMutex() } catch { }
+    $script:heldMutex = $false
+  }
+  if ($mutex) {
+    try { $mutex.Dispose() } catch { }
+    $script:mutex = $null
+  }
+}
+
+function Wait-WslVhdReleased {
+  param(
+    [Parameter(Mandatory)][string]$VhdPath,
+    [int]$TimeoutSeconds = 180
+  )
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  $attempt = 0
+  while ((Get-Date) -lt $deadline) {
+    $attempt++
+    Write-MoveLog "wsl --shutdown (attempt $attempt)"
+    & wsl.exe --shutdown
+    Start-Sleep -Seconds 5
+    try {
+      $fs = [System.IO.File]::Open(
+        $VhdPath,
+        [System.IO.FileMode]::Open,
+        [System.IO.FileAccess]::Read,
+        [System.IO.FileShare]::None)
+      $fs.Dispose()
+      Write-MoveLog 'VHD handle released'
+      return
+    } catch {
+      Write-MoveLog "VHD still in use: $($_.Exception.Message)"
+    }
+  }
+  throw "WSL VHD still in use after ${TimeoutSeconds}s: $VhdPath"
+}
+
 trap {
   Write-MoveLog "ERROR: $($_.Exception.Message)"
+  Unlock-MoveMutex
   break
 }
 
@@ -52,17 +95,38 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
   [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
   Write-MoveLog 'Not elevated; re-launching with UAC'
-  Start-Process -FilePath 'pwsh.exe' -Verb RunAs -Wait -ArgumentList @(
-    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath
-  )
-  exit $LASTEXITCODE
+  $launch = @{
+    FilePath     = 'pwsh.exe'
+    Verb         = 'RunAs'
+    ArgumentList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
+  }
+  # Do not -Wait from inside the distro being moved: shutdown kills the waiter.
+  if (-not $env:WSL_DISTRO_NAME) {
+    $launch.Wait = $true
+  }
+  Start-Process @launch
+  exit 0
 }
+
+$mutex = New-Object System.Threading.Mutex($false, 'Global\RevealUI-Move-WslVhdx')
+try {
+  $got = $mutex.WaitOne(0)
+} catch [System.Threading.AbandonedMutexException] {
+  $got = $true
+}
+if (-not $got) {
+  Write-MoveLog 'Another Move-WslVhdx is already running; exiting'
+  Unlock-MoveMutex
+  exit 0
+}
+$heldMutex = $true
 
 $src = "C:\WSL\$Distro\ext4.vhdx"
 if (-not (Test-Path -LiteralPath $src)) {
   $already = Join-Path $Destination 'ext4.vhdx'
   if (Test-Path -LiteralPath $already) {
     Write-MoveLog "VHD already at $already; nothing to move"
+    Unlock-MoveMutex
     exit 0
   }
   throw "Source VHD not found: $src"
@@ -78,9 +142,7 @@ if ($destDrive.Free -lt $need) {
 }
 
 Write-MoveLog "Moving $src ($([math]::Round($srcSize/1GB,1)) GB) -> $Destination"
-Write-MoveLog 'Shutting down WSL (all distros stop here)'
-& wsl.exe --shutdown
-Start-Sleep -Seconds 8
+Wait-WslVhdReleased -VhdPath $src
 
 # wsl --manage --move creates the destination directory. Pre-creating it
 # (or leaving an empty leftover from an aborted run) makes the move fail
@@ -96,10 +158,20 @@ if (Test-Path -LiteralPath $Destination) {
   }
 }
 
-Write-MoveLog "wsl --manage $Distro --move $Destination"
-$manageOut = & wsl.exe --manage $Distro --move $Destination 2>&1 | Out-String
-$manageExit = $LASTEXITCODE
-if ($manageOut.Trim()) { Write-MoveLog "wsl --manage output: $($manageOut.Trim())" }
+$manageExit = -1
+$manageOut = ''
+for ($try = 1; $try -le 5; $try++) {
+  Write-MoveLog "wsl --manage $Distro --move $Destination (try $try/5)"
+  $manageOut = & wsl.exe --manage $Distro --move $Destination 2>&1 | Out-String
+  $manageExit = $LASTEXITCODE
+  if ($manageOut.Trim()) { Write-MoveLog "wsl --manage output: $($manageOut.Trim())" }
+  if ($manageExit -eq 0) { break }
+  if ($manageOut -match 'DISTRO_NOT_STOPPED|currently in use') {
+    Wait-WslVhdReleased -VhdPath $src
+    continue
+  }
+  throw "wsl --manage --move failed with exit $manageExit"
+}
 if ($manageExit -ne 0) {
   throw "wsl --manage --move failed with exit $manageExit"
 }
@@ -116,3 +188,4 @@ if (Test-Path -LiteralPath $src) {
   Write-MoveLog "Source removed: $src"
 }
 Write-MoveLog 'DONE'
+Unlock-MoveMutex

@@ -61,6 +61,14 @@ Describe 'Move-WslVhdx source contract' {
         $src.Contains('Join-Path $Destination ''move-vhdx.log''') | Should -BeFalse
         $src.Contains('Join-Path $Destination "move-vhdx.log"') | Should -BeFalse
     }
+
+    It 'waits for the VHD handle to release and serializes concurrent runs' {
+        $src = Get-Content -Raw (Join-Path $script:Scripts 'Move-WslVhdx.ps1')
+        $src.Contains('Global\RevealUI-Move-WslVhdx') | Should -BeTrue
+        $src.Contains('[System.IO.FileShare]::None') | Should -BeTrue
+        $src.Contains('DISTRO_NOT_STOPPED') | Should -BeTrue
+        $src.Contains('VHD handle released') | Should -BeTrue
+    }
 }
 
 Describe 'Apply-WslHostFix source contract' {
