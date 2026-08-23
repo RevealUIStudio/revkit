@@ -2,16 +2,16 @@
 # Exports the Ubuntu WSL distro to E:\backups\wsl-snapshots\current\, rotating
 # older snapshots (keeps the $KeepCount most recent). Designed to be run by a
 # weekly Windows scheduled task (RevealUI-WSL-Weekly-Backup, Sunday 03:00).
+# Task action MUST be: conhost.exe --headless pwsh.exe -NoProfile -ExecutionPolicy Bypass -File <this>
+# Bare pwsh.exe flashes a window when Windows Terminal is the default console.
+# Re-register with scripts/Register-WeeklyBackupTask.ps1 (WakeToRun=true).
 #
 # Created 2026-04-24 during storage-recovery session.
 # Replaces the dead RevealUI-Repo-Sync scheduled task role.
 #
-# GAP-301 (2026-07-24 re-verify): LastTaskResult 0x40 (64) on the 2026-07-19
-# 03:00 run with NO backup.log lines is the host-sleep kill class. The installed
-# operator copy already carried ES_SYSTEM_REQUIRED during export; this SSOT
-# port keeps that + logs a TEMP bootstrap line before any E: I/O so a kill
-# still leaves a fingerprint. Owner should also set WakeToRun=true on the
-# scheduled task (currently false) so a sleeping host actually wakes for 03:00.
+# GAP-301 (2026-07-24 re-verify): LastTaskResult 0x40 (64) on a 03:00 run with
+# NO backup.log lines is the host-sleep kill class. ES_SYSTEM_REQUIRED during
+# export plus WakeToRun on the task so Sunday 03:00 wakes the machine.
 
 [CmdletBinding()]
 param(
@@ -108,6 +108,10 @@ try {
 
   # Verify destination drive has enough space (need ~1.5x vhdx size for headroom)
   $vhdxPath = "C:\WSL\$Distro\ext4.vhdx"
+  if (-not (Test-Path -LiteralPath $vhdxPath)) {
+    $altVhdx = "E:\WSL\$Distro\ext4.vhdx"
+    if (Test-Path -LiteralPath $altVhdx) { $vhdxPath = $altVhdx }
+  }
   $vhdxSizeGB = 0
   if (Test-Path $vhdxPath) {
     $vhdxSizeGB = (Get-Item $vhdxPath).Length / 1GB
