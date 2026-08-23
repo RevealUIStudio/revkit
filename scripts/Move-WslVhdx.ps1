@@ -91,6 +91,16 @@ trap {
   break
 }
 
+# Idempotent no-op MUST run before UAC and before any wsl --shutdown.
+# 2026-08-23: the VHD is already on E:. A recover session that re-ran this
+# script would have killed a live WSL if the check sat after elevation.
+$src = "C:\WSL\$Distro\ext4.vhdx"
+$already = Join-Path $Destination 'ext4.vhdx'
+if (-not (Test-Path -LiteralPath $src) -and (Test-Path -LiteralPath $already)) {
+  Write-MoveLog "VHD already at $already; nothing to move"
+  exit 0
+}
+
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
   [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
@@ -122,9 +132,7 @@ if (-not $got) {
 }
 $heldMutex = $true
 
-$src = "C:\WSL\$Distro\ext4.vhdx"
 if (-not (Test-Path -LiteralPath $src)) {
-  $already = Join-Path $Destination 'ext4.vhdx'
   if (Test-Path -LiteralPath $already) {
     Write-MoveLog "VHD already at $already; nothing to move"
     Unlock-MoveMutex

@@ -70,6 +70,18 @@ Describe 'Move-WslVhdx source contract' {
         $src.Contains('VHD handle released') | Should -BeTrue
         $src.Contains('WorkingDirectory') | Should -BeTrue
     }
+
+    It 'no-ops an already-moved VHD before UAC and before Wait-WslVhdReleased' {
+        $src = Get-Content -Raw (Join-Path $script:Scripts 'Move-WslVhdx.ps1')
+        $alreadyIdx = $src.IndexOf('VHD already at')
+        $runAsIdx = $src.IndexOf('RunAs')
+        $waitCallIdx = $src.IndexOf('Wait-WslVhdReleased -VhdPath')
+        ($alreadyIdx -ge 0) | Should -BeTrue
+        ($runAsIdx -ge 0) | Should -BeTrue
+        ($waitCallIdx -ge 0) | Should -BeTrue
+        ($alreadyIdx -lt $runAsIdx) | Should -BeTrue
+        ($alreadyIdx -lt $waitCallIdx) | Should -BeTrue
+    }
 }
 
 Describe 'Apply-WslHostFix source contract' {
@@ -78,6 +90,15 @@ Describe 'Apply-WslHostFix source contract' {
         ($src.IndexOf('Register-WeeklyBackupTask.ps1') -ge 0) | Should -BeTrue
         ($src.IndexOf('Move-WslVhdx.ps1') -ge 0) | Should -BeTrue
         ($src.IndexOf('Register-WeeklyBackupTask.ps1') -lt $src.IndexOf('Move-WslVhdx.ps1')) | Should -BeTrue
+    }
+
+    It 'elevates from a Windows working directory and skips move when VHD is already on E:' {
+        $src = Get-Content -Raw (Join-Path $script:Scripts 'Apply-WslHostFix.ps1')
+        $src.Contains('WorkingDirectory') | Should -BeTrue
+        $src.Contains('$env:TEMP') | Should -BeTrue
+        $src.Contains('vhdAlreadyMoved') | Should -BeTrue
+        $src.Contains('will not shut WSL down') | Should -BeTrue
+        ($src.IndexOf('vhdAlreadyMoved') -lt $src.IndexOf('RunAs')) | Should -BeTrue
     }
 }
 
