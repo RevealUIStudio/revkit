@@ -1,14 +1,14 @@
 ---
 type: master-spec
 repo: revkit
-last-updated: 2026-08-19
+last-updated: 2026-08-25
 owner: RevealUI Studio
 staleness-status: FRESH
 ---
 
 # RevKit — Master Spec
 
-**Last Updated:** 2026-08-19
+**Last Updated:** 2026-08-25
 **Status:** Pre-1.0 — cross-platform foundation shipped (macOS + Linux + WSL2); surface stable for daily use, external-contributor onboarding is Phase C (see MASTER_PLAN)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
 
@@ -39,6 +39,8 @@ revkit/
 │   ├── shellrc.d/                   # shell config fragments sourced by .bashrc/.zshrc (00-base.sh, 25-local-ai.sh, 50-rfc.sh, …)
 │   ├── bin/                         # helper scripts → /usr/local/bin (or ~/.local/bin on macOS)
 │   │   ├── rfc.sh                   # WSL-native (and macOS/Linux) Claude launcher
+│   │   ├── rfg.sh                   # Grok launcher (MCP token from revvault)
+│   │   ├── revealui.sh              # GAP-351 retire shim (overwrites ~/.local/bin/revealui)
 │   │   ├── mount-sandbox-drive.sh   # WSL-only sandbox-drive mount helper
 │   │   ├── sandbox-services.sh      # WSL-only sandbox service control
 │   │   ├── sandbox-validate.sh      # WSL-only tier consistency check
@@ -128,6 +130,7 @@ wires fleet Claude rules when `revcon` is present.
 | Step | What | Platform |
 |---|---|---|
 | 1 | Install `shell/bin/*` helpers (WSL-only helpers skipped off WSL) | all |
+| 1b | Overwrite `~/.local/bin/revealui` with the GAP-351 retire shim (no tmux) | all |
 | 2 | Sudoers for passwordless sandbox mount (pinned to `--mount-only`) | WSL |
 | 3 | Self-healing rc-hook into `.bashrc`/`.zshrc` (sources `shell/shellrc.d/*.sh`; prints `● RevKit: managed`) | all |
 | 4 | Git + SSH includes (neutral configs + per-user `~/.config/revkit/`) | all |

@@ -34,6 +34,9 @@ the secure zero-prompt configuration.
 rfc                  # use $PWD if it is under ~/revfleet, else list repos
 rfc revealui         # cd ~/revfleet/revealui && exec claude
 rfc revealui --continue   # trailing args pass through to claude verbatim
+
+The PATH name `revealui` (tmux workspace launcher) is retired — GAP-351.
+Use `rfc <repo>` or `rfg <repo>`, not a multiplexer.
 ```
 
 Tab-completion over `~/revfleet/*` is provided in managed interactive shells.
