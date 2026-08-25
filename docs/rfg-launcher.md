@@ -33,6 +33,9 @@ Non-rfg tools should source `shell/lib/revealui-mcp-env.sh` and call
 ```bash
 rfg revealui          # load token + cd + exec grok
 rfg                   # already under ~/revfleet/<repo>
+
+# The PATH name `revealui` was a tmux workspace launcher. It is retired
+# (GAP-351). `bootstrap.sh` overwrites ~/.local/bin/revealui with a shim.
 rfg smoke             # auth + MCP health (no secret print)
 rfg mint              # OTP → revvault
 rfg env               # non-secret URL + vault path only (never the token)

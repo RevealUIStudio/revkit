@@ -236,6 +236,17 @@ jobs:
       - name: Run local-ai shell auto-load tests
         run: bash tests/test-local-ai-shell.sh
 
+  test-revealui-retired:
+    # GAP-351 — retire shim must not start tmux; must name rfg/rfc.
+    name: tests/test-revealui-retired.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run retired revealui launcher tests
+        run: bash tests/test-revealui-retired.sh
+
   test-fleet-workflow-health:
     # GAP-420 — regression guard for the consecutive-failure predicate that
     # backs scripts/fleet-workflow-health.sh (see fleet-workflow-health.yml).

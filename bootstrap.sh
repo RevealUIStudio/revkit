@@ -101,6 +101,24 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
 done
 printf '  %d helper(s) installed.\n' "$_installed"
 
+# GAP-351: the untracked tmux launcher lived at ~/.local/bin/revealui (no
+# .sh suffix) and still pointed at ~/projects. Always overwrite that PATH
+# name with the tracked retire shim so muscle memory cannot start tmux.
+echo "[1b] Installing retired revealui PATH name at ~/.local/bin/revealui..."
+_shim="$SCRIPT_DIR/shell/bin/revealui.sh"
+if [ -f "$_shim" ]; then
+  if [ "$DRY_RUN" -eq 0 ]; then
+    mkdir -p "$HOME/.local/bin"
+    sed 's/\r$//' "$_shim" > "$HOME/.local/bin/revealui"
+    chmod +x "$HOME/.local/bin/revealui"
+  else
+    printf '  [dry-run] %s -> %s/revealui\n' "$_shim" "$HOME/.local/bin"
+  fi
+  printf '  Installed: %s/revealui (retired; use rfg / rfc)\n' "$HOME/.local/bin"
+else
+  printf '  [skip] %s missing\n' "$_shim"
+fi
+
 # Shared shell libs (rfg worktree-env, mcp-env, …) next to helpers so installed
 # rfg.sh can source them without requiring a revkit git checkout on PATH.
 _lib_installed=0
