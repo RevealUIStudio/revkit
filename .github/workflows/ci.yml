@@ -214,6 +214,18 @@ jobs:
       - name: Run secrets tests
         run: bash tests/test-secrets.sh
 
+  test-rfg-env:
+    # P1: rfg env used to printf REVEALUI_MCP_TOKEN (stdout secret-exfil).
+    # Behavioral + static guard: stubbed vault, assert token never appears.
+    name: tests/test-rfg-env.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Prove rfg env never prints the MCP token
+        run: bash tests/test-rfg-env.sh
+
   test-local-ai-shell:
     name: tests/test-local-ai-shell.sh
     runs-on: ubuntu-latest

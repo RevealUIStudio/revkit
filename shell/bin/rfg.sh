@@ -12,7 +12,7 @@
 #   rfg revealui --worktree=label "…"  # worktree base = integration ref
 #   rfg mint             # interactive device-token mint → revvault
 #   rfg smoke            # auth/MCP health (no secret print)
-#   rfg env              # print export lines for eval
+#   rfg env              # print non-secret MCP URL + vault path (never the token)
 #   rfg bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
 #   rfg claim …          # claim acquire|release|list|check|sweep
 #   rfg open <repo> <label> [--claim surface] [--no-agent]
@@ -286,12 +286,15 @@ case "$cmd" in
     exec "$helper" "$@"
     ;;
   env)
+    # Load to validate the vault, then drop the token before any print.
+    # Printing REVEALUI_MCP_TOKEN is stdout secret-exfil (history, tmux, agents).
     REVEALUI_MCP_ENV_STRICT=1
     export REVEALUI_MCP_ENV_STRICT
     _revealui_mcp_env_load || exit 1
-    printf 'export REVEALUI_MCP_TOKEN=%q\n' "$REVEALUI_MCP_TOKEN"
+    unset REVEALUI_MCP_TOKEN
     printf 'export REVEALUI_MCP_URL=%q\n' "$REVEALUI_MCP_URL"
     printf 'export REVEALUI_MCP_TOKEN_VAULT_PATH=%q\n' "$REVEALUI_MCP_TOKEN_VAULT_PATH"
+    echo "rfg env: token not printed. Load MCP with rfg <repo>, rfg mint, or rfg smoke." >&2
     exit 0
     ;;
   bootstrap)

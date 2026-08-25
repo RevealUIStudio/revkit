@@ -20,7 +20,13 @@ No manual `eval`, no home-directory scripts as source of truth.
 | Secret | **RevVault** | `revealui/dev/mcp/cli-token` |
 | Global Grok prefs | User home | `~/.grok/config.toml` (permissions/UI only; optional MCP duplicate) |
 
-**Not durable:** one-off `eval "$(…)"` lines, secrets in chat, home-only mint scripts as the canonical path.
+**Not durable:** one-off eval lines, secrets in chat, home-only mint scripts as the canonical path.
+
+`rfg env` prints only `REVEALUI_MCP_URL` and `REVEALUI_MCP_TOKEN_VAULT_PATH`.
+It never prints `REVEALUI_MCP_TOKEN`. Do not eval a printed token — there
+is none. Load MCP by running `rfg <repo>` (or `rfg mint` then `rfg smoke`).
+Non-rfg tools should source `shell/lib/revealui-mcp-env.sh` and call
+`_revealui_mcp_env_load` in-process, or read the vault path with revvault.
 
 ## Usage
 
@@ -29,7 +35,7 @@ rfg revealui          # load token + cd + exec grok
 rfg                   # already under ~/revfleet/<repo>
 rfg smoke             # auth + MCP health (no secret print)
 rfg mint              # OTP → revvault
-eval "$(rfg env)"     # rare: export for non-rfg tools
+rfg env               # non-secret URL + vault path only (never the token)
 
 # Worktrees (owner hardline 2026-07-21: never inherit a feature-branch HEAD)
 rfg revealui --worktree=fix-gap-xxx "…"
