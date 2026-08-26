@@ -19,9 +19,9 @@ No manual `eval`, no home-directory scripts as source of truth.
 | MCP server config | **Repo** | `<repo>/.grok/config.toml` `[mcp_servers.revealui]` env refs only |
 | Secret | **RevVault** | `revealui/dev/mcp/cli-token` |
 | Global Grok prefs | User home | `~/.grok/config.toml` (permissions/UI only) |
-| Grok HOME constitution | **RevKit `rfg` / bootstrap** | Copies `shell/grok-home/AGENTS.md` + `rules/00-09` onto `$GROK_HOME`. Do not author under `$HOME/.grok`. |
-| Grok vendor hooks | **RevKit `rfg` / bootstrap** | Copies `<repo>/.revealui/adapters/grok/hooks/*.json` onto Grok's attach point (`$GROK_HOME/hooks`). Do not `cp` by hand. |
-| Product Grok preamble | **Repo** | `<repo>/.grok/rules/` (harnesses materialize). Loaded when cwd is the product. |
+| Grok HOME stub | **RevKit `rfg` / bootstrap** | Copies `shell/grok-home/AGENTS.md` onto `$GROK_HOME`. No prose rules in HOME. |
+| Grok vendor hooks | **RevKit `rfg` / bootstrap** | Copies `<repo>/.revealui/adapters/grok/hooks/*.json` onto `$GROK_HOME/hooks`. Mechanical deny. |
+| Product Grok constitution | **Repo** | `<repo>/.grok/rules/` (harnesses materialize). Loaded when cwd is the product. |
 
 **Not durable:** one-off eval lines, secrets in chat, home-only mint scripts, operator `cp` of policy into `$HOME/.grok`, hand-edits of `$HOME/.grok/AGENTS.md` or `$HOME/.grok/rules/`.
 
