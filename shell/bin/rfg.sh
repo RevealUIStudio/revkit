@@ -445,7 +445,7 @@ case "$cmd" in
     grok_bin="$(resolve_grok)" || die "grok not found on PATH or in ~/.grok/bin / ~/.local/bin"
     load_mcp_strict || die "MCP env not ready (mint with: rfg mint)"
     cd "$wt_path"
-    _load_grok_attach_lib && rfg_attach_grok_hooks "$wt_path"
+    _load_grok_attach_lib && rfg_attach_grok_constitution && rfg_attach_grok_hooks "$wt_path"
     # shellcheck disable=SC1090
     set -a
     # shellcheck disable=SC1090
@@ -511,5 +511,5 @@ _inject_worktree_ref "$@"
 set -- "${RFG_GROK_ARGS[@]}"
 
 cd "$target"
-_load_grok_attach_lib && rfg_attach_grok_hooks "$target"
+_load_grok_attach_lib && rfg_attach_grok_constitution && rfg_attach_grok_hooks "$target"
 exec "$grok_bin" "$@"

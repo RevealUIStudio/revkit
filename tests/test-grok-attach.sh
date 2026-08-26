@@ -14,7 +14,7 @@ fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
 echo "=== test-grok-attach.sh ==="
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP"; rm -f "$ROOT/shell/grok-home/rules/extra.md"' EXIT
 export HOME="$TMP/home"
 unset GROK_HOME
 mkdir -p "$HOME"
@@ -96,6 +96,35 @@ else
 fi
 unset GROK_HOME
 
+echo "--- HOME constitution (AGENTS.md + 00-09) ---"
+printf '%s\n' '{"ignore":true}' >"$ROOT/shell/grok-home/rules/extra.md"
+rfg_attach_grok_constitution
+if cmp -s "$ROOT/shell/grok-home/AGENTS.md" "$HOME/.grok/AGENTS.md"; then
+  pass "AGENTS.md deployed to Grok home"
+else
+  fail "AGENTS.md missing or different"
+fi
+if cmp -s "$ROOT/shell/grok-home/rules/00-dual-harness.md" "$HOME/.grok/rules/00-dual-harness.md"; then
+  pass "00-dual-harness.md deployed"
+else
+  fail "00-dual-harness.md missing"
+fi
+if [ -f "$HOME/.grok/rules/extra.md" ]; then
+  fail "non-allowlisted extra.md must not be copied"
+else
+  pass "constitution allowlist skips extra.md"
+fi
+rm -f "$ROOT/shell/grok-home/rules/extra.md"
+
+export GROK_HOME="$TMP/grok-const"
+rfg_attach_grok_constitution
+if [ -f "$GROK_HOME/AGENTS.md" ] && [ -f "$GROK_HOME/rules/09-unused-no-underscore.md" ]; then
+  pass "constitution respects GROK_HOME"
+else
+  fail "constitution ignored GROK_HOME"
+fi
+unset GROK_HOME
+
 if grep -q 'mkdir -p ~/.grok/hooks' "$ROOT/shell/bin/rfg.sh" 2>/dev/null; then
   fail "rfg.sh must not document a home cp recipe"
 else
@@ -149,6 +178,11 @@ if [ -f "$HOME/.grok/hooks/extra.json" ]; then
   fail "rfg copied non-allowlisted extra.json"
 else
   pass "rfg attach allowlist on product launch"
+fi
+if cmp -s "$ROOT/shell/grok-home/AGENTS.md" "$HOME/.grok/AGENTS.md"; then
+  pass "rfg deploys HOME constitution on product launch"
+else
+  fail "rfg did not deploy AGENTS.md on product launch"
 fi
 
 echo
