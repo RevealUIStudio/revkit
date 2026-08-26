@@ -1,46 +1,24 @@
-# Grok — RevealUI Studio (professional)
+# Grok — vendor home is a cache
 
-Pointer-thin machine home. Shared hardlines are not authored here.
-This file is **RevKit SSOT** (`shell/grok-home/AGENTS.md`). `rfg` and
-`bootstrap.sh` copy it onto Grok's vendor attach (`$GROK_HOME/AGENTS.md`).
-Do not edit `$HOME/.grok/AGENTS.md` by hand.
+`$HOME/.grok` is Grok's attach point (auth, sessions, UI, hooks). It is **not**
+an authoring surface and **not** the policy SSOT.
 
-- **In scope:** RevealUI Studio work under `~/revfleet/`.
-- **Out of scope:** personal projects under Windows PowerShell / `~/archive/`.
-- **Identity:** RevealUI Studio GitHub noreply (`git config user.email`). Never `founder@revealui.com`.
+RevKit (`rfg` / `bootstrap.sh`) may copy this stub here. Do not edit it in
+place. Do not put constitution, identity, or private planning paths under
+`$HOME/.grok/rules/`.
 
-## Load order
+## Product sessions
 
-1. Preamble pointers: `$GROK_HOME/rules/` (00-09), deployed by RevKit from
-   `shell/grok-home/rules/`. Do not full-copy Claude hardlines into this file.
-2. When cwd is a product, Grok also loads `<repo>/.grok/rules/` (harnesses
-   materialize, preamble tier 1). Shared policy SSOT is `.revealui/content/`.
-3. When cwd has `.revealui/manager.json`: that file + `.revealui/content/`, then TRACKER.
-4. Product I/O via RevealUI MCP (`rfg`). Secrets via revvault only.
+Launch with `rfg <repo>` (cwd is the product). Then:
 
-`[compat.claude] rules = false` and `agents = false`. Do not re-enable rules. Hooks, skills, and mcps stay on.
+1. `.revealui/manager.json` then `.revealui/content/` (SSOT)
+2. `<repo>/.grok/rules/` (harnesses materialize; preamble + adapter orientation)
+3. TRACKER from the manager `tracker.path`
+4. Product I/O via RevealUI MCP. Secrets via revvault.
 
-Policy owners live in `@revealui/harnesses` → `.revealui/content/`. Claude Code keeps `~/.claude/` untouched.
+`[compat.claude] rules = false`. Do not ingest the Claude vendor dump.
 
-## Stack
+Git identity is `git config user.email` (RevKit `identity.gitconfig`). Mechanical
+deny is PreToolUse hooks deployed from the product manager.
 
-TypeScript strict, ES modules, pnpm 10, Turborepo, Biome, Vitest, Tailwind v4, Nix + direnv.
-
-```
-feature/* ──PR──▶ test ──PR──▶ main
-```
-
-```bash
-rfg revealui
-pnpm dev:app
-pnpm gate
-pnpm validate:claims
-```
-
-MCP attach: `rfg` (RevKit). Vault path `revealui/dev/mcp/cli-token`. Never put device tokens in git or config.
-
-## Keepers
-
-RevKit `shell/grok-home/` (this file + 00-09), PreToolUse helper via `rfg` attach, `permission_mode = auto`.
-
-Do not invent parallel queues under `~/.grok`. Merges, gate labels, force-push, and repo-setting mutations need named in-session owner auth.
+Do not invent parallel queues under `$HOME/.grok`.

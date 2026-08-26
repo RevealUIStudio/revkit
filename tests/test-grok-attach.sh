@@ -14,7 +14,7 @@ fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
 echo "=== test-grok-attach.sh ==="
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"; rm -f "$ROOT/shell/grok-home/rules/extra.md"' EXIT
+trap 'rm -rf "$TMP"' EXIT
 export HOME="$TMP/home"
 unset GROK_HOME
 mkdir -p "$HOME"
@@ -96,32 +96,25 @@ else
 fi
 unset GROK_HOME
 
-echo "--- HOME constitution (AGENTS.md + 00-09) ---"
-printf '%s\n' '{"ignore":true}' >"$ROOT/shell/grok-home/rules/extra.md"
+echo "--- HOME stub (AGENTS.md only; no prose rules) ---"
 rfg_attach_grok_constitution
 if cmp -s "$ROOT/shell/grok-home/AGENTS.md" "$HOME/.grok/AGENTS.md"; then
-  pass "AGENTS.md deployed to Grok home"
+  pass "AGENTS.md stub deployed to Grok home"
 else
   fail "AGENTS.md missing or different"
 fi
-if cmp -s "$ROOT/shell/grok-home/rules/00-dual-harness.md" "$HOME/.grok/rules/00-dual-harness.md"; then
-  pass "00-dual-harness.md deployed"
+if [ -d "$HOME/.grok/rules" ]; then
+  fail "HOME attach must not create $HOME/.grok/rules"
 else
-  fail "00-dual-harness.md missing"
+  pass "no prose rules directory under HOME"
 fi
-if [ -f "$HOME/.grok/rules/extra.md" ]; then
-  fail "non-allowlisted extra.md must not be copied"
-else
-  pass "constitution allowlist skips extra.md"
-fi
-rm -f "$ROOT/shell/grok-home/rules/extra.md"
 
 export GROK_HOME="$TMP/grok-const"
 rfg_attach_grok_constitution
-if [ -f "$GROK_HOME/AGENTS.md" ] && [ -f "$GROK_HOME/rules/09-unused-no-underscore.md" ]; then
-  pass "constitution respects GROK_HOME"
+if [ -f "$GROK_HOME/AGENTS.md" ] && [ ! -d "$GROK_HOME/rules" ]; then
+  pass "stub respects GROK_HOME and does not copy rules"
 else
-  fail "constitution ignored GROK_HOME"
+  fail "constitution wrote rules into GROK_HOME or skipped AGENTS.md"
 fi
 unset GROK_HOME
 

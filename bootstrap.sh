@@ -129,7 +129,7 @@ if [ -f "$SCRIPT_DIR/shell/lib/grok-attach.sh" ]; then
   if [ "$DRY_RUN" -eq 0 ]; then
     rfg_attach_grok_constitution
     rfg_attach_grok_hooks "$_product"
-    printf '  Attached Grok HOME constitution + hooks from %s\n' "$_product"
+    printf '  Attached Grok HOME stub + hooks from %s\n' "$_product"
   else
     printf '  [dry-run] rfg_attach_grok_constitution; rfg_attach_grok_hooks %s\n' "$_product"
   fi
@@ -163,15 +163,15 @@ for lib in "$SCRIPT_DIR/shell/lib/"*.sh; do
 done
 printf '  %d shell lib(s) installed.\n' "$_lib_installed"
 
-# Grok HOME constitution templates next to grok-attach.sh (installed layout).
+# Grok HOME stub (AGENTS.md only) next to grok-attach.sh.
 _gh_src="$SCRIPT_DIR/shell/grok-home"
 _gh_dest="$_lib_dest/grok-home"
-if [ -d "$_gh_src/rules" ] && [ -f "$_gh_src/AGENTS.md" ]; then
+if [ -f "$_gh_src/AGENTS.md" ]; then
   if [ "$DRY_RUN" -eq 0 ]; then
     if revkit_is_macos; then
-      mkdir -p "$_gh_dest/rules"
+      mkdir -p "$_gh_dest"
     else
-      sudo mkdir -p "$_gh_dest/rules"
+      sudo mkdir -p "$_gh_dest"
     fi
   fi
   if revkit_is_macos; then
@@ -181,21 +181,9 @@ if [ -d "$_gh_src/rules" ] && [ -f "$_gh_src/AGENTS.md" ]; then
     run sh -c 'sed "s/\r$//" "$1" | sudo tee "$2" >/dev/null' _ "$_gh_src/AGENTS.md" "$_gh_dest/AGENTS.md"
     run sudo chmod 644 "$_gh_dest/AGENTS.md"
   fi
-  printf '  Installed Grok home: %s/AGENTS.md\n' "$_gh_dest"
-  for _gh_rule in "$_gh_src/rules/"*.md; do
-    [ -f "$_gh_rule" ] || continue
-    _gh_name="$(basename "$_gh_rule")"
-    if revkit_is_macos; then
-      run cp "$_gh_rule" "$_gh_dest/rules/$_gh_name"
-      run chmod 644 "$_gh_dest/rules/$_gh_name"
-    else
-      run sh -c 'sed "s/\r$//" "$1" | sudo tee "$2" >/dev/null' _ "$_gh_rule" "$_gh_dest/rules/$_gh_name"
-      run sudo chmod 644 "$_gh_dest/rules/$_gh_name"
-    fi
-    printf '  Installed Grok home rule: %s/rules/%s\n' "$_gh_dest" "$_gh_name"
-  done
+  printf '  Installed Grok home stub: %s/AGENTS.md\n' "$_gh_dest"
 else
-  printf '  [skip] shell/grok-home missing\n'
+  printf '  [skip] shell/grok-home/AGENTS.md missing\n'
 fi
 
 # ---------------------------------------------------------------------------
