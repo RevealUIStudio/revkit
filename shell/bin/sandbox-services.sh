@@ -1,11 +1,11 @@
 #!/bin/bash
 # Sandbox infrastructure service manager
-# Installed to /usr/local/bin/ by bootstrap-wsl.sh
+# Installed to /usr/local/bin/ by bootstrap.sh
 # Shell alias: sandbox() in bashrc.d/15-docker.sh
 
 set -euo pipefail
 
-COMPOSE_DIR="${REVEALUI_ROOT:?REVEALUI_ROOT not set — run bootstrap-wsl.sh, then source ~/.bashrc, or set explicitly}/shell/docker"
+COMPOSE_DIR="${REVEALUI_ROOT:?REVEALUI_ROOT not set — run bootstrap.sh, then source ~/.bashrc, or set explicitly}/shell/docker"
 COMPOSE_FILE="$COMPOSE_DIR/compose.yml"
 
 # --- Helpers ---

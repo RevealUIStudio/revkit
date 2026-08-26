@@ -70,10 +70,12 @@ and both the integrated terminal and the `claude-acp` agent run native in WSL.
 ## Install
 
 `rfc.sh` is deployed to `/usr/local/bin/rfc.sh` and `50-rfc.sh` is sourced
-automatically — both by `bootstrap-wsl.sh` (no extra step):
+automatically — both by `bootstrap.sh` (no extra step):
 
 ```bash
-bash /mnt/c/Users/$USER/.revealui/bootstrap-wsl.sh
+bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 # then, for the short `rfc` command + completion in the current shell:
 source ~/.bashrc
 ```
+
+`bootstrap-wsl.sh` still works (it execs `bootstrap.sh`). Prefer `bootstrap.sh` in new instructions.

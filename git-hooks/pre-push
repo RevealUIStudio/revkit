@@ -13,7 +13,7 @@
 #
 # Deployment
 #   Installed globally via `git config --global core.hooksPath
-#   "$REVEALUI_ROOT/git-hooks"` by revkit's bootstrap-wsl.sh + bootstrap.ps1.
+#   "$REVEALUI_ROOT/git-hooks"` by revkit's bootstrap.sh + bootstrap.ps1.
 #   Per-clone hook copies are an anti-pattern (per-machine fragility) and are
 #   not used; the hook IS the dev environment.
 #
