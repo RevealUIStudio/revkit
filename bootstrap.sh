@@ -119,6 +119,23 @@ else
   printf '  [skip] %s missing\n' "$_shim"
 fi
 
+# Deploy Grok vendor hooks from the product manager (SSOT in git). HOME is
+# the attach point Grok CLI requires; operators must not `cp` policy there.
+echo "[1c] Attaching Grok vendor hooks from product manager (if present)..."
+# shellcheck disable=SC1091
+if [ -f "$SCRIPT_DIR/shell/lib/grok-attach.sh" ]; then
+  . "$SCRIPT_DIR/shell/lib/grok-attach.sh"
+  _product="${REVFLEET_ROOT:-$HOME/revfleet}/revealui"
+  if [ "$DRY_RUN" -eq 0 ]; then
+    rfg_attach_grok_hooks "$_product"
+    printf '  Attached Grok hooks from %s (no-op if manager templates absent)\n' "$_product"
+  else
+    printf '  [dry-run] rfg_attach_grok_hooks %s\n' "$_product"
+  fi
+else
+  printf '  [skip] grok-attach.sh missing\n'
+fi
+
 # Shared shell libs (rfg worktree-env, mcp-env, …) next to helpers so installed
 # rfg.sh can source them without requiring a revkit git checkout on PATH.
 _lib_installed=0

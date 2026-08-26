@@ -131,6 +131,7 @@ wires fleet Claude rules when `revcon` is present.
 |---|---|---|
 | 1 | Install `shell/bin/*` helpers (WSL-only helpers skipped off WSL) | all |
 | 1b | Overwrite `~/.local/bin/revealui` with the GAP-351 retire shim (no tmux) | all |
+| 1c | Attach Grok vendor hooks from `revealui/.revealui/adapters/grok/hooks/` | all |
 | 2 | Sudoers for passwordless sandbox mount (pinned to `--mount-only`) | WSL |
 | 3 | Self-healing rc-hook into `.bashrc`/`.zshrc` (sources `shell/shellrc.d/*.sh`; prints `● RevKit: managed`) | all |
 | 4 | Git + SSH includes (neutral configs + per-user `~/.config/revkit/`) | all |
