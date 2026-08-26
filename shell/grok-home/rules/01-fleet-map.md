@@ -42,5 +42,5 @@ Distinct from `~/archive/` (retired personal/iced projects).
 
 ## Single fleet tracker
 
-Day-to-day backlog for **all** models/providers: `~/revfleet/.jv/docs/TRACKER.md`  
-(regenerate: `node scripts/initiatives-render.js`). Do not invent parallel queues under `~/.grok`.
+Day-to-day backlog for **all** models/providers: fleet TRACKER (planning checkout `docs/TRACKER.md`).  
+Regenerate with the planning `initiatives-render` script. Do not invent parallel queues under `~/.grok`.

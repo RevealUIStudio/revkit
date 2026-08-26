@@ -4,7 +4,7 @@
 
 ## Adapter summary
 
-- Identity: `RevealUI Studio <43050008+joshua-v-dev@users.noreply.github.com>` (noreply only).
+- Identity: RevealUI Studio GitHub noreply (`git config user.email`). Never `founder@revealui.com`.
 - Cut new work from `origin/test` (or `origin/main` if no `test`). Never from a feature branch.
 - PR target: `test`. Promote `test` → `main` separately.
 - Launch: `rfg revealui --worktree=<label>` injects `--ref test` when omitted.

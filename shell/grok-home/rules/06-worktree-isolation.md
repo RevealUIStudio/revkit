@@ -5,7 +5,7 @@
 **Owner (Plane A):**
 
 - `~/.claude/rules/git.md` (branch base from `origin/test`)
-- `~/revfleet/.jv/.claude/rules/coordination.md` §Worktree Discipline
+- Fleet planning coordination rule, Worktree Discipline section
 - Enforcement: `~/.claude/hooks/dirty-checkout-guard.js` (Claude + Grok PreToolUse)
 
 ## Adapter summary (ops only)

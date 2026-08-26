@@ -7,7 +7,7 @@ Do not edit `$HOME/.grok/AGENTS.md` by hand.
 
 - **In scope:** RevealUI Studio work under `~/revfleet/`.
 - **Out of scope:** personal projects under Windows PowerShell / `~/archive/`.
-- **Identity:** `RevealUI Studio <43050008+joshua-v-dev@users.noreply.github.com>` (noreply only; never `founder@revealui.com`).
+- **Identity:** RevealUI Studio GitHub noreply (`git config user.email`). Never `founder@revealui.com`.
 
 ## Load order
 
