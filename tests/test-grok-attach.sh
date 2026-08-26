@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# test-grok-attach.sh — RevKit deploys Grok hooks from the product manager.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+. "$ROOT/shell/lib/grok-attach.sh"
+
+PASS=0
+FAIL=0
+pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
+fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
+
+echo "=== test-grok-attach.sh ==="
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+export HOME="$TMP/home"
+unset GROK_HOME
+mkdir -p "$HOME"
+
+FLEET="$TMP/fleet"
+mkdir -p "$FLEET/revealui/.git" "$FLEET/revkit/.git"
+
+cd "$FLEET"
+if rfg_pwd_is_fleet_root "$FLEET"; then
+  pass "pwd at fleet root is fleet root"
+else
+  fail "expected fleet root"
+fi
+if rfg_path_is_fleet_root "$FLEET" "$FLEET/."; then
+  pass "path FLEET/. is fleet root"
+else
+  fail "expected FLEET/. to be fleet root"
+fi
+
+cd "$FLEET/revealui"
+if rfg_pwd_is_fleet_root "$FLEET"; then
+  fail "product checkout must not count as fleet root"
+else
+  pass "pwd in revealui is not fleet root"
+fi
+
+SRC="$TMP/product"
+mkdir -p "$SRC/.revealui/adapters/grok/hooks"
+printf '%s\n' '{"hooks":{"SessionStart":[]}}' >"$SRC/.revealui/adapters/grok/hooks/session-start.json"
+printf '%s\n' '{"hooks":{"SessionEnd":[]}}' >"$SRC/.revealui/adapters/grok/hooks/session-end.json"
+printf '%s\n' '{"hooks":{"PreToolUse":[]}}' >"$SRC/.revealui/adapters/grok/hooks/pre-tool.json"
+printf '%s\n' '{"ignore":true}' >"$SRC/.revealui/adapters/grok/hooks/extra.json"
+
+rfg_attach_grok_hooks "$SRC"
+dest="$HOME/.grok/hooks"
+if cmp -s "$SRC/.revealui/adapters/grok/hooks/session-start.json" "$dest/session-start.json"; then
+  pass "session-start.json deployed"
+else
+  fail "session-start.json missing or different"
+fi
+if cmp -s "$SRC/.revealui/adapters/grok/hooks/pre-tool.json" "$dest/pre-tool.json"; then
+  pass "pre-tool.json deployed"
+else
+  fail "pre-tool.json missing"
+fi
+if [ -f "$dest/extra.json" ]; then
+  fail "non-allowlisted extra.json must not be copied"
+else
+  pass "allowlist skips extra.json"
+fi
+
+mkdir -p "$SRC/packages/harnesses/scripts"
+printf '%s\n' 'module.exports = {};' >"$SRC/packages/harnesses/scripts/public-security-comment-pretool.cjs"
+rfg_attach_grok_hooks "$SRC"
+if cmp -s "$SRC/packages/harnesses/scripts/public-security-comment-pretool.cjs" \
+  "$HOME/.local/share/revealui/hooks/public-security-comment-pretool.cjs"; then
+  pass "pretool helper deployed to XDG data dir"
+else
+  fail "pretool helper missing from XDG data dir"
+fi
+
+RFG_GROK_ATTACH_SKIP=1 rfg_attach_grok_hooks "$SRC"
+pass "skip env does not error"
+unset RFG_GROK_ATTACH_SKIP
+
+rfg_attach_grok_hooks "$TMP/no-manager"
+if [ -d "$HOME/.grok/hooks" ]; then
+  pass "missing manager tree is a no-op"
+else
+  fail "hooks dir vanished"
+fi
+
+export GROK_HOME="$TMP/grok-alt"
+rfg_attach_grok_hooks "$SRC"
+if [ -f "$GROK_HOME/hooks/session-start.json" ]; then
+  pass "GROK_HOME override is the attach dest"
+else
+  fail "GROK_HOME was ignored"
+fi
+unset GROK_HOME
+
+if grep -q 'mkdir -p ~/.grok/hooks' "$ROOT/shell/bin/rfg.sh" 2>/dev/null; then
+  fail "rfg.sh must not document a home cp recipe"
+else
+  pass "rfg.sh has no home cp recipe"
+fi
+
+echo "--- Behavioral: rfg.sh fleet-root refuse + product attach ---"
+RFG="$ROOT/shell/bin/rfg.sh"
+mkdir -p "$FLEET/revealui/.revealui/adapters/grok/hooks" "$TMP/bin"
+cp "$SRC/.revealui/adapters/grok/hooks/"*.json "$FLEET/revealui/.revealui/adapters/grok/hooks/"
+cat >"$TMP/bin/grok" <<'EOF'
+#!/usr/bin/env bash
+printf 'GROK_STUB cwd=%s\n' "$(pwd)"
+exit 0
+EOF
+chmod +x "$TMP/bin/grok"
+export PATH="$TMP/bin:/usr/bin:/bin"
+export REVEALUI_MCP_ENV_SKIP=1
+export REVFLEET_ROOT="$FLEET"
+
+cd "$FLEET"
+out="$(bash "$RFG" 2>&1)" && rc=0 || rc=$?
+if [ "$rc" -eq 2 ] && [[ "$out" == *"fleet root is not a product session"* ]]; then
+  pass "rfg with no args at fleet root exits 2"
+else
+  fail "rfg fleet-root no-arg: rc=$rc out=$out"
+fi
+
+cd "$FLEET"
+out="$(bash "$RFG" . 2>&1)" && rc=0 || rc=$?
+if [ "$rc" -eq 2 ] && [[ "$out" == *"fleet root is not a product session"* ]]; then
+  pass "rfg . at fleet root exits 2"
+else
+  fail "rfg . fleet-root: rc=$rc out=$out"
+fi
+
+rm -rf "$HOME/.grok/hooks"
+cd "$FLEET/revealui"
+out="$(bash "$RFG" 2>&1)" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [[ "$out" == *"GROK_STUB cwd="*revealui ]]; then
+  pass "rfg in product execs grok stub"
+else
+  fail "rfg product: rc=$rc out=$out"
+fi
+if cmp -s "$FLEET/revealui/.revealui/adapters/grok/hooks/session-start.json" "$HOME/.grok/hooks/session-start.json"; then
+  pass "rfg deploys manager hooks on product launch"
+else
+  fail "rfg did not deploy session-start.json"
+fi
+if [ -f "$HOME/.grok/hooks/extra.json" ]; then
+  fail "rfg copied non-allowlisted extra.json"
+else
+  pass "rfg attach allowlist on product launch"
+fi
+
+echo
+echo "PASS=$PASS FAIL=$FAIL"
+if [ "$FAIL" -ne 0 ]; then
+  exit 1
+fi

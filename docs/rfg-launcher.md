@@ -18,9 +18,10 @@ No manual `eval`, no home-directory scripts as source of truth.
 | Shell aliases | **RevKit** | `shell/shellrc.d/55-rfg.sh` → `rfg`, `rfgrok`, `grok-rv` |
 | MCP server config | **Repo** | `<repo>/.grok/config.toml` `[mcp_servers.revealui]` env refs only |
 | Secret | **RevVault** | `revealui/dev/mcp/cli-token` |
-| Global Grok prefs | User home | `~/.grok/config.toml` (permissions/UI only; optional MCP duplicate) |
+| Global Grok prefs | User home | `~/.grok/config.toml` (permissions/UI only) |
+| Grok vendor hooks | **RevKit `rfg` / bootstrap** | Copies `<repo>/.revealui/adapters/grok/hooks/*.json` onto Grok's attach point (`$GROK_HOME/hooks`). Do not `cp` by hand. |
 
-**Not durable:** one-off eval lines, secrets in chat, home-only mint scripts as the canonical path.
+**Not durable:** one-off eval lines, secrets in chat, home-only mint scripts, operator `cp` of policy into `$HOME/.grok`.
 
 `rfg env` prints only `REVEALUI_MCP_URL` and `REVEALUI_MCP_TOKEN_VAULT_PATH`.
 It never prints `REVEALUI_MCP_TOKEN`. Do not eval a printed token — there
@@ -31,8 +32,10 @@ Non-rfg tools should source `shell/lib/revealui-mcp-env.sh` and call
 ## Usage
 
 ```bash
-rfg revealui          # load token + cd + exec grok
-rfg                   # already under ~/revfleet/<repo>
+rfg revealui          # load token + cd + exec grok (product session)
+rfg                   # already *inside* ~/revfleet/<repo> (not fleet root)
+# Fleet root is not a product session — rfg / rfg . there exits 2.
+# Skip Grok vendor-hook attach: RFG_GROK_ATTACH_SKIP=1
 
 # The PATH name `revealui` was a tmux workspace launcher. It is retired
 # (GAP-351). `bootstrap.sh` overwrites ~/.local/bin/revealui with a shim.
