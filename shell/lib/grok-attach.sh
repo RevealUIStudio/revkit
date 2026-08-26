@@ -1,16 +1,58 @@
 # shellcheck shell=bash
-# grok-attach.sh — deploy Grok vendor attach points from the product manager.
+# grok-attach.sh — deploy Grok vendor attach points from RevKit + product manager.
 #
-# Grok CLI always loads $GROK_HOME/hooks (default ~/.grok/hooks). That path is
-# a vendor cache, not an authoring surface. SSOT is the product tree:
-#   <repo>/.revealui/adapters/grok/hooks/*.json
-# RevKit (rfg + bootstrap) copies those files to the attach point, the same
-# way bootstrap deploys git hooks to ~/.config/revkit/git-hooks.
+# Grok CLI always loads $GROK_HOME (default ~/.grok): hooks, rules, AGENTS.md.
+# That path is a vendor cache, not an authoring surface.
+# SSOT:
+#   hooks      <repo>/.revealui/adapters/grok/hooks/*.json
+#   HOME rules revkit/shell/grok-home/ (AGENTS.md + 00-09 pointers)
+# Product preamble is <repo>/.grok/rules/ (loaded when cwd is the product).
+# RevKit (rfg + bootstrap) copies allowlisted files to the attach point.
 #
 # Skip: RFG_GROK_ATTACH_SKIP=1
 
 rfg_grok_home() {
   printf '%s\n' "${GROK_HOME:-$HOME/.grok}"
+}
+
+# RevKit templates for Grok HOME constitution (AGENTS.md + 00-09 pointers).
+rfg_grok_home_src() {
+  local here f
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  for f in \
+    "$here/../grok-home" \
+    "$here/grok-home" \
+    "$HOME/revfleet/revkit/shell/grok-home"
+  do
+    if [ -n "$f" ] && [ -d "$f/rules" ] && [ -f "$f/AGENTS.md" ]; then
+      printf '%s\n' "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Copy allowlisted HOME constitution onto Grok's vendor attach.
+rfg_attach_grok_constitution() {
+  local src dest f name
+  [ "${RFG_GROK_ATTACH_SKIP:-0}" = "1" ] && return 0
+  src="$(rfg_grok_home_src)" || return 0
+  dest="$(rfg_grok_home)"
+  mkdir -p "$dest/rules"
+  if [ ! -f "$dest/AGENTS.md" ] || ! cmp -s "$src/AGENTS.md" "$dest/AGENTS.md"; then
+    cp "$src/AGENTS.md" "$dest/AGENTS.md"
+  fi
+  for f in "$src/rules"/*.md; do
+    [ -f "$f" ] || continue
+    name="$(basename "$f")"
+    case "$name" in
+      00-dual-harness.md | 01-fleet-map.md | 02-dispositions.md | 03-git-and-branches.md | 04-subagents-and-tokens.md | 05-secrets-and-safety.md | 06-worktree-isolation.md | 07-durable-solutions.md | 08-model-allocation.md | 09-unused-no-underscore.md) ;;
+      *) continue ;;
+    esac
+    if [ ! -f "$dest/rules/$name" ] || ! cmp -s "$f" "$dest/rules/$name"; then
+      cp "$f" "$dest/rules/$name"
+    fi
+  done
 }
 
 # True when path is exactly the fleet root (not a product repo under it).
