@@ -180,6 +180,6 @@ Write-Host "For WSL-side setup, run inside WSL:" -ForegroundColor Cyan
 $revealRootDrive = $revealRoot.Substring(0, 1).ToLower()
 $revealRootRest  = $revealRoot.Substring(2) -replace '\\', '/'
 $revealRootWsl   = "/mnt/$revealRootDrive$revealRootRest"
-Write-Host "  bash $revealRootWsl/bootstrap-wsl.sh" -ForegroundColor White
-Write-Host "  (or from portable SSD: bash /mnt/<drive>/.revealui/bootstrap-wsl.sh)" -ForegroundColor Gray
+Write-Host "  bash $revealRootWsl/bootstrap.sh" -ForegroundColor White
+Write-Host "  (or from portable SSD: bash /mnt/<drive>/.revealui/bootstrap.sh)" -ForegroundColor Gray
 Write-Host ""

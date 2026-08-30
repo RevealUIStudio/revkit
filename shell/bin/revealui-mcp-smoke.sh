@@ -7,18 +7,34 @@
 
 set -euo pipefail
 
-# Load env via rfg if available, else embedded path through rfg.sh env
-if command -v rfg.sh >/dev/null 2>&1; then
-  # shellcheck disable=SC1090
-  eval "$(rfg.sh env)"
-elif [ -x "$HOME/.local/bin/rfg.sh" ]; then
-  eval "$("$HOME/.local/bin/rfg.sh" env)"
-elif [ -x "$HOME/revfleet/revkit/shell/bin/rfg.sh" ]; then
-  eval "$("$HOME/revfleet/revkit/shell/bin/rfg.sh" env)"
-else
-  echo "revealui-mcp-smoke: rfg.sh not found" >&2
+# Load MCP env in-process (never print the token). Same lib rfg sources.
+_load_mcp_lib() {
+  local here candidates f
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  candidates=(
+    "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
+    "$here/../lib/revealui-mcp-env.sh"
+    "$(dirname "$here")/lib/revkit/revealui-mcp-env.sh"
+    "$HOME/.local/lib/revkit/revealui-mcp-env.sh"
+    "$HOME/revfleet/revkit/shell/lib/revealui-mcp-env.sh"
+  )
+  for f in "${candidates[@]}"; do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      # shellcheck disable=SC1090
+      . "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+
+_load_mcp_lib || {
+  echo "revealui-mcp-smoke: revealui-mcp-env.sh not found (re-run revkit bootstrap)" >&2
   exit 2
-fi
+}
+REVEALUI_MCP_ENV_STRICT=1
+export REVEALUI_MCP_ENV_STRICT
+_revealui_mcp_env_load || exit 1
 
 URL="${REVEALUI_MCP_URL:-https://api.revealui.com/api/mcp}"
 API_BASE="${URL%/api/mcp}"
@@ -29,7 +45,7 @@ fail=0
 ok() { echo "PASS  $1"; pass=$((pass + 1)); }
 bad() { echo "FAIL  $1"; fail=$((fail + 1)); }
 
-ok "token shape (from revvault via rfg env)"
+ok "token shape (from revvault via revealui-mcp-env.sh)"
 
 STATUS_BODY="$(mktemp)"
 STATUS_CODE="$(curl -sS -o "$STATUS_BODY" -w "%{http_code}" \

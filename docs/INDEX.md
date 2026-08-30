@@ -1,16 +1,18 @@
 ---
 type: repo-doc-index
 repo: revkit
-updated: 2026-07-23
+updated: 2026-08-19
 ---
 
 # RevKit — Documentation Index
 
-Cross-platform (macOS + Linux + WSL2, WSL-first) development-environment toolkit for RevealUI development. Neutral-config bootstrap, shell config, WSL boot optimization, editor configs.
+Operator machine kit (macOS + Linux + WSL2, WSL-first) for RevealUI development.
+Not a customer runtime. Neutral-config bootstrap, shell config, WSL boot
+optimization, editor configs.
 
 ## Start here
 
-- [`ONBOARDING.md`](./ONBOARDING.md) — fresh machine → working environment
+- [`ONBOARDING.md`](./ONBOARDING.md). Fresh operator machine to working environment. Read the privilege warning before `bootstrap.sh`.
 
 ## This repo's masters
 

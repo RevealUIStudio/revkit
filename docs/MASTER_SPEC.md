@@ -1,14 +1,14 @@
 ---
 type: master-spec
 repo: revkit
-last-updated: 2026-06-22
+last-updated: 2026-08-25
 owner: RevealUI Studio
 staleness-status: FRESH
 ---
 
 # RevKit — Master Spec
 
-**Last Updated:** 2026-06-22
+**Last Updated:** 2026-08-25
 **Status:** Pre-1.0 — cross-platform foundation shipped (macOS + Linux + WSL2); surface stable for daily use, external-contributor onboarding is Phase C (see MASTER_PLAN)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
 
@@ -18,7 +18,10 @@ staleness-status: FRESH
 
 ## Mission
 
-Cross-platform development-environment toolkit (macOS + Linux + WSL2, WSL-first). Take a fresh workstation and turn it into a RevealUI Studio-grade environment from one detect-then-dispatch bootstrap, with per-machine values kept machine-local (never committed).
+Operator machine kit (macOS + Linux + WSL2, WSL-first). Not a customer runtime.
+Take a fresh operator workstation and turn it into a RevealUI Studio-grade
+environment from one detect-then-dispatch bootstrap, with per-machine values
+kept machine-local (never committed).
 
 ---
 
@@ -36,6 +39,8 @@ revkit/
 │   ├── shellrc.d/                   # shell config fragments sourced by .bashrc/.zshrc (00-base.sh, 25-local-ai.sh, 50-rfc.sh, …)
 │   ├── bin/                         # helper scripts → /usr/local/bin (or ~/.local/bin on macOS)
 │   │   ├── rfc.sh                   # WSL-native (and macOS/Linux) Claude launcher
+│   │   ├── rfg.sh                   # Grok launcher (MCP token from revvault)
+│   │   ├── revealui.sh              # GAP-351 retire shim (overwrites ~/.local/bin/revealui)
 │   │   ├── mount-sandbox-drive.sh   # WSL-only sandbox-drive mount helper
 │   │   ├── sandbox-services.sh      # WSL-only sandbox service control
 │   │   ├── sandbox-validate.sh      # WSL-only tier consistency check
@@ -49,11 +54,14 @@ revkit/
 │   ├── docker/                      # Docker-related config (T1 services)
 │   ├── setup-wsl-boot.sh            # idempotent WSL boot optimization (--revert supported)
 │   ├── compact-vhdx.ps1             # VHDx compaction helper
-│   └── Register-VHDxCompactTask.ps1
+│   └── Register-VHDxCompactTask.ps1 # conhost --headless wrap (Sunday 04:00)
 ├── scripts/
 │   ├── check-no-private-leaks.sh    # private-path / credential scan (CI)
 │   ├── check-backup-staleness.ps1   # weekly-backup staleness guard
-│   └── weekly-wsl-backup.ps1        # scheduled task — exports Ubuntu distro
+│   ├── weekly-wsl-backup.ps1        # scheduled task — exports Ubuntu distro
+│   ├── Register-WeeklyBackupTask.ps1 # conhost --headless + WakeToRun (Sunday 03:00)
+│   ├── Move-WslVhdx.ps1             # wsl --manage --move C:\WSL -> E:\WSL
+│   └── Apply-WslHostFix.ps1         # elevated: register backup wrap, then move VHD
 ├── powershell/
 │   └── Modules/
 │       └── RevealUI.RevStation/     # PowerShell module (Mount-WSLDev, Sync-RevealUIToWindows, etc.)
@@ -108,23 +116,31 @@ Tested by `tests/test-platform-detect.sh` against `tests/platform-fixtures/`
 
 ## Bootstrap (`bootstrap.sh`)
 
-Universal cross-platform entry point. Detect-then-dispatch: platform-agnostic
-steps run unconditionally; WSL-only steps are gated by `revkit_is_wsl`;
-macOS-specific paths are chosen by `revkit_is_macos` (e.g. helpers install to
-`~/.local/bin` without sudo on macOS, `/usr/local/bin` elsewhere). `--dry-run`
-previews every step without writing.
+Universal cross-platform entry point for **operator machines only**.
+Detect-then-dispatch: platform-agnostic steps run unconditionally; WSL-only
+steps are gated by `revkit_is_wsl`; macOS-specific paths are chosen by
+`revkit_is_macos` (e.g. helpers install to `~/.local/bin` without sudo on
+macOS, `/usr/local/bin` elsewhere). `--dry-run` previews every step without
+writing.
+
+A default run is privileged. It writes WSL sudoers, installs helpers to
+`/usr/local/bin` on Linux/WSL, sets `git config --global core.hooksPath`, and
+wires fleet Claude rules when `revcon` is present.
 
 | Step | What | Platform |
 |---|---|---|
 | 1 | Install `shell/bin/*` helpers (WSL-only helpers skipped off WSL) | all |
+| 1b | Overwrite `~/.local/bin/revealui` with the GAP-351 retire shim (no tmux) | all |
+| 1c | Attach Grok vendor hooks from the product manager plus HOME stub `AGENTS.md` (no prose rules in `$HOME/.grok`) | all |
 | 2 | Sudoers for passwordless sandbox mount (pinned to `--mount-only`) | WSL |
 | 3 | Self-healing rc-hook into `.bashrc`/`.zshrc` (sources `shell/shellrc.d/*.sh`; prints `● RevKit: managed`) | all |
 | 4 | Git + SSH includes (neutral configs + per-user `~/.config/revkit/`) | all |
 | 5 | WSL boot optimization (`shell/setup-wsl-boot.sh`) | WSL |
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL |
-| 7 | Deploy M-4 Claude Code scanner hook | all |
-| 8 | Wire RevFleet Claude rules via `revcon/link.sh` | all |
-| 9 | Fleet-wide M-11 pre-push hook — `core.hooksPath` at `~/.config/revkit/git-hooks` (Linux/WSL, LF-normalized copy) or `<repo>/git-hooks` (Windows, in-repo) | all |
+| 7 | Clone/wire `claude-config` into `~/.claude` + revskills marketplace | all |
+| 8 | Deploy M-4 Claude Code scanner hook | all |
+| 9 | Wire RevFleet Claude rules via `revcon/link.sh` | all |
+| 10 | Fleet-wide M-11 pre-push hook. `core.hooksPath` at `~/.config/revkit/git-hooks` (Linux/WSL, LF-normalized copy) or `<repo>/git-hooks` (Windows, in-repo) | all |
 
 `bootstrap-wsl.sh` is a thin deprecation shim that execs `bootstrap.sh` — it
 exists only to keep the legacy `bash ~/.revealui/bootstrap-wsl.sh` invocation
@@ -205,8 +221,17 @@ connected. The VHDx helpers ship at `shell/compact-vhdx.ps1` +
 **Weekly WSL `.tar` snapshot** — `scripts/weekly-wsl-backup.ps1` runs Sunday
 03:00 via scheduled task `RevealUI-WSL-Weekly-Backup`; exports Ubuntu distro to
 `E:\backups\wsl-snapshots\current\Ubuntu-<date>.tar`; keeps 2 most recent.
-Recovery: `wsl --import`. `scripts/check-backup-staleness.ps1` guards against
-silent backup failures.
+Task action is `conhost.exe --headless pwsh.exe ...` (bare `pwsh.exe` flashes
+when Windows Terminal is the default console) with `WakeToRun=true` so a
+sleeping host actually runs 03:00. Register with
+`scripts/Register-WeeklyBackupTask.ps1`. Recovery: `wsl --import`.
+`scripts/check-backup-staleness.ps1` guards against silent backup failures.
+The live VHD lives at `E:\WSL\Ubuntu\ext4.vhdx` after `Move-WslVhdx.ps1`;
+scripts fall back from `C:\WSL\` to `E:\WSL\` when the C: file is gone.
+`wsl --manage --move` creates the destination. Do not pre-create it. An empty
+leftover directory from an aborted move is removed first. After `wsl --shutdown`,
+wait until the source VHD opens with `FileShare.None` before `--move`; retry on
+`WSL_E_DISTRO_NOT_STOPPED`. One named mutex serializes concurrent launches.
 
 The previous Windows-side mirror infrastructure (read-only `E:\projects\*`
 clones synced by the `RevealUI-Repo-Sync` scheduled task; backup-guard hooks)
@@ -229,7 +254,7 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 | **RevealUI** | Independent — RevealUI runs anywhere with Node 24 + pnpm + Postgres; RevKit is one provisioning option |
 | **RevVault** | RevKit sets up the age-identity mount path RevVault expects |
 | **RevDev** | Independent — RevDev's harness daemon runs on whatever workstation RevKit (or any other tool) provisioned |
-| **RevCon** | Pairs cleanly — RevKit wires RevFleet Claude rules via `revcon/link.sh` (bootstrap step 8) |
+| **RevCon** | Pairs cleanly — RevKit wires RevFleet Claude rules via `revcon/link.sh` (bootstrap step 9) |
 | **RevForge** | Independent — RevForge runs on a workstation; RevKit can provision that workstation |
 | **RevSkills** | Independent — skills are markdown, work in any RevKit-provisioned env |
 

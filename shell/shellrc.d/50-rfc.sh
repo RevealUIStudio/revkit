@@ -2,7 +2,7 @@
 # rfc — RevFleet Claude launcher: short command + completion (interactive).
 #
 # The robust implementation lives at /usr/local/bin/rfc.sh (deployed by
-# bootstrap-wsl.sh step 1). This file — auto-sourced in managed interactive
+# bootstrap.sh). This file — auto-sourced in managed interactive
 # shells via the ~/.bashrc hook — just provides the short `rfc` name and
 # tab-completion over ~/revfleet/* repos. See docs/rfc-launcher.md.
 
@@ -15,7 +15,7 @@ rfc() {
   elif [ -x "$HOME/.local/bin/rfc.sh" ]; then
     impl="$HOME/.local/bin/rfc.sh"
   else
-    echo "rfc: rfc.sh not installed — run bootstrap-wsl.sh" >&2
+    echo "rfc: rfc.sh not installed — run bootstrap.sh" >&2
     return 1
   fi
   "$impl" "$@"

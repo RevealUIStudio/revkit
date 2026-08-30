@@ -1,7 +1,15 @@
 # RevKit — Contributor Onboarding
 
-Get from a fresh machine to a working RevealUI Studio development environment.
-RevKit is **cross-platform** (macOS, native Linux, WSL2) and **WSL-first**.
+RevKit is an **operator machine kit**, not a customer runtime. Use it to
+provision a RevealUI Studio workstation (macOS, native Linux, WSL2; WSL-first).
+Do not run the bootstrap on a customer host.
+
+## Privilege warning
+
+`bootstrap.sh` is a privileged installer. A default run writes WSL sudoers
+(`/etc/sudoers.d/wsl-revealui`), sets `git config --global core.hooksPath`,
+installs helpers to `/usr/local/bin` on Linux/WSL, and wires fleet Claude
+rules when `revcon` is present. Always preview first (`--dry-run`).
 
 ## Prerequisites
 
@@ -38,15 +46,16 @@ bash bootstrap.sh               # apply
 
 | Step | What | Where it runs |
 |---|---|---|
-| 1 | Install `shell/bin/*` helpers (WSL-only helpers skipped off WSL) | all |
+| 1 | Install `shell/bin/*` helpers (WSL-only helpers skipped off WSL; `/usr/local/bin` on Linux/WSL) | all |
 | 2 | Sudoers for passwordless sandbox mount | WSL only |
 | 3 | Self-healing rc-hook into `.bashrc`/`.zshrc` | all |
 | 4 | Git + SSH config includes (see below) | all |
 | 5 | WSL boot optimization | WSL only |
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL only |
-| 7 | Deploy the M-4 Claude Code scanner hook | all |
-| 8 | Wire RevFleet Claude rules via `revcon/link.sh` (skipped if absent) | all |
-| 9 | Fleet-wide M-11 pre-push hook (`core.hooksPath`) | all |
+| 7 | Clone/wire `claude-config` into `~/.claude` + revskills marketplace | all |
+| 8 | Deploy the M-4 Claude Code scanner hook | all |
+| 9 | Wire RevFleet Claude rules via `revcon/link.sh` (skipped if absent) | all |
+| 10 | Fleet-wide M-11 pre-push hook (`git config --global core.hooksPath`) | all |
 
 ## 4. Configuration model — neutral configs, machine-local identity
 

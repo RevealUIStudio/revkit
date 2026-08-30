@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sandbox environment validation — health checks for DevKit tiers
-# Installed to /usr/local/bin/ by bootstrap-wsl.sh
+# Installed to /usr/local/bin/ by bootstrap.sh
 # Usage: sandbox validate [--verbose] [--json]
 
 set -uo pipefail

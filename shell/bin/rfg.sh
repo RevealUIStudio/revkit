@@ -6,13 +6,14 @@
 # resolution as rfc. See docs/rfg-launcher.md.
 #
 # Usage:
-#   rfg                  # use $PWD if under ~/revfleet, else list repos
-#   rfg revealui         # cd + load MCP env + exec grok
+#   rfg                  # use $PWD if inside ~/revfleet/<repo>, else list repos
+#   rfg revealui         # cd product checkout + load MCP env + exec grok
+#   (fleet root ~/revfleet is not a product session — name a repo)
 #   rfg revealui --help  # trailing args pass through to grok
 #   rfg revealui --worktree=label "…"  # worktree base = integration ref
 #   rfg mint             # interactive device-token mint → revvault
 #   rfg smoke            # auth/MCP health (no secret print)
-#   rfg env              # print export lines for eval
+#   rfg env              # print non-secret MCP URL + vault path (never the token)
 #   rfg bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
 #   rfg claim …          # claim acquire|release|list|check|sweep
 #   rfg open <repo> <label> [--claim surface] [--no-agent]
@@ -24,12 +25,25 @@
 # Non-strict (launch even if token missing): REVEALUI_MCP_ENV_STRICT=0
 # Skip worktree-ref inject: RFG_WORKTREE_REF_SKIP=1
 # Force worktree base ref: RFG_WORKTREE_REF=test
+# Skip Grok vendor-hook attach: RFG_GROK_ATTACH_SKIP=1
 
 set -euo pipefail
 
 FLEET_ROOT="${REVFLEET_ROOT:-$HOME/revfleet}"
 
 die() { echo "rfg: $*" >&2; exit 1; }
+
+# Fast-forward idle local integration refs (test/main). Never switches branches.
+_sync_integration() {
+  local repo="${1:-}"
+  local script="$FLEET_ROOT/.jv/scripts/fleet-sync-integration.js"
+  [ -f "$script" ] || return 0
+  if [ -n "$repo" ]; then
+    node "$script" --auto "$repo" >/dev/null || true
+  else
+    node "$script" --auto >/dev/null || true
+  fi
+}
 
 case "$(uname -s 2>/dev/null)" in
   Linux | Darwin) : ;;
@@ -239,6 +253,25 @@ _resolve_helper() {
   return 1
 }
 
+_load_grok_attach_lib() {
+  local here f
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  for f in \
+    "$(dirname "$here")/lib/revkit/grok-attach.sh" \
+    "$here/../lib/grok-attach.sh" \
+    "$HOME/revfleet/revkit/shell/lib/grok-attach.sh" \
+    "${REVEALUI_ROOT:-}/shell/lib/grok-attach.sh" \
+    "$HOME/.local/lib/revkit/grok-attach.sh"
+  do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      # shellcheck disable=SC1090
+      . "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+
 _load_worktree_env_lib() {
   local here d candidates f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
@@ -274,12 +307,15 @@ case "$cmd" in
     exec "$helper" "$@"
     ;;
   env)
+    # Load to validate the vault, then drop the token before any print.
+    # Printing REVEALUI_MCP_TOKEN is stdout secret-exfil (history, tmux, agents).
     REVEALUI_MCP_ENV_STRICT=1
     export REVEALUI_MCP_ENV_STRICT
     _revealui_mcp_env_load || exit 1
-    printf 'export REVEALUI_MCP_TOKEN=%q\n' "$REVEALUI_MCP_TOKEN"
+    unset REVEALUI_MCP_TOKEN
     printf 'export REVEALUI_MCP_URL=%q\n' "$REVEALUI_MCP_URL"
     printf 'export REVEALUI_MCP_TOKEN_VAULT_PATH=%q\n' "$REVEALUI_MCP_TOKEN_VAULT_PATH"
+    echo "rfg env: token not printed. Load MCP with rfg <repo>, rfg mint, or rfg smoke." >&2
     exit 0
     ;;
   bootstrap)
@@ -373,7 +409,8 @@ case "$cmd" in
       echo "rfg: worktree path exists: $wt_path (bootstrap only)" >&2
     else
       mkdir -p "$wt_root"
-      echo "rfg: fetching origin/$ref …" >&2
+      echo "rfg: syncing origin/$ref …" >&2
+      _sync_integration "$source_repo"
       git -C "$source_repo" fetch origin "$ref" 2>/dev/null || git -C "$source_repo" fetch origin || true
       base="origin/$ref"
       if ! git -C "$source_repo" rev-parse --verify --quiet "$base" >/dev/null 2>&1; then
@@ -408,6 +445,7 @@ case "$cmd" in
     grok_bin="$(resolve_grok)" || die "grok not found on PATH or in ~/.grok/bin / ~/.local/bin"
     load_mcp_strict || die "MCP env not ready (mint with: rfg mint)"
     cd "$wt_path"
+    _load_grok_attach_lib && rfg_attach_grok_constitution && rfg_attach_grok_hooks "$wt_path"
     # shellcheck disable=SC1090
     set -a
     # shellcheck disable=SC1090
@@ -428,7 +466,9 @@ fi
 
 if [ -z "${repo:-}" ]; then
   case "$PWD/" in
-    "$FLEET_ROOT"/*) target="$PWD" ;;
+    "$FLEET_ROOT"/*)
+      target="$PWD"
+      ;;
     *)
       echo "rfg: name a fleet repo, e.g. 'rfg revealui'. Available:" >&2
       list_repos >&2
@@ -439,7 +479,10 @@ else
   case "$repo" in
     -*)
       case "$PWD/" in
-        "$FLEET_ROOT"/*) target="$PWD"; set -- "$repo" "$@" ;;
+        "$FLEET_ROOT"/*)
+          target="$PWD"
+          set -- "$repo" "$@"
+          ;;
         *) die "name a fleet repo before grok flags, or cd into ~/revfleet/<repo>" ;;
       esac
       ;;
@@ -450,7 +493,16 @@ else
   esac
 fi
 
+_load_grok_attach_lib || die "grok-attach.sh not found (re-run revkit bootstrap)"
+if rfg_path_is_fleet_root "$FLEET_ROOT" "$target"; then
+  echo "rfg: fleet root is not a product session. Name a repo, e.g. 'rfg revealui'. Available:" >&2
+  list_repos >&2
+  exit 2
+fi
+
 grok_bin="$(resolve_grok)" || die "grok not found on PATH or in ~/.grok/bin / ~/.local/bin"
+
+_sync_integration "$target"
 
 load_mcp_strict || die "MCP env not ready (mint with: rfg mint)"
 
@@ -459,4 +511,5 @@ _inject_worktree_ref "$@"
 set -- "${RFG_GROK_ARGS[@]}"
 
 cd "$target"
+_load_grok_attach_lib && rfg_attach_grok_constitution && rfg_attach_grok_hooks "$target"
 exec "$grok_bin" "$@"

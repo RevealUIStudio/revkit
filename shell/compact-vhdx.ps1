@@ -15,6 +15,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ($VhdxPath.StartsWith('C:\WSL\') -and -not (Test-Path -LiteralPath $VhdxPath)) {
+    $altVhdx = 'E:\WSL\' + $VhdxPath.Substring('C:\WSL\'.Length)
+    if (Test-Path -LiteralPath $altVhdx) { $VhdxPath = $altVhdx }
+}
+
 Write-Host "[compact-vhdx] Starting VHDx compaction for $Distro..."
 
 # Step 1: fstrim inside WSL (best-effort — WSL may not support it, and the

@@ -22,6 +22,7 @@ Invoke-Pester ./tests/powershell/
 | `Show-WSLHelp.Tests.ps1` | `Show-WSLHelp` | Docs file presence (`WSL-QuickReference.md`) + module export. Launch path (opens `notepad.exe`) is not exercised — unreliable to mock; lives in the manual integration suite. |
 | `Register-DevMountTask.Tests.ps1` | `Register-DevMountTask` | Self-elevation `-WhatIf` / `-Confirm` contract: under `-WhatIf` the non-elevated branch must not call `Invoke-Elevated` (mocked `Test-IsAdmin` / `Invoke-Elevated`). The scheduled-task registration path stays integration-only. |
 | `Unregister-DevMountTask.Tests.ps1` | `Unregister-DevMountTask` | Same self-elevation `-WhatIf` contract as `Register-DevMountTask` (`ConfirmImpact = High`). The scheduled-task removal path stays integration-only. |
+| `WslHostScripts.Tests.ps1` | Register-WeeklyBackupTask / Move-WslVhdx / Apply-WslHostFix / Register-VHDxCompactTask | Source contracts: conhost `--headless`, WakeToRun, `wsl --manage --move` to `E:\WSL`, no export/import, do not pre-create the move destination, wait until the VHD handle is released, named mutex. Task Scheduler writes stay integration-only. |
 
 ## What's NOT covered (integration-only)
 

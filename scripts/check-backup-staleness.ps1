@@ -26,6 +26,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+if ($VhdxPath.StartsWith('C:\WSL\') -and -not (Test-Path -LiteralPath $VhdxPath)) {
+  $altVhdx = 'E:\WSL\' + $VhdxPath.Substring('C:\WSL\'.Length)
+  if (Test-Path -LiteralPath $altVhdx) { $VhdxPath = $altVhdx }
+}
+
 # Ensure the event source exists. Creating it requires admin once; subsequent
 # writes work from any context. Swallow the create error if it already exists
 # or if the current context lacks admin (it will fall back to Write-Host below).

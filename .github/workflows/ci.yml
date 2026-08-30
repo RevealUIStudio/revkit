@@ -214,6 +214,18 @@ jobs:
       - name: Run secrets tests
         run: bash tests/test-secrets.sh
 
+  test-rfg-env:
+    # P1: rfg env used to printf REVEALUI_MCP_TOKEN (stdout secret-exfil).
+    # Behavioral + static guard: stubbed vault, assert token never appears.
+    name: tests/test-rfg-env.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Prove rfg env never prints the MCP token
+        run: bash tests/test-rfg-env.sh
+
   test-local-ai-shell:
     name: tests/test-local-ai-shell.sh
     runs-on: ubuntu-latest
@@ -223,6 +235,27 @@ jobs:
           persist-credentials: false
       - name: Run local-ai shell auto-load tests
         run: bash tests/test-local-ai-shell.sh
+
+  test-revealui-retired:
+    # GAP-351 — retire shim must not start tmux; must name rfg/rfc.
+    name: tests/test-revealui-retired.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run retired revealui launcher tests
+        run: bash tests/test-revealui-retired.sh
+
+  test-grok-attach:
+    name: tests/test-grok-attach.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run Grok manager-attach tests
+        run: bash tests/test-grok-attach.sh
 
   test-fleet-workflow-health:
     # GAP-420 — regression guard for the consecutive-failure predicate that

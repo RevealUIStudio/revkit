@@ -6,7 +6,7 @@
 //
 // Source of truth: revkit/shell/bin/m4-sudoers-fs-scanner.js (this file).
 // Runtime location: ~/.claude/hooks/m4-sudoers-fs-scanner.js (copied by
-//   bootstrap-wsl.sh step 7).
+//   bootstrap.sh).
 // Invoked from: ~/.claude/hooks/session-start.js (M-4 scan block).
 //
 // Read-only. No mutations. Pure stat + read + parse.

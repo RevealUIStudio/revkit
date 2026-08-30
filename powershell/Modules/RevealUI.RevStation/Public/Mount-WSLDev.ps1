@@ -175,7 +175,7 @@ function Mount-WSLDev {
 
     # --- Mount the partition inside WSL ---
     # Always pass --mount-only so the NOPASSWD sudoers rule matches; the rule
-    # is pinned to this exact arg list (see revkit/bootstrap-wsl.sh + GAP-119).
+    # is pinned to this exact arg list (see revkit/bootstrap.sh + GAP-119).
     # First-time marker setup is `sudo mount-sandbox-drive.sh --init` (manual,
     # interactive sudo) and is documented in revkit/docs/tier-capabilities.md.
     Write-DevLog 'Mounting partition inside WSL at /mnt/sandbox...' -Source 'Mount' -LogFile $logFile

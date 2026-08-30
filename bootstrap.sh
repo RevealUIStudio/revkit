@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # bootstrap.sh — cross-platform RevKit bootstrap (macOS + Linux + WSL2).
+# Operator machine kit (not a customer runtime): writes sudoers (WSL), sets git config --global core.hooksPath, installs to /usr/local/bin, wires fleet hooks.
 #
 # Replaces bootstrap-wsl.sh as the universal entry point. Detect-then-dispatch:
 # everything that is platform-agnostic runs unconditionally; WSL-only steps are
@@ -100,6 +101,42 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
 done
 printf '  %d helper(s) installed.\n' "$_installed"
 
+# GAP-351: the untracked tmux launcher lived at ~/.local/bin/revealui (no
+# .sh suffix) and still pointed at ~/projects. Always overwrite that PATH
+# name with the tracked retire shim so muscle memory cannot start tmux.
+echo "[1b] Installing retired revealui PATH name at ~/.local/bin/revealui..."
+_shim="$SCRIPT_DIR/shell/bin/revealui.sh"
+if [ -f "$_shim" ]; then
+  if [ "$DRY_RUN" -eq 0 ]; then
+    mkdir -p "$HOME/.local/bin"
+    sed 's/\r$//' "$_shim" > "$HOME/.local/bin/revealui"
+    chmod +x "$HOME/.local/bin/revealui"
+  else
+    printf '  [dry-run] %s -> %s/revealui\n' "$_shim" "$HOME/.local/bin"
+  fi
+  printf '  Installed: %s/revealui (retired; use rfg / rfc)\n' "$HOME/.local/bin"
+else
+  printf '  [skip] %s missing\n' "$_shim"
+fi
+
+# Deploy Grok vendor hooks from the product manager (SSOT in git). HOME is
+# the attach point Grok CLI requires; operators must not `cp` policy there.
+echo "[1c] Attaching Grok vendor hooks from product manager (if present)..."
+# shellcheck disable=SC1091
+if [ -f "$SCRIPT_DIR/shell/lib/grok-attach.sh" ]; then
+  . "$SCRIPT_DIR/shell/lib/grok-attach.sh"
+  _product="${REVFLEET_ROOT:-$HOME/revfleet}/revealui"
+  if [ "$DRY_RUN" -eq 0 ]; then
+    rfg_attach_grok_constitution
+    rfg_attach_grok_hooks "$_product"
+    printf '  Attached Grok HOME stub + hooks from %s\n' "$_product"
+  else
+    printf '  [dry-run] rfg_attach_grok_constitution; rfg_attach_grok_hooks %s\n' "$_product"
+  fi
+else
+  printf '  [skip] grok-attach.sh missing\n'
+fi
+
 # Shared shell libs (rfg worktree-env, mcp-env, …) next to helpers so installed
 # rfg.sh can source them without requiring a revkit git checkout on PATH.
 _lib_installed=0
@@ -125,6 +162,29 @@ for lib in "$SCRIPT_DIR/shell/lib/"*.sh; do
   _lib_installed=$((_lib_installed + 1))
 done
 printf '  %d shell lib(s) installed.\n' "$_lib_installed"
+
+# Grok HOME stub (AGENTS.md only) next to grok-attach.sh.
+_gh_src="$SCRIPT_DIR/shell/grok-home"
+_gh_dest="$_lib_dest/grok-home"
+if [ -f "$_gh_src/AGENTS.md" ]; then
+  if [ "$DRY_RUN" -eq 0 ]; then
+    if revkit_is_macos; then
+      mkdir -p "$_gh_dest"
+    else
+      sudo mkdir -p "$_gh_dest"
+    fi
+  fi
+  if revkit_is_macos; then
+    run cp "$_gh_src/AGENTS.md" "$_gh_dest/AGENTS.md"
+    run chmod 644 "$_gh_dest/AGENTS.md"
+  else
+    run sh -c 'sed "s/\r$//" "$1" | sudo tee "$2" >/dev/null' _ "$_gh_src/AGENTS.md" "$_gh_dest/AGENTS.md"
+    run sudo chmod 644 "$_gh_dest/AGENTS.md"
+  fi
+  printf '  Installed Grok home stub: %s/AGENTS.md\n' "$_gh_dest"
+else
+  printf '  [skip] shell/grok-home/AGENTS.md missing\n'
+fi
 
 # ---------------------------------------------------------------------------
 # Step 2: Sudoers — WSL only (passwordless mount for sandbox drive)

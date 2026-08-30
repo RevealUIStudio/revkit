@@ -34,6 +34,9 @@ the secure zero-prompt configuration.
 rfc                  # use $PWD if it is under ~/revfleet, else list repos
 rfc revealui         # cd ~/revfleet/revealui && exec claude
 rfc revealui --continue   # trailing args pass through to claude verbatim
+
+The PATH name `revealui` (tmux workspace launcher) is retired — GAP-351.
+Use `rfc <repo>` or `rfg <repo>`, not a multiplexer.
 ```
 
 Tab-completion over `~/revfleet/*` is provided in managed interactive shells.
@@ -67,10 +70,12 @@ and both the integrated terminal and the `claude-acp` agent run native in WSL.
 ## Install
 
 `rfc.sh` is deployed to `/usr/local/bin/rfc.sh` and `50-rfc.sh` is sourced
-automatically — both by `bootstrap-wsl.sh` (no extra step):
+automatically — both by `bootstrap.sh` (no extra step):
 
 ```bash
-bash /mnt/c/Users/$USER/.revealui/bootstrap-wsl.sh
+bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 # then, for the short `rfc` command + completion in the current shell:
 source ~/.bashrc
 ```
+
+`bootstrap-wsl.sh` still works (it execs `bootstrap.sh`). Prefer `bootstrap.sh` in new instructions.
