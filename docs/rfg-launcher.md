@@ -1,7 +1,8 @@
 # `rfg` — RevFleet Grok launcher (durable)
 
 `rfg` is the **only supported** way to start Grok against the fleet with
-RevealUI MCP attached. It is the Grok sibling of `rfc` (Claude).
+RevealUI MCP attached. It is the Grok sibling of `rfc` (Claude). `rfc`
+shares worktree ports, claims, and `open` (`docs/rfc-launcher.md`).
 
 No manual `eval`, no home-directory scripts as source of truth.
 
