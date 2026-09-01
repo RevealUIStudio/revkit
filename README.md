@@ -47,7 +47,7 @@ bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 
 In more detail, the bootstrap also adds a `~/.bashrc`/`~/.zshrc` hook that sources `shell/shellrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and clones/wires `claude-config` into `~/.claude`.
 
-Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md)). The old `revealui` tmux workspace launcher is **retired** (GAP-351 / ADR 2026-06-23); `bootstrap.sh` overwrites `~/.local/bin/revealui` with a shim that prints `rfg` / `rfc`.
+Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native; same `bootstrap` / `claim` / `open` isolation as `rfg`); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md) and [`docs/rfc-launcher.md`](docs/rfc-launcher.md)). The old `revealui` tmux workspace launcher is **retired** (GAP-351 / ADR 2026-06-23); `bootstrap.sh` overwrites `~/.local/bin/revealui` with a shim that prints `rfg` / `rfc`.
 
 > **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap.sh` — the rc hook is self-healing and migrates in place. No manual edit needed.
 

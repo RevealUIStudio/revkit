@@ -31,16 +31,39 @@ the secure zero-prompt configuration.
 ## Usage
 
 ```bash
-rfc                  # use $PWD if it is under ~/revfleet, else list repos
-rfc revealui         # cd ~/revfleet/revealui && exec claude
+rfc                  # use $PWD if inside ~/revfleet/<repo>, else list repos
+rfc revealui         # cd product checkout + exec claude
+# Fleet root is not a product session — rfc / rfc . there exits 2.
+
 rfc revealui --continue   # trailing args pass through to claude verbatim
+
+rfc smoke             # auth + MCP health (no secret print)
+rfc mint              # OTP → revvault
+rfc env               # non-secret URL + vault path only (never the token)
+
+rfc revealui          # loads RevealUI MCP when a token is vaulted (warn, do not
+                      # block, unless RFC_MCP_STRICT=1)
+
+# Worktrees (same isolation as rfg: origin/test, hash ports, PID/TTL claims)
+rfc open revealui ves-fo-managed --claim marketing/ves-fo-managed
+rfc bootstrap ~/revfleet/.wt/ves-fo-managed
+rfc claim acquire revealui marketing/ves-fo-managed
+rfc claim list
+rfc claim release revealui marketing/ves-fo-managed
+rfc claim sweep
 
 The PATH name `revealui` (tmux workspace launcher) is retired — GAP-351.
 Use `rfc <repo>` or `rfg <repo>`, not a multiplexer.
 ```
 
-Tab-completion over `~/revfleet/*` is provided in managed interactive shells.
-Override the fleet root with `REVFLEET_ROOT`.
+Tab-completion over `~/revfleet/*` plus `mint|smoke|env|bootstrap|claim|open|help`
+is provided in managed interactive shells. Override the fleet root with
+`REVFLEET_ROOT`. Worktree ports and claims share `shell/lib/worktree-env.sh`
+with `rfg` (same `.env.worktree` and `~/.local/share/revealui/claims/`).
+
+`rfc env` never prints `REVEALUI_MCP_TOKEN`. Claude can launch without a
+device token (unlike `rfg`, which is strict by default). Set `RFC_MCP_STRICT=1`
+to fail closed.
 
 ## Per-surface wiring
 

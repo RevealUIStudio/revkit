@@ -31,7 +31,7 @@ alias rfclaude='rfc'
 # system and lacks complete/compgen/mapfile, so this block no-ops there.
 if [ -n "${BASH_VERSION:-}" ] && command -v complete >/dev/null 2>&1; then
   _rfc_complete() {
-    # Only complete the first argument (the repo name).
+    # Only complete the first argument (repo name or rfc subcommand).
     [ "${COMP_CWORD:-0}" -eq 1 ] || return 0
     local root="${REVFLEET_ROOT:-$HOME/revfleet}" cur="${COMP_WORDS[COMP_CWORD]}"
     local d repos=()
@@ -39,7 +39,7 @@ if [ -n "${BASH_VERSION:-}" ] && command -v complete >/dev/null 2>&1; then
       [ -e "${d}.git" ] || continue
       d="${d%/}"; repos+=("${d##*/}")
     done
-    mapfile -t COMPREPLY < <(compgen -W "${repos[*]}" -- "$cur")
+    mapfile -t COMPREPLY < <(compgen -W "mint smoke env bootstrap claim open help ${repos[*]}" -- "$cur")
   }
   complete -F _rfc_complete rfc
 fi
