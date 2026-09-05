@@ -124,7 +124,7 @@ else
   pass "rfg.sh has no home cp recipe"
 fi
 
-echo "--- Behavioral: rfg.sh fleet-root refuse + product attach ---"
+echo "--- Behavioral: rfg.sh fleet-root session + product attach ---"
 RFG="$ROOT/shell/bin/rfg.sh"
 mkdir -p "$FLEET/revealui/.revealui/adapters/grok/hooks" "$TMP/bin"
 cp "$SRC/.revealui/adapters/grok/hooks/"*.json "$FLEET/revealui/.revealui/adapters/grok/hooks/"
@@ -140,16 +140,16 @@ export REVFLEET_ROOT="$FLEET"
 
 cd "$FLEET"
 out="$(bash "$RFG" 2>&1)" && rc=0 || rc=$?
-if [ "$rc" -eq 2 ] && [[ "$out" == *"fleet root is not a product session"* ]]; then
-  pass "rfg with no args at fleet root exits 2"
+if [ "$rc" -eq 0 ] && [[ "$out" == *"GROK_STUB cwd="*"$(basename "$FLEET")"* || "$out" == *"GROK_STUB cwd=$FLEET"* ]]; then
+  pass "rfg with no args at fleet root starts a session"
 else
   fail "rfg fleet-root no-arg: rc=$rc out=$out"
 fi
 
 cd "$FLEET"
 out="$(bash "$RFG" . 2>&1)" && rc=0 || rc=$?
-if [ "$rc" -eq 2 ] && [[ "$out" == *"fleet root is not a product session"* ]]; then
-  pass "rfg . at fleet root exits 2"
+if [ "$rc" -eq 0 ] && [[ "$out" == *"GROK_STUB cwd="* ]]; then
+  pass "rfg . at fleet root starts a session"
 else
   fail "rfg . fleet-root: rc=$rc out=$out"
 fi

@@ -45,19 +45,19 @@ export GIT_COMMITTER_EMAIL='rfc-test@example.com'
 
 echo "=== test-rfc.sh ==="
 
-echo "--- Fleet-root refuse ---"
+echo "--- Fleet-root session ---"
 cd "$TMP/fleet"
 out="$(bash "$RFC" 2>&1)" && rc=0 || rc=$?
-if [ "$rc" -eq 2 ] && [[ "$out" == *"fleet root is not a product session"* ]]; then
-  pass "rfc with no args at fleet root exits 2"
+if [ "$rc" -eq 0 ] && [[ "$out" == *"CLAUDE_STUB cwd="* ]]; then
+  pass "rfc with no args at fleet root starts a session"
 else
   fail "rfc fleet-root no-arg: rc=$rc out=$out"
 fi
 
 cd "$TMP/fleet"
 out="$(bash "$RFC" . 2>&1)" && rc=0 || rc=$?
-if [ "$rc" -eq 2 ] && [[ "$out" == *"fleet root is not a product session"* ]]; then
-  pass "rfc . at fleet root exits 2"
+if [ "$rc" -eq 0 ] && [[ "$out" == *"CLAUDE_STUB cwd="* ]]; then
+  pass "rfc . at fleet root starts a session"
 else
   fail "rfc . fleet-root: rc=$rc out=$out"
 fi
@@ -146,8 +146,8 @@ else
 fi
 
 echo "--- Static ---"
-if grep -q 'rfc open' "$RFC" && grep -q 'fleet root is not a product session' "$RFC"; then
-  pass "rfc.sh documents open + fleet-root refuse"
+if grep -q 'rfc open' "$RFC" && grep -q 'fleet-root session' "$RFC"; then
+  pass "rfc.sh documents open + fleet-root session"
 else
   fail "rfc.sh missing open or fleet-root copy"
 fi

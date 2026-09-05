@@ -9,7 +9,15 @@
 # REVEALUI_WORKBOARD when the default layout does not apply.
 
 # Fleet root (public path form is fine)
-: "${REVFLEET_ROOT:=$HOME/revfleet}"
+if [ -z "${REVFLEET_ROOT:-}" ]; then
+  if [ -d "$HOME/revealfleet" ]; then
+    REVFLEET_ROOT="$HOME/revealfleet"
+  elif [ -d "$HOME/revfleet" ]; then
+    REVFLEET_ROOT="$HOME/revfleet"
+  else
+    REVFLEET_ROOT="$HOME/revealfleet"
+  fi
+fi
 
 # Private planning checkout under the fleet root (basename built at runtime).
 __rv_planning_root() {
