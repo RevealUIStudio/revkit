@@ -15,10 +15,12 @@ rfg() {
     impl="$HOME/.local/bin/rfg.sh"
   elif [ -n "${REVEALUI_ROOT:-}" ] && [ -x "$REVEALUI_ROOT/shell/bin/rfg.sh" ]; then
     impl="$REVEALUI_ROOT/shell/bin/rfg.sh"
+  elif [ -x "$HOME/revealfleet/revkit/shell/bin/rfg.sh" ]; then
+    impl="$HOME/revealfleet/revkit/shell/bin/rfg.sh"
   elif [ -x "$HOME/revfleet/revkit/shell/bin/rfg.sh" ]; then
     impl="$HOME/revfleet/revkit/shell/bin/rfg.sh"
   else
-    echo "rfg: rfg.sh not installed — re-run revkit bootstrap.sh or: ln -s ~/revfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh" >&2
+    echo "rfg: rfg.sh not installed — re-run revkit bootstrap.sh or: ln -s \$REVFLEET_ROOT/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh" >&2
     return 1
   fi
   "$impl" "$@"

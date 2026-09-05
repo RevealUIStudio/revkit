@@ -125,7 +125,11 @@ echo "[1c] Attaching Grok vendor hooks from product manager (if present)..."
 # shellcheck disable=SC1091
 if [ -f "$SCRIPT_DIR/shell/lib/grok-attach.sh" ]; then
   . "$SCRIPT_DIR/shell/lib/grok-attach.sh"
-  _product="${REVFLEET_ROOT:-$HOME/revfleet}/revealui"
+  if [ -f "$SCRIPT_DIR/shell/lib/fleet-root.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$SCRIPT_DIR/shell/lib/fleet-root.sh"
+  fi
+  _product="$(rfg_resolve_fleet_root 2>/dev/null || printf '%s\n' "${REVFLEET_ROOT:-$HOME/revealfleet}")/revealui"
   if [ "$DRY_RUN" -eq 0 ]; then
     rfg_attach_grok_constitution
     rfg_attach_grok_hooks "$_product"
@@ -509,8 +513,15 @@ fi
 # Step 9: RevFleet Claude rules via revcon/link.sh
 # ---------------------------------------------------------------------------
 echo "[9] Wiring RevFleet Claude rules via revcon/link.sh..."
-REVCON_LINK_SH="$HOME/revfleet/revcon/link.sh"
-REVFLEET_ROOT="$HOME/revfleet"
+if [ -f "$SCRIPT_DIR/shell/lib/fleet-root.sh" ]; then
+  # shellcheck disable=SC1091
+  . "$SCRIPT_DIR/shell/lib/fleet-root.sh"
+fi
+if [ -z "${REVFLEET_ROOT:-}" ] && type rfg_resolve_fleet_root >/dev/null 2>&1; then
+  REVFLEET_ROOT="$(rfg_resolve_fleet_root)"
+fi
+: "${REVFLEET_ROOT:=$HOME/revealfleet}"
+REVCON_LINK_SH="$REVFLEET_ROOT/revcon/link.sh"
 
 if [ ! -f "$REVCON_LINK_SH" ]; then
   echo "  WARNING: $REVCON_LINK_SH not found — skipping (clone RevealUIStudio/revcon first)" >&2

@@ -14,8 +14,17 @@
 #
 # shellcheck shell=bash
 
-# Default fleet worktree parent (matches .jv / AGENTS.md convention).
-RFG_WT_ROOT="${RFG_WT_ROOT:-$HOME/revfleet/.wt}"
+# Default fleet worktree parent: <resolved fleet root>/.wt
+_fr="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/fleet-root.sh"
+# shellcheck disable=SC1090
+[ -f "$_fr" ] && . "$_fr"
+if [ -z "${RFG_WT_ROOT:-}" ]; then
+  if type rfg_wt_root >/dev/null 2>&1; then
+    RFG_WT_ROOT="$(rfg_wt_root)"
+  else
+    RFG_WT_ROOT="${HOME}/revealfleet/.wt"
+  fi
+fi
 REVEALUI_CLAIMS_DIR="${REVEALUI_CLAIMS_DIR:-$HOME/.local/share/revealui/claims}"
 REVEALUI_WT_ENV_DIR="${REVEALUI_WT_ENV_DIR:-$HOME/.local/share/revealui/worktree-env}"
 

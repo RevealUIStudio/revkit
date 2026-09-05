@@ -154,6 +154,22 @@ else
   fail "rfg . fleet-root: rc=$rc out=$out"
 fi
 
+cd "$FLEET/revealui"
+out="$(bash "$RFG" . 2>&1)" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [[ "$out" == *"GROK_STUB cwd="*revealui ]]; then
+  pass "rfg . in product stays in product"
+else
+  fail "rfg . product: rc=$rc out=$out"
+fi
+
+cd "$FLEET"
+out="$(bash "$RFG" .. 2>&1)" && rc=0 || rc=$?
+if [ "$rc" -ne 0 ] && [[ "$out" == *"single fleet checkout"* ]]; then
+  pass "rfg .. is rejected"
+else
+  fail "rfg .. : rc=$rc out=$out"
+fi
+
 rm -rf "$HOME/.grok/hooks"
 cd "$FLEET/revealui"
 out="$(bash "$RFG" 2>&1)" && rc=0 || rc=$?
