@@ -31,9 +31,9 @@ the secure zero-prompt configuration.
 ## Usage
 
 ```bash
-rfc                  # use $PWD if inside ~/revfleet/<repo>, else list repos
+rfc                  # use $PWD if inside the fleet (root or a repo)
 rfc revealui         # cd product checkout + exec claude
-# Fleet root is not a product session — rfc / rfc . there exits 2.
+# Fleet root is a valid session — rfc / rfc . there does not exit 2.
 
 rfc revealui --continue   # trailing args pass through to claude verbatim
 

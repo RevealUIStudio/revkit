@@ -36,8 +36,8 @@ Non-rfg tools should source `shell/lib/revealui-mcp-env.sh` and call
 
 ```bash
 rfg revealui          # load token + cd + exec grok (product session)
-rfg                   # already *inside* ~/revfleet/<repo> (not fleet root)
-# Fleet root is not a product session — rfg / rfg . there exits 2.
+rfg                   # already *inside* the fleet (root or a repo)
+# Fleet root is a valid session — rfg / rfg . there does not exit 2.
 # Skip Grok vendor-hook attach: RFG_GROK_ATTACH_SKIP=1
 
 # The PATH name `revealui` was a tmux workspace launcher. It is retired
@@ -138,7 +138,7 @@ Future Level 2 (`GrokAdapter` in `@revealui/harnesses`) extends the same data pl
 
 | Variable | Default |
 |----------|---------|
-| `REVFLEET_ROOT` | `$HOME/revfleet` |
+| `REVFLEET_ROOT` | `$HOME/revealfleet` (falls back to `$HOME/revfleet` if that dir exists and the default does not) |
 | `REVEALUI_MCP_URL` | `https://api.revealui.com/api/mcp` |
 | `REVEALUI_MCP_TOKEN_VAULT_PATH` | `revealui/dev/mcp/cli-token` |
 | `REVEALUI_MCP_ENV_SKIP=1` | skip vault (debug) |

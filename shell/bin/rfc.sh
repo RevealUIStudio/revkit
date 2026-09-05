@@ -12,9 +12,9 @@
 # convenience. See docs/rfc-launcher.md for the full per-surface rationale.
 #
 # Usage:
-#   rfc                  # use $PWD if inside ~/revfleet/<repo>, else list repos
+#   rfc                  # use $PWD if inside the fleet (root or repo)
 #   rfc revealui         # cd product checkout + exec claude
-#   (fleet root ~/revfleet is not a product session — name a repo)
+#   rfc / rfc . at fleet root starts a fleet-root session (does not exit 2)
 #   rfc revealui --continue  # trailing args pass through to claude
 #   rfc mint             # interactive device-token mint → revvault
 #   rfc smoke            # auth/MCP health (no secret print)
@@ -32,7 +32,23 @@
 
 set -euo pipefail
 
-FLEET_ROOT="${REVFLEET_ROOT:-$HOME/revfleet}"
+_load_fleet_root_lib() {
+  local f
+  for f in \
+    "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" 2>/dev/null && pwd)/fleet-root.sh" \
+    "$HOME/revealfleet/revkit/shell/lib/fleet-root.sh" \
+    "$HOME/revfleet/revkit/shell/lib/fleet-root.sh"
+  do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      # shellcheck disable=SC1090
+      . "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+_load_fleet_root_lib || rfg_resolve_fleet_root() { printf '%s\n' "${REVFLEET_ROOT:-$HOME/revealfleet}"; }
+FLEET_ROOT="$(rfg_resolve_fleet_root)"
 
 die() { echo "rfc: $*" >&2; exit 1; }
 
@@ -57,6 +73,7 @@ esac
 _load_mcp_lib() {
   local candidates=(
     "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
+    "$HOME/revealfleet/revkit/shell/lib/revealui-mcp-env.sh"
     "$HOME/revfleet/revkit/shell/lib/revealui-mcp-env.sh"
     "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)/shell/lib/revealui-mcp-env.sh"
   )
@@ -125,24 +142,6 @@ list_repos() {
     [ -e "${d}.git" ] || continue
     d="${d%/}"; echo "  ${d##*/}"
   done
-}
-
-rfc_path_is_fleet_root() {
-  local fleet="${1:-}"
-  local path="${2:-}"
-  local fleet_real path_real
-  [ -n "$fleet" ] && [ -n "$path" ] || return 1
-  if [ -d "$fleet" ]; then
-    fleet_real="$(cd "$fleet" && pwd -P)"
-  else
-    return 1
-  fi
-  if [ -d "$path" ]; then
-    path_real="$(cd "$path" && pwd -P)"
-  else
-    return 1
-  fi
-  [ "$path_real" = "$fleet_real" ]
 }
 
 _resolve_helper() {
@@ -346,38 +345,28 @@ if [ -n "${repo:-}" ]; then
 fi
 
 if [ -z "${repo:-}" ]; then
-  case "$PWD/" in
-    "$FLEET_ROOT"/*)
-      target="$PWD"
-      ;;
-    *)
-      echo "rfc: name a fleet repo, e.g. 'rfc revealui'. Available:" >&2
-      list_repos >&2
-      exit 2
-      ;;
-  esac
+  if rfg_path_is_in_fleet "$FLEET_ROOT" "$PWD"; then
+    target="$PWD"
+  else
+    echo "rfc: name a fleet repo, e.g. 'rfc revealui'. Available:" >&2
+    list_repos >&2
+    exit 2
+  fi
 else
   case "$repo" in
     -*)
-      case "$PWD/" in
-        "$FLEET_ROOT"/*)
-          target="$PWD"
-          set -- "$repo" "$@"
-          ;;
-        *) die "name a fleet repo before claude flags, or cd into ~/revfleet/<repo>" ;;
-      esac
+      if rfg_path_is_in_fleet "$FLEET_ROOT" "$PWD"; then
+        target="$PWD"
+        set -- "$repo" "$@"
+      else
+        die "name a fleet repo before claude flags, or cd into the fleet root / a repo"
+      fi
       ;;
     *)
       target="$FLEET_ROOT/$repo"
       [ -d "$target" ] || die "no such fleet repo: '$repo' (under $FLEET_ROOT)"
       ;;
   esac
-fi
-
-if rfc_path_is_fleet_root "$FLEET_ROOT" "$target"; then
-  echo "rfc: fleet root is not a product session. Name a repo, e.g. 'rfc revealui'. Available:" >&2
-  list_repos >&2
-  exit 2
 fi
 
 claude_bin="$(resolve_claude)" || die "claude not found on PATH or in ~/.local/bin*"
