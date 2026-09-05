@@ -62,6 +62,22 @@ else
   fail "rfc . fleet-root: rc=$rc out=$out"
 fi
 
+cd "$TMP/fleet/revealui"
+out="$(bash "$RFC" . 2>&1)" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [[ "$out" == *"CLAUDE_STUB cwd="*"revealui"* ]]; then
+  pass "rfc . in product stays in product"
+else
+  fail "rfc . product: rc=$rc out=$out"
+fi
+
+cd "$TMP/fleet"
+out="$(bash "$RFC" .. 2>&1)" && rc=0 || rc=$?
+if [ "$rc" -ne 0 ] && [[ "$out" == *"single fleet checkout"* ]]; then
+  pass "rfc .. is rejected"
+else
+  fail "rfc .. : rc=$rc out=$out"
+fi
+
 echo "--- Product launch ---"
 cd "$TMP/fleet/revealui"
 out="$(bash "$RFC" 2>&1)" && rc=0 || rc=$?

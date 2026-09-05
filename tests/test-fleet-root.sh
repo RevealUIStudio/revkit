@@ -62,5 +62,66 @@ else
   pass "parent of fleet is outside"
 fi
 
+unset RFG_WT_ROOT
+export REVFLEET_ROOT="$TMP/fleet"
+got="$(rfg_wt_root)"
+if [ "$got" = "$TMP/fleet/.wt" ]; then
+  pass "wt root follows resolved fleet"
+else
+  fail "wt root: got $got"
+fi
+export RFG_WT_ROOT="$TMP/custom-wt"
+got="$(rfg_wt_root)"
+if [ "$got" = "$TMP/custom-wt" ]; then
+  pass "RFG_WT_ROOT override wins"
+else
+  fail "wt override: got $got"
+fi
+unset RFG_WT_ROOT
+
+mkdir -p "$TMP/fleet/.jv"
+rfg_resolve_launch_target "$TMP/fleet" "" "$TMP/fleet" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$TMP/fleet" ]; then
+  pass "empty arg at fleet root → fleet root"
+else
+  fail "empty at root: rc=$rc target=$RFG_LAUNCH_TARGET"
+fi
+rfg_resolve_launch_target "$TMP/fleet" "." "$TMP/fleet/revealui" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$TMP/fleet/revealui" ]; then
+  pass ". in product → PWD (not fleet root)"
+else
+  fail ". in product: rc=$rc target=$RFG_LAUNCH_TARGET"
+fi
+rfg_resolve_launch_target "$TMP/fleet" ".jv" "$TMP/fleet" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$TMP/fleet/.jv" ]; then
+  pass "dotted checkout .jv is a named repo"
+else
+  fail ".jv: rc=$rc target=$RFG_LAUNCH_TARGET"
+fi
+rfg_resolve_launch_target "$TMP/fleet" ".." "$TMP/fleet" && rc=0 || rc=$?
+if [ "$rc" -eq 1 ]; then
+  pass ".. is rejected"
+else
+  fail ".. should be rc=1, got $rc target=$RFG_LAUNCH_TARGET"
+fi
+rfg_resolve_launch_target "$TMP/fleet" "../revealui" "$TMP/fleet" && rc=0 || rc=$?
+if [ "$rc" -eq 1 ]; then
+  pass "path with slash is rejected"
+else
+  fail "slash: rc=$rc target=$RFG_LAUNCH_TARGET"
+fi
+rfg_resolve_launch_target "$TMP/fleet" "revealui" "$TMP/fleet" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$TMP/fleet/revealui" ]; then
+  pass "named repo still resolves under fleet"
+else
+  fail "revealui: rc=$rc target=$RFG_LAUNCH_TARGET"
+fi
+rfg_resolve_launch_target "$TMP/fleet" "" "$TMP" && rc=0 || rc=$?
+if [ "$rc" -eq 2 ]; then
+  pass "outside fleet with no args → list-repos"
+else
+  fail "outside: rc=$rc"
+fi
+
 echo "--- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]
