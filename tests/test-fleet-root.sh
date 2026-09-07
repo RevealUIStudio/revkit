@@ -18,7 +18,7 @@ mkdir -p "$HOME"
 
 echo "=== test-fleet-root.sh ==="
 
-unset REVFLEET_ROOT
+unset REVEALFLEET_ROOT REVFLEET_ROOT
 got="$(rfg_resolve_fleet_root)"
 if [ "$got" = "$HOME/revealfleet" ]; then
   pass "unset + neither dir → \$HOME/revealfleet"
@@ -43,13 +43,31 @@ else
   fail "revealfleet present: got $got"
 fi
 
-export REVFLEET_ROOT="$TMP/explicit"
+export REVEALFLEET_ROOT="$TMP/explicit"
 got="$(rfg_resolve_fleet_root)"
 if [ "$got" = "$TMP/explicit" ]; then
-  pass "REVFLEET_ROOT override wins"
+  pass "REVEALFLEET_ROOT override wins"
 else
   fail "override: got $got"
 fi
+unset REVEALFLEET_ROOT
+export REVFLEET_ROOT="$TMP/alias"
+got="$(rfg_resolve_fleet_root)"
+if [ "$got" = "$TMP/alias" ]; then
+  pass "REVFLEET_ROOT alias still works"
+else
+  fail "alias: got $got"
+fi
+export REVEALFLEET_ROOT="$TMP/canonical"
+export REVFLEET_ROOT="$TMP/alias"
+got="$(rfg_resolve_fleet_root)"
+if [ "$got" = "$TMP/canonical" ]; then
+  pass "REVEALFLEET_ROOT beats REVFLEET_ROOT"
+else
+  fail "canonical vs alias: got $got"
+fi
+unset REVEALFLEET_ROOT
+export REVFLEET_ROOT="$TMP/fleet"
 
 mkdir -p "$TMP/fleet/revealui"
 if rfg_path_is_in_fleet "$TMP/fleet" "$TMP/fleet" && rfg_path_is_in_fleet "$TMP/fleet" "$TMP/fleet/revealui"; then

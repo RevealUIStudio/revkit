@@ -1,9 +1,13 @@
 # shellcheck shell=bash
-# fleet-root.sh — resolve REVFLEET_ROOT. Default path is $HOME/revealfleet.
-# Explicit REVFLEET_ROOT always wins. The $HOME/revfleet fallback was dropped
-# after the owner mv (GAP-489).
+# fleet-root.sh — resolve the RevealFleet root. Default path is $HOME/revealfleet.
+# Canonical override is REVEALFLEET_ROOT. REVFLEET_ROOT is still accepted as an
+# alias. The $HOME/revfleet directory fallback was dropped after the owner mv.
 
 rfg_resolve_fleet_root() {
+  if [ -n "${REVEALFLEET_ROOT:-}" ]; then
+    printf '%s\n' "$REVEALFLEET_ROOT"
+    return 0
+  fi
   if [ -n "${REVFLEET_ROOT:-}" ]; then
     printf '%s\n' "$REVFLEET_ROOT"
     return 0

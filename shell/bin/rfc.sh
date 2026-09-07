@@ -25,7 +25,7 @@
 #                        # create ~/revealfleet/.wt/<label> from integration ref,
 #                        # bootstrap env, optional claim, optional claude
 #
-# Override fleet root: REVFLEET_ROOT
+# Override fleet root: REVEALFLEET_ROOT (REVFLEET_ROOT still accepted)
 # Skip MCP load: REVEALUI_MCP_ENV_SKIP=1
 # Strict MCP (die if token missing): RFC_MCP_STRICT=1
 # Force worktree base ref: RFG_WORKTREE_REF=test
@@ -48,7 +48,7 @@ _load_fleet_root_lib() {
   done
   return 1
 }
-_load_fleet_root_lib || rfg_resolve_fleet_root() { printf '%s\n' "${REVFLEET_ROOT:-$HOME/revealfleet}"; }
+_load_fleet_root_lib || rfg_resolve_fleet_root() { printf '%s\n' "${REVEALFLEET_ROOT:-${REVFLEET_ROOT:-$HOME/revealfleet}}"; }
 FLEET_ROOT="$(rfg_resolve_fleet_root)"
 
 die() { echo "rfc: $*" >&2; exit 1; }
@@ -69,7 +69,7 @@ case "$(uname -s 2>/dev/null)" in
   Linux | Darwin) : ;;
   *) die "must run in a POSIX shell (WSL, Linux, or macOS); not Git Bash/cmd" ;;
 esac
-[ -d "$FLEET_ROOT" ] || die "fleet root not found: $FLEET_ROOT (set REVFLEET_ROOT)"
+[ -d "$FLEET_ROOT" ] || die "fleet root not found: $FLEET_ROOT (set REVEALFLEET_ROOT)"
 
 _load_mcp_lib() {
   local candidates=(

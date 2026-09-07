@@ -5,11 +5,13 @@
 # Coordination: TRACKER free surfaces, fleet workboard, base origin/test, PR→test.
 #
 # Private planning tree paths are never written as a contiguous public-forbidden
-# literal. Override with REVFLEET_ROOT / REVFLEET_PLANNING / REVEALUI_TRACKER /
+# literal. Override with REVEALFLEET_ROOT / REVFLEET_PLANNING / REVEALUI_TRACKER /
 # REVEALUI_WORKBOARD when the default layout does not apply.
+# REVFLEET_ROOT remains an alias for REVEALFLEET_ROOT.
 
 # Fleet root (public path form is fine)
-: "${REVFLEET_ROOT:=$HOME/revealfleet}"
+: "${REVEALFLEET_ROOT:=${REVFLEET_ROOT:-$HOME/revealfleet}}"
+: "${REVFLEET_ROOT:=$REVEALFLEET_ROOT}"
 
 # Private planning checkout under the fleet root (basename built at runtime).
 __rv_planning_root() {
@@ -17,8 +19,8 @@ __rv_planning_root() {
     printf '%s\n' "$REVFLEET_PLANNING"
     return
   fi
-  # printf keeps the private dirname from appearing next to "revfleet/" in source
-  printf '%s/%s\n' "$REVFLEET_ROOT" ".$(printf '%s' 'jv')"
+  # printf keeps the private dirname from appearing next to "revealfleet/" in source
+  printf '%s/%s\n' "$REVEALFLEET_ROOT" ".$(printf '%s' 'jv')"
 }
 
 # Quick project navigation

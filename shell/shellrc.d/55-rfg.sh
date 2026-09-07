@@ -18,7 +18,7 @@ rfg() {
   elif [ -x "$HOME/revealfleet/revkit/shell/bin/rfg.sh" ]; then
     impl="$HOME/revealfleet/revkit/shell/bin/rfg.sh"
   else
-    echo "rfg: rfg.sh not installed — re-run revkit bootstrap.sh or: ln -s \$REVFLEET_ROOT/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh" >&2
+    echo "rfg: rfg.sh not installed — re-run revkit bootstrap.sh or: ln -s \$REVEALFLEET_ROOT/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh" >&2
     return 1
   fi
   "$impl" "$@"
@@ -32,7 +32,7 @@ alias grok-rv='rfg'
 if [ -n "${BASH_VERSION:-}" ] && command -v complete >/dev/null 2>&1; then
   _rfg_complete() {
     [ "${COMP_CWORD:-0}" -eq 1 ] || return 0
-    local root="${REVFLEET_ROOT:-$HOME/revealfleet}"
+    local root="${REVEALFLEET_ROOT:-${REVFLEET_ROOT:-$HOME/revealfleet}}"
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local d repos=(mint smoke env bootstrap claim open help)
     for d in "$root"/*/ "$root"/.*/; do
