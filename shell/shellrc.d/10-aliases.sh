@@ -9,9 +9,9 @@
 # REVEALUI_WORKBOARD when the default layout does not apply.
 # REVFLEET_ROOT remains an alias for REVEALFLEET_ROOT.
 
-# Fleet root (public path form is fine)
-: "${REVEALFLEET_ROOT:=${REVFLEET_ROOT:-$HOME/revealfleet}}"
-: "${REVFLEET_ROOT:=$REVEALFLEET_ROOT}"
+# Fleet root comes from the rc pin / install pin. Do not guess $HOME.
+: "${REVEALFLEET_ROOT:=${REVFLEET_ROOT:-}}"
+: "${REVFLEET_ROOT:=${REVEALFLEET_ROOT:-}}"
 
 # Private planning checkout under the fleet root (basename built at runtime).
 __rv_planning_root() {
@@ -19,6 +19,7 @@ __rv_planning_root() {
     printf '%s\n' "$REVFLEET_PLANNING"
     return
   fi
+  [ -n "${REVEALFLEET_ROOT:-}" ] || return 1
   # printf keeps the private dirname from appearing next to "revealfleet/" in source
   printf '%s/%s\n' "$REVEALFLEET_ROOT" ".$(printf '%s' 'jv')"
 }

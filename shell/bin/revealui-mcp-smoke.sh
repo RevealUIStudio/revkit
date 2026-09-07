@@ -12,10 +12,9 @@ _load_mcp_lib() {
   local here candidates f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   candidates=(
-    "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
     "$here/../lib/revealui-mcp-env.sh"
     "$(dirname "$here")/lib/revkit/revealui-mcp-env.sh"
-    "$HOME/.local/lib/revkit/revealui-mcp-env.sh"
+    "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
   )
   for f in "${candidates[@]}"; do
     if [ -n "$f" ] && [ -f "$f" ]; then

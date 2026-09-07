@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-fleet-root.sh — default $HOME/revealfleet (no $HOME/revfleet fallback).
+# test-fleet-root.sh — pin / infer / explicit env. Never $HOME as a code root.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,30 +18,50 @@ mkdir -p "$HOME"
 
 echo "=== test-fleet-root.sh ==="
 
-unset REVEALFLEET_ROOT REVFLEET_ROOT
-got="$(rfg_resolve_fleet_root)"
+unset REVEALFLEET_ROOT REVFLEET_ROOT REVEALUI_ROOT
+export HOME="$TMP/evil"
+mkdir -p "$HOME/revealfleet/revkit/shell/lib"
+got="$(rfg_resolve_fleet_root)" && true || got="UNRESOLVED"
 if [ "$got" = "$HOME/revealfleet" ]; then
-  pass "unset + neither dir → \$HOME/revealfleet"
+  fail "HOME hijack must not become fleet root (got $got)"
 else
-  fail "expected \$HOME/revealfleet, got $got"
+  pass "HOME hijack does not win (got $got)"
+fi
+export HOME="$TMP/home"
+
+mkdir -p "$TMP/fakefleet/revkit/shell/lib"
+cp "$ROOT/shell/lib/fleet-root.sh" "$TMP/fakefleet/revkit/shell/lib/fleet-root.sh"
+got="$(rfg_infer_fleet_from_path "$TMP/fakefleet/revkit")"
+if [ "$got" = "$TMP/fakefleet" ]; then
+  pass "infer from revkit checkout → parent fleet"
+else
+  fail "infer checkout: got $got"
+fi
+mkdir -p "$TMP/wtfleet/.wt/label/shell/lib"
+got="$(rfg_infer_fleet_from_path "$TMP/wtfleet/.wt/label")"
+if [ "$got" = "$TMP/wtfleet" ]; then
+  pass "infer from .wt worktree → fleet"
+else
+  fail "infer worktree: got $got"
 fi
 
-# Leftover old folder name must not win after the fallback drop.
-mkdir -p "$HOME/revfleet"
-got="$(rfg_resolve_fleet_root)"
-if [ "$got" = "$HOME/revealfleet" ]; then
-  pass "unset + only leftover revfleet dir → still \$HOME/revealfleet"
+mkdir -p "$TMP/pfx/lib/revkit"
+cp "$ROOT/shell/lib/fleet-root.sh" "$TMP/pfx/lib/revkit/fleet-root.sh"
+printf 'REVEALFLEET_ROOT=%s\n' "$TMP/pinned-fleet" >"$TMP/pfx/lib/revkit/pin.env"
+pin_got="$(
+  unset REVEALFLEET_ROOT REVFLEET_ROOT REVEALUI_ROOT
+  # shellcheck disable=SC1091
+  . "$TMP/pfx/lib/revkit/fleet-root.sh"
+  rfg_resolve_fleet_root
+)"
+if [ "$pin_got" = "$TMP/pinned-fleet" ]; then
+  pass "matched-prefix pin.env wins when not in-tree"
 else
-  fail "stale revfleet dir must not win: got $got"
+  fail "pin.env: got $pin_got"
 fi
-
-mkdir -p "$HOME/revealfleet"
-got="$(rfg_resolve_fleet_root)"
-if [ "$got" = "$HOME/revealfleet" ]; then
-  pass "unset + revealfleet dir present → \$HOME/revealfleet"
-else
-  fail "revealfleet present: got $got"
-fi
+# Re-source the in-tree lib after the pin subshell.
+# shellcheck disable=SC1091
+. "$ROOT/shell/lib/fleet-root.sh"
 
 export REVEALFLEET_ROOT="$TMP/explicit"
 got="$(rfg_resolve_fleet_root)"

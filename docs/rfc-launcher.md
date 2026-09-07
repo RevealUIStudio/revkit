@@ -58,7 +58,7 @@ Use `rfc <repo>` or `rfg <repo>`, not a multiplexer.
 
 Tab-completion over `~/revealfleet/*` plus `mint|smoke|env|bootstrap|claim|open|help`
 is provided in managed interactive shells. Override the fleet root with
-`REVEALFLEET_ROOT`. Worktree ports and claims share `shell/lib/worktree-env.sh`
+`REVEALFLEET_ROOT` (bootstrap pin; `REVFLEET_ROOT` alias). Worktree ports and claims share `shell/lib/worktree-env.sh`
 with `rfg` (same `.env.worktree` and `~/.local/share/revealui/claims/`).
 
 `rfc env` never prints `REVEALUI_MCP_TOKEN`. Claude can launch without a

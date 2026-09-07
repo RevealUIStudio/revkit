@@ -138,13 +138,13 @@ Future Level 2 (`GrokAdapter` in `@revealui/harnesses`) extends the same data pl
 
 | Variable | Default |
 |----------|---------|
-| `REVEALFLEET_ROOT` | `$HOME/revealfleet` (`REVFLEET_ROOT` still accepted as an alias) |
+| `REVEALFLEET_ROOT` | bootstrap pin (absolute). `REVFLEET_ROOT` alias still accepted. Never `$HOME/revealfleet` at runtime. |
 | `REVEALUI_MCP_URL` | `https://api.revealui.com/api/mcp` |
 | `REVEALUI_MCP_TOKEN_VAULT_PATH` | `revealui/dev/mcp/cli-token` |
 | `REVEALUI_MCP_ENV_SKIP=1` | skip vault (debug) |
 | `RFG_WORKTREE_REF` | auto: `test` if `origin/test` else `main` |
 | `RFG_WORKTREE_REF_SKIP=1` | do not inject `--ref` on `--worktree` |
-| `RFG_WT_ROOT` | `$REVEALFLEET_ROOT/.wt` (`$HOME/revealfleet/.wt`) |
+| `RFG_WT_ROOT` | `$REVEALFLEET_ROOT/.wt` |
 | `REVEALUI_CLAIMS_DIR` | `$HOME/.local/share/revealui/claims` |
 | `REVEALUI_WT_ENV_DIR` | `$HOME/.local/share/revealui/worktree-env` |
 | `RFG_CLAIM_FORCE=1` | steal an active claim |

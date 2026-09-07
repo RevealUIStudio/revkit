@@ -33,7 +33,8 @@ if [ -n "${BASH_VERSION:-}" ] && command -v complete >/dev/null 2>&1; then
   _rfc_complete() {
     # Only complete the first argument (repo name or rfc subcommand).
     [ "${COMP_CWORD:-0}" -eq 1 ] || return 0
-    local root="${REVEALFLEET_ROOT:-${REVFLEET_ROOT:-$HOME/revealfleet}}"
+    local root="${REVEALFLEET_ROOT:-${REVFLEET_ROOT:-}}"
+    [ -n "$root" ] || return 0
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local d repos=()
     for d in "$root"/*/ "$root"/.*/; do
