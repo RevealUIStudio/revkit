@@ -16,7 +16,6 @@ _load_mcp_lib() {
     "$here/../lib/revealui-mcp-env.sh"
     "$(dirname "$here")/lib/revkit/revealui-mcp-env.sh"
     "$HOME/.local/lib/revkit/revealui-mcp-env.sh"
-    "$HOME/revfleet/revkit/shell/lib/revealui-mcp-env.sh"
   )
   for f in "${candidates[@]}"; do
     if [ -n "$f" ] && [ -f "$f" ]; then

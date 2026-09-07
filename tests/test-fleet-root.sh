@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-fleet-root.sh — default $HOME/revealfleet with $HOME/revfleet fallback.
+# test-fleet-root.sh — default $HOME/revealfleet (no $HOME/revfleet fallback).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,20 +26,21 @@ else
   fail "expected \$HOME/revealfleet, got $got"
 fi
 
+# Leftover old folder name must not win after the fallback drop.
 mkdir -p "$HOME/revfleet"
 got="$(rfg_resolve_fleet_root)"
-if [ "$got" = "$HOME/revfleet" ]; then
-  pass "unset + only revfleet → fallback"
+if [ "$got" = "$HOME/revealfleet" ]; then
+  pass "unset + only leftover revfleet dir → still \$HOME/revealfleet"
 else
-  fail "fallback: got $got"
+  fail "stale revfleet dir must not win: got $got"
 fi
 
 mkdir -p "$HOME/revealfleet"
 got="$(rfg_resolve_fleet_root)"
 if [ "$got" = "$HOME/revealfleet" ]; then
-  pass "unset + both dirs → revealfleet wins"
+  pass "unset + revealfleet dir present → \$HOME/revealfleet"
 else
-  fail "both dirs: got $got"
+  fail "revealfleet present: got $got"
 fi
 
 export REVFLEET_ROOT="$TMP/explicit"

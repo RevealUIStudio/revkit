@@ -16,8 +16,6 @@ if [ -n "${REVFLEET_ROOT:-}" ] && [ -f "$REVFLEET_ROOT/.jv/revcon-profiles/activ
   _rv_activate="$REVFLEET_ROOT/.jv/revcon-profiles/activate.sh"
 elif [ -f "$HOME/revealfleet/.jv/revcon-profiles/activate.sh" ]; then
   _rv_activate="$HOME/revealfleet/.jv/revcon-profiles/activate.sh"
-elif [ -f "$HOME/revfleet/.jv/revcon-profiles/activate.sh" ]; then
-  _rv_activate="$HOME/revfleet/.jv/revcon-profiles/activate.sh"
 fi
 if [ -n "$_rv_activate" ]; then
   # shellcheck disable=SC1090

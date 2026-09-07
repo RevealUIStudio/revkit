@@ -22,7 +22,7 @@
 #   rfc bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
 #   rfc claim …          # claim acquire|release|list|check|sweep
 #   rfc open <repo> <label> [--claim surface] [--no-agent]
-#                        # create ~/revfleet/.wt/<label> from integration ref,
+#                        # create ~/revealfleet/.wt/<label> from integration ref,
 #                        # bootstrap env, optional claim, optional claude
 #
 # Override fleet root: REVFLEET_ROOT
@@ -38,8 +38,7 @@ _load_fleet_root_lib() {
   for f in \
     "$here/../lib/fleet-root.sh" \
     "$(dirname "$here")/lib/revkit/fleet-root.sh" \
-    "$HOME/revealfleet/revkit/shell/lib/fleet-root.sh" \
-    "$HOME/revfleet/revkit/shell/lib/fleet-root.sh"
+    "$HOME/revealfleet/revkit/shell/lib/fleet-root.sh"
   do
     if [ -n "$f" ] && [ -f "$f" ]; then
       # shellcheck disable=SC1090
@@ -76,7 +75,6 @@ _load_mcp_lib() {
   local candidates=(
     "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
     "$HOME/revealfleet/revkit/shell/lib/revealui-mcp-env.sh"
-    "$HOME/revfleet/revkit/shell/lib/revealui-mcp-env.sh"
     "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)/shell/lib/revealui-mcp-env.sh"
   )
   local f
@@ -155,7 +153,6 @@ _resolve_helper() {
     "/usr/local/bin/$name" \
     "$HOME/.local/bin/$name" \
     "$HOME/revealfleet/revkit/shell/bin/$name" \
-    "$HOME/revfleet/revkit/shell/bin/$name" \
     "${REVEALUI_ROOT:-}/shell/bin/$name"
   do
     [ -n "$c" ] && [ -x "$c" ] && { echo "$c"; return 0; }
@@ -170,7 +167,6 @@ _load_worktree_env_lib() {
     "$(dirname "$here")/lib/revkit/worktree-env.sh" \
     "$here/../lib/worktree-env.sh" \
     "$HOME/revealfleet/revkit/shell/lib/worktree-env.sh" \
-    "$HOME/revfleet/revkit/shell/lib/worktree-env.sh" \
     "${REVEALUI_ROOT:-}/shell/lib/worktree-env.sh" \
     "$HOME/.local/lib/revkit/worktree-env.sh"
   do

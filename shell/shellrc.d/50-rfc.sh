@@ -4,7 +4,7 @@
 # The robust implementation lives at /usr/local/bin/rfc.sh (deployed by
 # bootstrap.sh). This file — auto-sourced in managed interactive
 # shells via the ~/.bashrc hook — just provides the short `rfc` name and
-# tab-completion over ~/revfleet/* repos. See docs/rfc-launcher.md.
+# tab-completion over ~/revealfleet/* repos. See docs/rfc-launcher.md.
 
 rfc() {
   local impl
@@ -27,19 +27,13 @@ rfc() {
 alias rf='rfc'
 alias rfclaude='rfc'
 
-# Bash tab-completion over ~/revfleet/* — bash only. zsh has its own completion
+# Bash tab-completion over ~/revealfleet/* — bash only. zsh has its own completion
 # system and lacks complete/compgen/mapfile, so this block no-ops there.
 if [ -n "${BASH_VERSION:-}" ] && command -v complete >/dev/null 2>&1; then
   _rfc_complete() {
     # Only complete the first argument (repo name or rfc subcommand).
     [ "${COMP_CWORD:-0}" -eq 1 ] || return 0
-    local root="${REVFLEET_ROOT:-}"
-    if [ -z "$root" ]; then
-      if [ -d "$HOME/revealfleet" ]; then root="$HOME/revealfleet"
-      elif [ -d "$HOME/revfleet" ]; then root="$HOME/revfleet"
-      else root="$HOME/revealfleet"
-      fi
-    fi
+    local root="${REVFLEET_ROOT:-$HOME/revealfleet}"
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local d repos=()
     for d in "$root"/*/ "$root"/.*/; do

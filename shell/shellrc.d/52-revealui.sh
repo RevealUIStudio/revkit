@@ -17,8 +17,6 @@ revealui() {
     impl="$HOME/.local/bin/revealui"
   elif [ -x "$HOME/revealfleet/revkit/shell/bin/revealui.sh" ]; then
     impl="$HOME/revealfleet/revkit/shell/bin/revealui.sh"
-  elif [ -x "$HOME/revfleet/revkit/shell/bin/revealui.sh" ]; then
-    impl="$HOME/revfleet/revkit/shell/bin/revealui.sh"
   else
     echo "revealui: retired — use rfg <repo> (Grok) or rfc <repo> (Claude)" >&2
     return 2

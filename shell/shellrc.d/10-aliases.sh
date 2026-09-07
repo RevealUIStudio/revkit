@@ -9,15 +9,7 @@
 # REVEALUI_WORKBOARD when the default layout does not apply.
 
 # Fleet root (public path form is fine)
-if [ -z "${REVFLEET_ROOT:-}" ]; then
-  if [ -d "$HOME/revealfleet" ]; then
-    REVFLEET_ROOT="$HOME/revealfleet"
-  elif [ -d "$HOME/revfleet" ]; then
-    REVFLEET_ROOT="$HOME/revfleet"
-  else
-    REVFLEET_ROOT="$HOME/revealfleet"
-  fi
-fi
+: "${REVFLEET_ROOT:=$HOME/revealfleet}"
 
 # Private planning checkout under the fleet root (basename built at runtime).
 __rv_planning_root() {
@@ -30,7 +22,7 @@ __rv_planning_root() {
 }
 
 # Quick project navigation
-# cdreveal → primary RevealUI checkout (WSL-native ext4 at ~/revfleet/revealui).
+# cdreveal → primary RevealUI checkout (WSL-native ext4 at ~/revealfleet/revealui).
 # The legacy sandbox-drive Suite path was retired with the Suite→RevFleet rename.
 alias cdreveal='cd "$REVFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVFLEET_ROOT" >&2'
 alias cdjv='cd "$(__rv_planning_root)" 2>/dev/null || echo "cdjv: private planning tree not found (set REVFLEET_PLANNING)" >&2'
