@@ -17,10 +17,10 @@
 #   rfg bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
 #   rfg claim …          # claim acquire|release|list|check|sweep
 #   rfg open <repo> <label> [--claim surface] [--no-agent]
-#                        # create ~/revfleet/.wt/<label> from integration ref,
+#                        # create ~/revealfleet/.wt/<label> from integration ref,
 #                        # bootstrap env, optional claim, optional grok
 #
-# Override fleet root: REVFLEET_ROOT
+# Override fleet root: REVEALFLEET_ROOT (REVFLEET_ROOT still accepted)
 # Skip MCP load: REVEALUI_MCP_ENV_SKIP=1
 # Non-strict (launch even if token missing): REVEALUI_MCP_ENV_STRICT=0
 # Skip worktree-ref inject: RFG_WORKTREE_REF_SKIP=1
@@ -35,8 +35,7 @@ _load_fleet_root_lib() {
   for f in \
     "$here/../lib/fleet-root.sh" \
     "$(dirname "$here")/lib/revkit/fleet-root.sh" \
-    "$HOME/revealfleet/revkit/shell/lib/fleet-root.sh" \
-    "$HOME/revfleet/revkit/shell/lib/fleet-root.sh"
+    "${REVEALUI_ROOT:-}/shell/lib/fleet-root.sh"
   do
     if [ -n "$f" ] && [ -f "$f" ]; then
       # shellcheck disable=SC1090
@@ -46,8 +45,12 @@ _load_fleet_root_lib() {
   done
   return 1
 }
-_load_fleet_root_lib || rfg_resolve_fleet_root() { printf '%s\n' "${REVFLEET_ROOT:-$HOME/revealfleet}"; }
-FLEET_ROOT="$(rfg_resolve_fleet_root)"
+_load_fleet_root_lib || rfg_resolve_fleet_root() {
+  if [ -n "${REVEALFLEET_ROOT:-}" ]; then printf '%s\n' "$REVEALFLEET_ROOT"; return 0; fi
+  if [ -n "${REVFLEET_ROOT:-}" ]; then printf '%s\n' "$REVFLEET_ROOT"; return 0; fi
+  return 1
+}
+FLEET_ROOT="$(rfg_resolve_fleet_root)" || true
 
 die() { echo "rfg: $*" >&2; exit 1; }
 
@@ -68,14 +71,14 @@ case "$(uname -s 2>/dev/null)" in
   *) die "must run in a POSIX shell (WSL, Linux, or macOS)" ;;
 esac
 
-# --- MCP env load (self-contained: bootstrap copies this file alone) ----------
-# Prefer shared lib when running from a revkit checkout; else use embedded.
+# MCP env: in-tree lib, matched install prefix, then managed pin. Never $HOME/revealfleet.
 _load_mcp_lib() {
+  local here
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   local candidates=(
+    "$here/../lib/revealui-mcp-env.sh"
+    "$(dirname "$here")/lib/revkit/revealui-mcp-env.sh"
     "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
-    "$HOME/revealfleet/revkit/shell/lib/revealui-mcp-env.sh"
-    "$HOME/revfleet/revkit/shell/lib/revealui-mcp-env.sh"
-    "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)/shell/lib/revealui-mcp-env.sh"
   )
   local f
   for f in "${candidates[@]}"; do
@@ -264,8 +267,6 @@ _resolve_helper() {
     "$d/$name" \
     "/usr/local/bin/$name" \
     "$HOME/.local/bin/$name" \
-    "$HOME/revealfleet/revkit/shell/bin/$name" \
-    "$HOME/revfleet/revkit/shell/bin/$name" \
     "${REVEALUI_ROOT:-}/shell/bin/$name"
   do
     [ -n "$c" ] && [ -x "$c" ] && { echo "$c"; return 0; }
@@ -277,12 +278,9 @@ _load_grok_attach_lib() {
   local here f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   for f in \
-    "$(dirname "$here")/lib/revkit/grok-attach.sh" \
     "$here/../lib/grok-attach.sh" \
-    "$HOME/revealfleet/revkit/shell/lib/grok-attach.sh" \
-    "$HOME/revfleet/revkit/shell/lib/grok-attach.sh" \
-    "${REVEALUI_ROOT:-}/shell/lib/grok-attach.sh" \
-    "$HOME/.local/lib/revkit/grok-attach.sh"
+    "$(dirname "$here")/lib/revkit/grok-attach.sh" \
+    "${REVEALUI_ROOT:-}/shell/lib/grok-attach.sh"
   do
     if [ -n "$f" ] && [ -f "$f" ]; then
       # shellcheck disable=SC1090
@@ -294,17 +292,13 @@ _load_grok_attach_lib() {
 }
 
 _load_worktree_env_lib() {
-  local here d candidates f
+  local here candidates f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   candidates=(
     # Installed layout: /usr/local/bin/rfg.sh → /usr/local/lib/revkit/worktree-env.sh
-    "$(dirname "$here")/lib/revkit/worktree-env.sh"
-    # Source layout: shell/bin/rfg.sh → shell/lib/worktree-env.sh
     "$here/../lib/worktree-env.sh"
-    "$HOME/revealfleet/revkit/shell/lib/worktree-env.sh"
-    "$HOME/revfleet/revkit/shell/lib/worktree-env.sh"
+    "$(dirname "$here")/lib/revkit/worktree-env.sh"
     "${REVEALUI_ROOT:-}/shell/lib/worktree-env.sh"
-    "$HOME/.local/lib/revkit/worktree-env.sh"
   )
   for f in "${candidates[@]}"; do
     if [ -n "$f" ] && [ -f "$f" ]; then
@@ -317,6 +311,12 @@ _load_worktree_env_lib() {
 }
 
 cmd="${1:-}"
+case "$cmd" in
+  mint|smoke|env|help|--help|-h) ;;
+  *)
+    [ -n "${FLEET_ROOT:-}" ] || die "fleet root not found (set REVEALFLEET_ROOT or re-run bootstrap)"
+    ;;
+esac
 case "$cmd" in
   mint)
     shift || true

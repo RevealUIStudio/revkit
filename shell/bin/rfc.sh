@@ -22,10 +22,10 @@
 #   rfc bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
 #   rfc claim …          # claim acquire|release|list|check|sweep
 #   rfc open <repo> <label> [--claim surface] [--no-agent]
-#                        # create ~/revfleet/.wt/<label> from integration ref,
+#                        # create ~/revealfleet/.wt/<label> from integration ref,
 #                        # bootstrap env, optional claim, optional claude
 #
-# Override fleet root: REVFLEET_ROOT
+# Override fleet root: REVEALFLEET_ROOT (REVFLEET_ROOT still accepted)
 # Skip MCP load: REVEALUI_MCP_ENV_SKIP=1
 # Strict MCP (die if token missing): RFC_MCP_STRICT=1
 # Force worktree base ref: RFG_WORKTREE_REF=test
@@ -38,8 +38,7 @@ _load_fleet_root_lib() {
   for f in \
     "$here/../lib/fleet-root.sh" \
     "$(dirname "$here")/lib/revkit/fleet-root.sh" \
-    "$HOME/revealfleet/revkit/shell/lib/fleet-root.sh" \
-    "$HOME/revfleet/revkit/shell/lib/fleet-root.sh"
+    "${REVEALUI_ROOT:-}/shell/lib/fleet-root.sh"
   do
     if [ -n "$f" ] && [ -f "$f" ]; then
       # shellcheck disable=SC1090
@@ -49,8 +48,12 @@ _load_fleet_root_lib() {
   done
   return 1
 }
-_load_fleet_root_lib || rfg_resolve_fleet_root() { printf '%s\n' "${REVFLEET_ROOT:-$HOME/revealfleet}"; }
-FLEET_ROOT="$(rfg_resolve_fleet_root)"
+_load_fleet_root_lib || rfg_resolve_fleet_root() {
+  if [ -n "${REVEALFLEET_ROOT:-}" ]; then printf '%s\n' "$REVEALFLEET_ROOT"; return 0; fi
+  if [ -n "${REVFLEET_ROOT:-}" ]; then printf '%s\n' "$REVFLEET_ROOT"; return 0; fi
+  return 1
+}
+FLEET_ROOT="$(rfg_resolve_fleet_root)" || true
 
 die() { echo "rfc: $*" >&2; exit 1; }
 
@@ -70,14 +73,15 @@ case "$(uname -s 2>/dev/null)" in
   Linux | Darwin) : ;;
   *) die "must run in a POSIX shell (WSL, Linux, or macOS); not Git Bash/cmd" ;;
 esac
-[ -d "$FLEET_ROOT" ] || die "fleet root not found: $FLEET_ROOT (set REVFLEET_ROOT)"
+[ -n "${FLEET_ROOT:-}" ] && [ -d "$FLEET_ROOT" ] || die "fleet root not found (set REVEALFLEET_ROOT or re-run bootstrap)"
 
 _load_mcp_lib() {
+  local here f
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   local candidates=(
+    "$here/../lib/revealui-mcp-env.sh"
+    "$(dirname "$here")/lib/revkit/revealui-mcp-env.sh"
     "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
-    "$HOME/revealfleet/revkit/shell/lib/revealui-mcp-env.sh"
-    "$HOME/revfleet/revkit/shell/lib/revealui-mcp-env.sh"
-    "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)/shell/lib/revealui-mcp-env.sh"
   )
   local f
   for f in "${candidates[@]}"; do
@@ -154,8 +158,6 @@ _resolve_helper() {
     "$d/$name" \
     "/usr/local/bin/$name" \
     "$HOME/.local/bin/$name" \
-    "$HOME/revealfleet/revkit/shell/bin/$name" \
-    "$HOME/revfleet/revkit/shell/bin/$name" \
     "${REVEALUI_ROOT:-}/shell/bin/$name"
   do
     [ -n "$c" ] && [ -x "$c" ] && { echo "$c"; return 0; }
@@ -167,12 +169,9 @@ _load_worktree_env_lib() {
   local here f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   for f in \
-    "$(dirname "$here")/lib/revkit/worktree-env.sh" \
     "$here/../lib/worktree-env.sh" \
-    "$HOME/revealfleet/revkit/shell/lib/worktree-env.sh" \
-    "$HOME/revfleet/revkit/shell/lib/worktree-env.sh" \
-    "${REVEALUI_ROOT:-}/shell/lib/worktree-env.sh" \
-    "$HOME/.local/lib/revkit/worktree-env.sh"
+    "$(dirname "$here")/lib/revkit/worktree-env.sh" \
+    "${REVEALUI_ROOT:-}/shell/lib/worktree-env.sh"
   do
     if [ -n "$f" ] && [ -f "$f" ]; then
       # shellcheck disable=SC1090

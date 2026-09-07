@@ -88,7 +88,7 @@ MIT
 ## RevFleet Claude launcher (`rfc`)
 
 `rfc <repo>` starts a Claude Code session whose process runs **inside WSL**,
-rooted in a `~/revfleet/*` repo — the configuration that makes a secure,
+rooted in a `~/revealfleet/*` repo — the configuration that makes a secure,
 prompt-free session possible (commands stay native instead of being wrapped in
 `wsl.exe`, so they allowlist by real prefix and the deny-list hooks fire). On
 macOS and native Linux `rfc` runs the session locally in the target repo.

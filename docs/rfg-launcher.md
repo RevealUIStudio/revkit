@@ -60,12 +60,12 @@ runs the same tool across the fleet.
 
 # Rift-inspired isolation (runtime ports + claim registry)
 rfg open revealui ves-fo-managed --claim marketing/ves-fo-managed
-# → git worktree at ~/revfleet/.wt/ves-fo-managed from origin/test
+# → git worktree at ~/revealfleet/.wt/ves-fo-managed from origin/test
 # → writes .env.worktree (hash ports 3000–9999 + multi-service offsets)
 # → PID/TTL claim under ~/.local/share/revealui/claims/
 # → exec grok with MCP env (use --no-agent to stop after bootstrap)
 
-rfg bootstrap ~/revfleet/.wt/ves-fo-managed   # ports only
+rfg bootstrap ~/revealfleet/.wt/ves-fo-managed   # ports only
 rfg claim acquire revealui marketing/ves-fo-managed
 rfg claim list
 rfg claim release revealui marketing/ves-fo-managed
@@ -110,18 +110,18 @@ Claims coordinate agents; they do **not** replace modular product code (e.g. rev
 Bootstrap deploys all `shell/bin/*.sh` (including `rfg` helpers):
 
 ```bash
-cd ~/revfleet/revkit && bash bootstrap.sh
+cd ~/revealfleet/revkit && bash bootstrap.sh
 source ~/.bashrc
 ```
 
 Or symlink until bootstrap:
 
 ```bash
-ln -sfn ~/revfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh
-ln -sfn ~/revfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg
-ln -sfn ~/revfleet/revkit/shell/bin/revealui-mcp-mint.sh ~/.local/bin/revealui-mcp-mint.sh
-ln -sfn ~/revfleet/revkit/shell/bin/revealui-mcp-smoke.sh ~/.local/bin/revealui-mcp-smoke.sh
-source ~/revfleet/revkit/shell/shellrc.d/55-rfg.sh
+ln -sfn ~/revealfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg.sh
+ln -sfn ~/revealfleet/revkit/shell/bin/rfg.sh ~/.local/bin/rfg
+ln -sfn ~/revealfleet/revkit/shell/bin/revealui-mcp-mint.sh ~/.local/bin/revealui-mcp-mint.sh
+ln -sfn ~/revealfleet/revkit/shell/bin/revealui-mcp-smoke.sh ~/.local/bin/revealui-mcp-smoke.sh
+source ~/revealfleet/revkit/shell/shellrc.d/55-rfg.sh
 ```
 
 ## RevCon / RevSkills
@@ -138,13 +138,13 @@ Future Level 2 (`GrokAdapter` in `@revealui/harnesses`) extends the same data pl
 
 | Variable | Default |
 |----------|---------|
-| `REVFLEET_ROOT` | `$HOME/revealfleet` (falls back to `$HOME/revfleet` if that dir exists and the default does not) |
+| `REVEALFLEET_ROOT` | bootstrap pin (absolute). `REVFLEET_ROOT` alias still accepted. Never `$HOME/revealfleet` at runtime. |
 | `REVEALUI_MCP_URL` | `https://api.revealui.com/api/mcp` |
 | `REVEALUI_MCP_TOKEN_VAULT_PATH` | `revealui/dev/mcp/cli-token` |
 | `REVEALUI_MCP_ENV_SKIP=1` | skip vault (debug) |
 | `RFG_WORKTREE_REF` | auto: `test` if `origin/test` else `main` |
 | `RFG_WORKTREE_REF_SKIP=1` | do not inject `--ref` on `--worktree` |
-| `RFG_WT_ROOT` | `$REVFLEET_ROOT/.wt` (`$HOME/revealfleet/.wt`, with `$HOME/revfleet/.wt` fallback) |
+| `RFG_WT_ROOT` | `$REVEALFLEET_ROOT/.wt` |
 | `REVEALUI_CLAIMS_DIR` | `$HOME/.local/share/revealui/claims` |
 | `REVEALUI_WT_ENV_DIR` | `$HOME/.local/share/revealui/worktree-env` |
 | `RFG_CLAIM_FORCE=1` | steal an active claim |

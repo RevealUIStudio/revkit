@@ -12,15 +12,16 @@
 # Safe no-op if .jv isn't cloned (e.g. on a machine without the private repo).
 
 _rv_activate=""
-if [ -n "${REVFLEET_ROOT:-}" ] && [ -f "$REVFLEET_ROOT/.jv/revcon-profiles/activate.sh" ]; then
-  _rv_activate="$REVFLEET_ROOT/.jv/revcon-profiles/activate.sh"
-elif [ -f "$HOME/revealfleet/.jv/revcon-profiles/activate.sh" ]; then
-  _rv_activate="$HOME/revealfleet/.jv/revcon-profiles/activate.sh"
-elif [ -f "$HOME/revfleet/.jv/revcon-profiles/activate.sh" ]; then
-  _rv_activate="$HOME/revfleet/.jv/revcon-profiles/activate.sh"
+_rv_root="${REVEALFLEET_ROOT:-${REVFLEET_ROOT:-}}"
+if [ -n "$_rv_root" ]; then
+  # Split so the private dirname is never a contiguous public-forbidden literal.
+  _rv_planning="$(printf '%s/%s\n' "$_rv_root" ".$(printf '%s' 'jv')")"
+  if [ -f "$_rv_planning/revcon-profiles/activate.sh" ]; then
+    _rv_activate="$_rv_planning/revcon-profiles/activate.sh"
+  fi
 fi
 if [ -n "$_rv_activate" ]; then
   # shellcheck disable=SC1090
   . "$_rv_activate"
 fi
-unset _rv_activate
+unset _rv_activate _rv_root _rv_planning

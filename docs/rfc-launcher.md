@@ -46,7 +46,7 @@ rfc revealui          # loads RevealUI MCP when a token is vaulted (warn, do not
 
 # Worktrees (same isolation as rfg: origin/test, hash ports, PID/TTL claims)
 rfc open revealui ves-fo-managed --claim marketing/ves-fo-managed
-rfc bootstrap ~/revfleet/.wt/ves-fo-managed
+rfc bootstrap ~/revealfleet/.wt/ves-fo-managed
 rfc claim acquire revealui marketing/ves-fo-managed
 rfc claim list
 rfc claim release revealui marketing/ves-fo-managed
@@ -56,9 +56,9 @@ The PATH name `revealui` (tmux workspace launcher) is retired — GAP-351.
 Use `rfc <repo>` or `rfg <repo>`, not a multiplexer.
 ```
 
-Tab-completion over `~/revfleet/*` plus `mint|smoke|env|bootstrap|claim|open|help`
+Tab-completion over `~/revealfleet/*` plus `mint|smoke|env|bootstrap|claim|open|help`
 is provided in managed interactive shells. Override the fleet root with
-`REVFLEET_ROOT`. Worktree ports and claims share `shell/lib/worktree-env.sh`
+`REVEALFLEET_ROOT` (bootstrap pin; `REVFLEET_ROOT` alias). Worktree ports and claims share `shell/lib/worktree-env.sh`
 with `rfg` (same `.env.worktree` and `~/.local/share/revealui/claims/`).
 
 `rfc env` never prints `REVEALUI_MCP_TOKEN`. Claude can launch without a
@@ -86,7 +86,7 @@ automatically.
 ### Zed connection (covers the extension + terminal)
 
 In Zed `settings.json`, an Ubuntu `wsl_connections` entry with a project root
-of your WSL home (e.g. `/home/<wsl-user>`) already covers every `~/revfleet/*`
+of your WSL home (e.g. `/home/<wsl-user>`) already covers every `~/revealfleet/*`
 repo. Open fleet repos through that connection (not as a local Windows folder)
 and both the integrated terminal and the `claude-acp` agent run native in WSL.
 
