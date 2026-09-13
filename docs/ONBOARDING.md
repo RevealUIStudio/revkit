@@ -77,8 +77,19 @@ profile or render step** (the old TOML-profile/`render.sh` model was removed).
 Open a new shell — you should see:
 
 ```
-● RevKit: managed (/path/to/revkit)
+● RevKit: fleet (/path/to/revkit)
 ```
+
+That is the default engineer/fleet mode (formerly `managed`; `REVEALUI_MODE=managed` still maps to fleet). Switch with `revkit-mode`:
+
+```
+revkit-mode            # print current (fleet|vibe|bare)
+revkit-mode vibe       # product-first subset; banner ● RevKit: vibe
+revkit-mode bare       # no fragments; banner ● RevKit: bare
+revkit-mode fleet      # full shellrc.d surface
+```
+
+Preference is stored in `~/.config/revkit/mode` and used on the next login when `REVEALUI_MODE` is unset.
 
 On WSL, run `wsl --shutdown` from Windows once to apply the boot optimization.
 

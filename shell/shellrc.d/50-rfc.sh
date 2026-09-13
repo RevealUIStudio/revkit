@@ -2,7 +2,7 @@
 # rfc — RevFleet Claude launcher: short command + completion (interactive).
 #
 # The robust implementation lives at /usr/local/bin/rfc.sh (deployed by
-# bootstrap.sh). This file — auto-sourced in managed interactive
+# bootstrap.sh). This file — auto-sourced in fleet interactive
 # shells via the ~/.bashrc hook — just provides the short `rfc` name and
 # tab-completion over ~/revealfleet/* repos. See docs/rfc-launcher.md.
 
