@@ -19,7 +19,7 @@ rfg_grok_home_src() {
   for f in \
     "$here/../grok-home" \
     "$here/grok-home" \
-    "$HOME/revfleet/revkit/shell/grok-home"
+    "${REVEALUI_ROOT:-}/shell/grok-home"
   do
     if [ -n "$f" ] && [ -f "$f/AGENTS.md" ]; then
       printf '%s\n' "$f"

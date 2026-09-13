@@ -1,0 +1,3 @@
+# fleet — full engineer/fleet workflow (today's former "managed").
+# Glob includes every fragment under shell/shellrc.d/.
+shellrc.d/*.sh

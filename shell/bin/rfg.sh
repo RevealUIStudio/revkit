@@ -6,9 +6,9 @@
 # resolution as rfc. See docs/rfg-launcher.md.
 #
 # Usage:
-#   rfg                  # use $PWD if inside ~/revfleet/<repo>, else list repos
+#   rfg                  # use $PWD if inside the fleet (root or repo)
 #   rfg revealui         # cd product checkout + load MCP env + exec grok
-#   (fleet root ~/revfleet is not a product session — name a repo)
+#   rfg / rfg . at fleet root starts a fleet-root session (does not exit 2)
 #   rfg revealui --help  # trailing args pass through to grok
 #   rfg revealui --worktree=label "…"  # worktree base = integration ref
 #   rfg mint             # interactive device-token mint → revvault
@@ -17,10 +17,10 @@
 #   rfg bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
 #   rfg claim …          # claim acquire|release|list|check|sweep
 #   rfg open <repo> <label> [--claim surface] [--no-agent]
-#                        # create ~/revfleet/.wt/<label> from integration ref,
+#                        # create ~/revealfleet/.wt/<label> from integration ref,
 #                        # bootstrap env, optional claim, optional grok
 #
-# Override fleet root: REVFLEET_ROOT
+# Override fleet root: REVEALFLEET_ROOT (REVFLEET_ROOT still accepted)
 # Skip MCP load: REVEALUI_MCP_ENV_SKIP=1
 # Non-strict (launch even if token missing): REVEALUI_MCP_ENV_STRICT=0
 # Skip worktree-ref inject: RFG_WORKTREE_REF_SKIP=1
@@ -29,7 +29,28 @@
 
 set -euo pipefail
 
-FLEET_ROOT="${REVFLEET_ROOT:-$HOME/revfleet}"
+_load_fleet_root_lib() {
+  local here f
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  for f in \
+    "$here/../lib/fleet-root.sh" \
+    "$(dirname "$here")/lib/revkit/fleet-root.sh" \
+    "${REVEALUI_ROOT:-}/shell/lib/fleet-root.sh"
+  do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      # shellcheck disable=SC1090
+      . "$f"
+      return 0
+    fi
+  done
+  return 1
+}
+_load_fleet_root_lib || rfg_resolve_fleet_root() {
+  if [ -n "${REVEALFLEET_ROOT:-}" ]; then printf '%s\n' "$REVEALFLEET_ROOT"; return 0; fi
+  if [ -n "${REVFLEET_ROOT:-}" ]; then printf '%s\n' "$REVFLEET_ROOT"; return 0; fi
+  return 1
+}
+FLEET_ROOT="$(rfg_resolve_fleet_root)" || true
 
 die() { echo "rfg: $*" >&2; exit 1; }
 
@@ -50,13 +71,14 @@ case "$(uname -s 2>/dev/null)" in
   *) die "must run in a POSIX shell (WSL, Linux, or macOS)" ;;
 esac
 
-# --- MCP env load (self-contained: bootstrap copies this file alone) ----------
-# Prefer shared lib when running from a revkit checkout; else use embedded.
+# MCP env: in-tree lib, matched install prefix, then managed pin. Never $HOME/revealfleet.
 _load_mcp_lib() {
+  local here
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   local candidates=(
+    "$here/../lib/revealui-mcp-env.sh"
+    "$(dirname "$here")/lib/revkit/revealui-mcp-env.sh"
     "${REVEALUI_ROOT:-}/shell/lib/revealui-mcp-env.sh"
-    "$HOME/revfleet/revkit/shell/lib/revealui-mcp-env.sh"
-    "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd)/shell/lib/revealui-mcp-env.sh"
   )
   local f
   for f in "${candidates[@]}"; do
@@ -245,7 +267,6 @@ _resolve_helper() {
     "$d/$name" \
     "/usr/local/bin/$name" \
     "$HOME/.local/bin/$name" \
-    "$HOME/revfleet/revkit/shell/bin/$name" \
     "${REVEALUI_ROOT:-}/shell/bin/$name"
   do
     [ -n "$c" ] && [ -x "$c" ] && { echo "$c"; return 0; }
@@ -257,11 +278,9 @@ _load_grok_attach_lib() {
   local here f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   for f in \
-    "$(dirname "$here")/lib/revkit/grok-attach.sh" \
     "$here/../lib/grok-attach.sh" \
-    "$HOME/revfleet/revkit/shell/lib/grok-attach.sh" \
-    "${REVEALUI_ROOT:-}/shell/lib/grok-attach.sh" \
-    "$HOME/.local/lib/revkit/grok-attach.sh"
+    "$(dirname "$here")/lib/revkit/grok-attach.sh" \
+    "${REVEALUI_ROOT:-}/shell/lib/grok-attach.sh"
   do
     if [ -n "$f" ] && [ -f "$f" ]; then
       # shellcheck disable=SC1090
@@ -273,16 +292,13 @@ _load_grok_attach_lib() {
 }
 
 _load_worktree_env_lib() {
-  local here d candidates f
+  local here candidates f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
   candidates=(
     # Installed layout: /usr/local/bin/rfg.sh → /usr/local/lib/revkit/worktree-env.sh
-    "$(dirname "$here")/lib/revkit/worktree-env.sh"
-    # Source layout: shell/bin/rfg.sh → shell/lib/worktree-env.sh
     "$here/../lib/worktree-env.sh"
-    "$HOME/revfleet/revkit/shell/lib/worktree-env.sh"
+    "$(dirname "$here")/lib/revkit/worktree-env.sh"
     "${REVEALUI_ROOT:-}/shell/lib/worktree-env.sh"
-    "$HOME/.local/lib/revkit/worktree-env.sh"
   )
   for f in "${candidates[@]}"; do
     if [ -n "$f" ] && [ -f "$f" ]; then
@@ -295,6 +311,12 @@ _load_worktree_env_lib() {
 }
 
 cmd="${1:-}"
+case "$cmd" in
+  mint|smoke|env|help|--help|-h) ;;
+  *)
+    [ -n "${FLEET_ROOT:-}" ] || die "fleet root not found (set REVEALFLEET_ROOT or re-run bootstrap)"
+    ;;
+esac
 case "$cmd" in
   mint)
     shift || true
@@ -401,7 +423,7 @@ case "$cmd" in
 
     source_repo="$FLEET_ROOT/$open_repo"
     [ -d "$source_repo" ] || die "no such fleet repo: $open_repo"
-    wt_root="${RFG_WT_ROOT:-$HOME/revfleet/.wt}"
+    wt_root="$(rfg_wt_root)"
     wt_path="$wt_root/$open_label"
     ref="$(_resolve_integration_ref "$source_repo")"
 
@@ -464,41 +486,32 @@ if [ -n "${repo:-}" ]; then
   shift
 fi
 
-if [ -z "${repo:-}" ]; then
-  case "$PWD/" in
-    "$FLEET_ROOT"/*)
-      target="$PWD"
-      ;;
-    *)
-      echo "rfg: name a fleet repo, e.g. 'rfg revealui'. Available:" >&2
-      list_repos >&2
-      exit 2
-      ;;
-  esac
-else
-  case "$repo" in
-    -*)
-      case "$PWD/" in
-        "$FLEET_ROOT"/*)
-          target="$PWD"
-          set -- "$repo" "$@"
-          ;;
-        *) die "name a fleet repo before grok flags, or cd into ~/revfleet/<repo>" ;;
+rfg_resolve_launch_target "$FLEET_ROOT" "${repo:-}" "$PWD" && rc=0 || rc=$?
+case "$rc" in
+  0)
+    target="$RFG_LAUNCH_TARGET"
+    if [ "${RFG_LAUNCH_KEEP_FLAGS:-0}" = 1 ]; then
+      set -- "$repo" "$@"
+    fi
+    ;;
+  2)
+    echo "rfg: name a fleet repo, e.g. 'rfg revealui'. Available:" >&2
+    list_repos >&2
+    exit 2
+    ;;
+  *)
+    if [ -n "${repo:-}" ]; then
+      case "$repo" in
+        -*) die "name a fleet repo before grok flags, or cd into the fleet root / a repo" ;;
+        .. | ../* | */.. | */../* | /* | */*) die "repo name must be a single fleet checkout (got '$repo')" ;;
+        *) die "no such fleet repo: '$repo' (under $FLEET_ROOT)" ;;
       esac
-      ;;
-    *)
-      target="$FLEET_ROOT/$repo"
-      [ -d "$target" ] || die "no such fleet repo: '$repo' (under $FLEET_ROOT)"
-      ;;
-  esac
-fi
+    fi
+    die "could not resolve launch target"
+    ;;
+esac
 
 _load_grok_attach_lib || die "grok-attach.sh not found (re-run revkit bootstrap)"
-if rfg_path_is_fleet_root "$FLEET_ROOT" "$target"; then
-  echo "rfg: fleet root is not a product session. Name a repo, e.g. 'rfg revealui'. Available:" >&2
-  list_repos >&2
-  exit 2
-fi
 
 grok_bin="$(resolve_grok)" || die "grok not found on PATH or in ~/.grok/bin / ~/.local/bin"
 

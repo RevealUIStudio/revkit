@@ -3,7 +3,7 @@
 #
 # Path: revealui/dev/founder-license-key
 # Format: RVUI-<tier>-<32 hex chars>
-# Consumer: revdev daemon — see ~/revfleet/revdev/packages/daemon/src/license.ts
+# Consumer: revdev daemon — see ~/revealfleet/revdev/packages/daemon/src/license.ts
 #
 # Failure mode (per ADR docs/decisions/2026-05-01-license-key-revvault.md): quiet with warning.
 # If revvault is unavailable or returns empty, REVEALUI_LICENSE_KEY stays unset

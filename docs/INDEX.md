@@ -1,7 +1,7 @@
 ---
 type: repo-doc-index
 repo: revkit
-updated: 2026-08-19
+updated: 2026-09-13
 ---
 
 # RevKit — Documentation Index
@@ -24,6 +24,7 @@ optimization, editor configs.
 - [`rfc-launcher.md`](./rfc-launcher.md) — the `rfc` secure Claude launcher
 - [`tier-capabilities.md`](./tier-capabilities.md) — T0/T1 (sandbox-drive) capabilities
 - [`WSL-QuickReference.md`](./WSL-QuickReference.md) + [`WSL-CheatSheet.txt`](./WSL-CheatSheet.txt) — WSL ops
+- [`windows-terminal-profiles.sample.json`](./windows-terminal-profiles.sample.json) — optional WT profile fragment (merge; do not overwrite user settings)
 
 ## Fleet coordination
 

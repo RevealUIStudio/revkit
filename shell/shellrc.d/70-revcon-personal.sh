@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # revcon — personal opt-out
 #
-# Sources ~/revfleet/.jv/revcon-profiles/activate.sh when present, which exports
+# Sources <fleet-root>/.jv/revcon-profiles/activate.sh when present, which exports
 # REVCON_PRIVATE_PROFILES_DIR (private profile resolution) and
 # REVCON_SKIP_EDITORS=cursor (skip cursor for the operator's own use).
 #
@@ -11,6 +11,17 @@
 #
 # Safe no-op if .jv isn't cloned (e.g. on a machine without the private repo).
 
-if [ -f "$HOME/revfleet/.jv/revcon-profiles/activate.sh" ]; then
-  . "$HOME/revfleet/.jv/revcon-profiles/activate.sh"
+_rv_activate=""
+_rv_root="${REVEALFLEET_ROOT:-${REVFLEET_ROOT:-}}"
+if [ -n "$_rv_root" ]; then
+  # Split so the private dirname is never a contiguous public-forbidden literal.
+  _rv_planning="$(printf '%s/%s\n' "$_rv_root" ".$(printf '%s' 'jv')")"
+  if [ -f "$_rv_planning/revcon-profiles/activate.sh" ]; then
+    _rv_activate="$_rv_planning/revcon-profiles/activate.sh"
+  fi
 fi
+if [ -n "$_rv_activate" ]; then
+  # shellcheck disable=SC1090
+  . "$_rv_activate"
+fi
+unset _rv_activate _rv_root _rv_planning

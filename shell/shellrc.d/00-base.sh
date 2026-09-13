@@ -3,28 +3,18 @@
 # Discovers REVEALUI_ROOT and checks Sandbox drive mount status
 
 _find_revealui_root() {
-    # Check env var first
-    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT:-}/shell/shellrc.d/00-base.sh" ]; then
+    # Bootstrap pin only. Do not scan other users' homes or extra drives.
+    if [ -n "${REVEALUI_ROOT:-}" ] && [ -f "${REVEALUI_ROOT}/shell/shellrc.d/00-base.sh" ]; then
         echo "$REVEALUI_ROOT"
         return
     fi
-    # Primary: any Windows user's .revealui under /mnt/c/Users/* (works for any account name)
-    for candidate in /mnt/c/Users/*/.revealui; do
-        if [ -f "$candidate/shell/shellrc.d/00-base.sh" ]; then
-            echo "$candidate"
-            return
-        fi
-    done
-    # Fallback: scan known SSD locations
-    for candidate in /mnt/e/professional/.revealui /mnt/e/.revealui /mnt/d/.revealui; do
-        if [ -f "$candidate/shell/shellrc.d/00-base.sh" ]; then
-            echo "$candidate"
-            return
-        fi
-    done
 }
 
-REVEALUI_ROOT="$(_find_revealui_root)"
+_found="$(_find_revealui_root)"
+if [ -n "$_found" ]; then
+    REVEALUI_ROOT="$_found"
+fi
+unset _found
 export REVEALUI_ROOT
 export REVEALUI_SANDBOX="/mnt/sandbox"
 

@@ -45,13 +45,13 @@ bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 
 > `bootstrap-wsl.sh` still works as a backward-compatible alias. It is now a thin shim that execs `bootstrap.sh` (which auto-detects WSL).
 
-In more detail, the bootstrap also adds a `~/.bashrc`/`~/.zshrc` hook that sources `shell/shellrc.d/*.sh` from the cloned repo, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and clones/wires `claude-config` into `~/.claude`.
+In more detail, the bootstrap also adds a `~/.bashrc`/`~/.zshrc` hook that resolves the shell mode (`fleet` / `vibe` / `bare`; `managed` is a silent alias for `fleet`) and sources the matching fragments from `shell/modes/*.list`, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and clones/wires `claude-config` into `~/.claude`.
 
-Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md)). The old `revealui` tmux workspace launcher is **retired** (GAP-351 / ADR 2026-06-23); `bootstrap.sh` overwrites `~/.local/bin/revealui` with a shim that prints `rfg` / `rfc`.
+Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native; same `bootstrap` / `claim` / `open` isolation as `rfg`); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md) and [`docs/rfc-launcher.md`](docs/rfc-launcher.md)). The old `revealui` tmux workspace launcher is **retired** (GAP-351 / ADR 2026-06-23); `bootstrap.sh` overwrites `~/.local/bin/revealui` with a shim that prints `rfg` / `rfc`.
 
 > **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap.sh` — the rc hook is self-healing and migrates in place. No manual edit needed.
 
-Open a new shell — you should see a `● RevKit: managed` banner. On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.
+Open a new shell — you should see a `● RevKit: fleet` banner (default). `revkit-mode vibe` switches to the product-first subset; `revkit-mode bare` is the no-fragment escape hatch. `REVEALUI_MODE=managed` still works (silent alias for fleet). Streaming safety is an overlay (`revkit-mode stream-safe` / `RV_STREAM=1`), not a fourth mode. On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.
 
 ### Per-machine configuration
 
@@ -70,7 +70,7 @@ revkit/
   bootstrap-wsl.sh     # Deprecation shim → execs bootstrap.sh
   bootstrap.ps1        # Windows-host PowerShell prep
   lib/platform.sh      # OS detector (REVKIT_OS + capability predicates)
-  shell/               # shellrc.d/, bin/, config/, docker/, setup-wsl-boot.sh
+  shell/               # shellrc.d/, modes/, bin/, config/, docker/, setup-wsl-boot.sh
   scripts/             # backup + private-leak-scan scripts
   powershell/          # RevealUI.RevStation PowerShell module
   editor-configs/zed/  # portable Zed settings + rfc task
@@ -88,7 +88,7 @@ MIT
 ## RevFleet Claude launcher (`rfc`)
 
 `rfc <repo>` starts a Claude Code session whose process runs **inside WSL**,
-rooted in a `~/revfleet/*` repo — the configuration that makes a secure,
+rooted in a `~/revealfleet/*` repo — the configuration that makes a secure,
 prompt-free session possible (commands stay native instead of being wrapped in
 `wsl.exe`, so they allowlist by real prefix and the deny-list hooks fire). On
 macOS and native Linux `rfc` runs the session locally in the target repo.
