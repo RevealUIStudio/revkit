@@ -133,21 +133,85 @@ revkit_mode_print_vibe_tip() {
 revkit_mode_usage() {
   cat <<'EOF'
 usage:
-  revkit-mode                 # print current mode
-  revkit-mode fleet|vibe|bare # set for this shell + write ~/.config/revkit/mode
+  revkit-mode                      # print workflow mode + stream overlay
+  revkit-mode fleet|vibe|bare      # set workflow mode (this shell + ~/.config/revkit/mode)
+  revkit-mode stream-safe          # stream overlay ON (does not change REVEALUI_MODE)
+  revkit-mode vault-private        # stream overlay off / vault-private (does not change REVEALUI_MODE)
 
-modes:
+workflow modes:
   fleet  full engineer/fleet workflow (all shell/shellrc.d/*.sh)
   vibe   product-first subset (see shell/modes/vibe.list)
   bare   no fragments (escape hatch)
 
+stream overlay (orthogonal; not a fourth REVEALUI_MODE):
+  stream-safe     STREAM_SAFE=1; no TTY print/clip of secrets
+  vault-private   REVVAULT_ALLOW_PRINT=1; keep this window out of OBS
+  off             neither (default)
+
 managed is a deprecated alias for fleet (silent map).
 Default when unset: fleet (not vibe).
+There is no REVEALUI_MODE=stream.
 EOF
 }
 
+# Overlay state: stream-safe | vault-private | off
+revkit_mode_stream_state() {
+  if [ "${REVVAULT_ALLOW_PRINT:-}" = "1" ] && [ "${STREAM_SAFE:-}" != "1" ] && [ "${REVVAULT_STREAM_SAFE:-}" != "1" ]; then
+    printf '%s\n' "vault-private"
+  elif [ "${STREAM_SAFE:-}" = "1" ] || [ "${REVVAULT_STREAM_SAFE:-}" = "1" ]; then
+    printf '%s\n' "stream-safe"
+  else
+    printf '%s\n' "off"
+  fi
+}
+
 revkit_mode_print_current() {
-  revkit_resolve_mode
+  printf 'mode: %s\n' "$(revkit_resolve_mode)"
+  printf 'stream: %s\n' "$(revkit_mode_stream_state)"
+}
+
+# Same exports as shell/shellrc.d/42-stream-safe.sh. Does not touch REVEALUI_MODE.
+revkit_mode_ensure_stream_helpers() {
+  if type stream-safe >/dev/null 2>&1 && type vault-private >/dev/null 2>&1; then
+    return 0
+  fi
+  local f="${REVEALUI_ROOT:-}/shell/shellrc.d/42-stream-safe.sh"
+  if [ -r "$f" ]; then
+    # shellcheck disable=SC1090
+    . "$f"
+  fi
+}
+
+revkit_mode_apply_stream_safe() {
+  revkit_mode_ensure_stream_helpers
+  if type stream-safe >/dev/null 2>&1; then
+    stream-safe
+  else
+    export STREAM_SAFE=1
+    export REVVAULT_STREAM_SAFE=1
+    unset REVVAULT_ALLOW_PRINT 2>/dev/null || true
+    printf 'stream-safe ON: secrets only via revvault run / with-secrets (no TTY print/clip).\n' >&2
+  fi
+}
+
+revkit_mode_apply_vault_private() {
+  revkit_mode_ensure_stream_helpers
+  if type vault-private >/dev/null 2>&1; then
+    vault-private
+  else
+    unset STREAM_SAFE REVVAULT_STREAM_SAFE 2>/dev/null || true
+    export REVVAULT_ALLOW_PRINT=1
+    printf 'vault-private ON: full get/clip allowed. Keep this window out of OBS.\n' >&2
+  fi
+}
+
+# RV_STREAM=1 from a terminal profile enables stream-safe without changing mode.
+# Mirrors 42-stream-safe.sh so vibe/bare (which do not source that fragment) still honor it.
+revkit_mode_honor_rv_stream() {
+  if [ "${RV_STREAM:-}" = "1" ] && [ -z "${REVVAULT_ALLOW_PRINT:-}" ]; then
+    export STREAM_SAFE=1
+    export REVVAULT_STREAM_SAFE=1
+  fi
 }
 
 # Apply the resolved mode: source fragments, export, banner.
@@ -157,6 +221,7 @@ revkit_mode_activate() {
   if [ ! -f "${REVEALUI_ROOT:-}/shell/shellrc.d/00-base.sh" ]; then
     export REVEALUI_MODE="bare"
     export REVEALUI_SHELL_READY=1
+    revkit_mode_honor_rv_stream
     revkit_mode_print_banner bare
     return 0
   fi
@@ -165,6 +230,7 @@ revkit_mode_activate() {
   if [ "$mode" != "bare" ]; then
     revkit_mode_source_fragments "$mode"
   fi
+  revkit_mode_honor_rv_stream
   revkit_mode_print_banner "$mode"
   if [ "$mode" = "vibe" ]; then
     revkit_mode_print_vibe_tip
@@ -192,6 +258,7 @@ revkit_mode_set() {
     fi
     revkit_mode_source_fragments "$mode"
   fi
+  revkit_mode_honor_rv_stream
   revkit_mode_print_banner "$mode"
   if [ "$mode" = "vibe" ]; then
     revkit_mode_print_vibe_tip

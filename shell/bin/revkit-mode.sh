@@ -7,8 +7,10 @@
 # up; or run `revkit-mode <mode>` from a fleet/vibe shell to apply immediately.
 #
 # Usage:
-#   revkit-mode                 # print current
-#   revkit-mode fleet|vibe|bare # write preference file
+#   revkit-mode                      # print workflow mode + stream overlay
+#   revkit-mode fleet|vibe|bare      # write preference file
+#   revkit-mode stream-safe          # overlay ON (this process; does not change mode)
+#   revkit-mode vault-private        # overlay vault-private (this process)
 #   revkit-mode --help
 
 set -euo pipefail
@@ -42,6 +44,18 @@ case "${1:-}" in
     ;;
   "")
     revkit_mode_print_current
+    exit 0
+    ;;
+  stream-safe | stream_safe)
+    revkit_mode_apply_stream_safe
+    revkit_mode_print_current
+    printf 'Note: overlay applies to this process; use the revkit-mode shell function to change the current shell.\n' >&2
+    exit 0
+    ;;
+  vault-private | vault_private)
+    revkit_mode_apply_vault_private
+    revkit_mode_print_current
+    printf 'Note: overlay applies to this process; use the revkit-mode shell function to change the current shell.\n' >&2
     exit 0
     ;;
   *)

@@ -1,0 +1,18 @@
+{
+  "profiles": {
+    "list": [
+      {
+        "name": "RevKit fleet",
+        "commandline": "wsl.exe -d Ubuntu -- bash -lc 'export REVEALUI_MODE=fleet; exec bash -l'"
+      },
+      {
+        "name": "RevKit vibe",
+        "commandline": "wsl.exe -d Ubuntu -- bash -lc 'export REVEALUI_MODE=vibe; exec bash -l'"
+      },
+      {
+        "name": "RevKit stream",
+        "commandline": "wsl.exe -d Ubuntu -- bash -lc 'export REVEALUI_MODE=fleet; export RV_STREAM=1; exec bash -l'"
+      }
+    ]
+  }
+}

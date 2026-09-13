@@ -65,6 +65,9 @@ assert_eq "REVEALUI_MODE=bare stays bare" "$got" "bare"
 got="$(resolve REVEALUI_MODE=fleet)"
 assert_eq "REVEALUI_MODE=fleet stays fleet" "$got" "fleet"
 
+got="$(resolve REVEALUI_MODE=stream 2>/dev/null)"
+assert_eq "REVEALUI_MODE=stream is not a workflow mode (defaults fleet)" "$got" "fleet"
+
 printf 'vibe\n' > "$HOME/.config/revkit/mode"
 got="$(resolve -u REVEALUI_MODE)"
 assert_eq "preference file vibe when env unset" "$got" "vibe"
@@ -253,8 +256,12 @@ assert_eq "bare does not define create-revealui" \
 # --- CLI helper ---
 chmod +x "$BIN" 2>/dev/null || true
 rm -f "$HOME/.config/revkit/mode"
+unset STREAM_SAFE REVVAULT_STREAM_SAFE REVVAULT_ALLOW_PRINT RV_STREAM || true
 out="$("$BIN")"
-assert_eq "revkit-mode.sh prints fleet by default" "$out" "fleet"
+assert_eq "revkit-mode.sh prints mode: fleet by default" \
+  "$(printf '%s\n' "$out" | sed -n '1p')" "mode: fleet"
+assert_eq "revkit-mode.sh prints stream: off by default" \
+  "$(printf '%s\n' "$out" | sed -n '2p')" "stream: off"
 
 code=0
 "$BIN" banana >/dev/null 2>"$TMP/err" || code=$?
@@ -271,6 +278,79 @@ assert_eq "revkit-mode.sh vibe writes preference" "$pref" "vibe"
 "$BIN" managed >/dev/null
 pref="$(tr -d '[:space:]' < "$HOME/.config/revkit/mode")"
 assert_eq "revkit-mode.sh managed writes fleet" "$pref" "fleet"
+
+# --- stream overlay is orthogonal ---
+ov="$(mktemp "$TMP/ov.XXXXXX")"
+bash --noprofile --norc -c "
+  export HOME='$HOME'
+  export XDG_CONFIG_HOME='$XDG_CONFIG_HOME'
+  export REVEALUI_ROOT='$ROOT'
+  export REVEALUI_MODE=vibe
+  unset STREAM_SAFE REVVAULT_STREAM_SAFE REVVAULT_ALLOW_PRINT RV_STREAM
+  . '$LIB'
+  revkit_mode_apply_stream_safe >/dev/null
+  printf '%s\n' \"\$(revkit_resolve_mode)\"
+  printf '%s\n' \"\$(revkit_mode_stream_state)\"
+  printf '%s\n' \"\${REVEALUI_MODE}\"
+" >"$ov" 2>/dev/null
+assert_eq "stream-safe keeps resolved mode vibe" "$(sed -n '1p' "$ov")" "vibe"
+assert_eq "stream-safe sets overlay state" "$(sed -n '2p' "$ov")" "stream-safe"
+assert_eq "stream-safe does not change REVEALUI_MODE" "$(sed -n '3p' "$ov")" "vibe"
+
+ov2="$(mktemp "$TMP/ov2.XXXXXX")"
+bash --noprofile --norc -c "
+  export HOME='$HOME'
+  export XDG_CONFIG_HOME='$XDG_CONFIG_HOME'
+  export REVEALUI_ROOT='$ROOT'
+  export REVEALUI_MODE=fleet
+  unset STREAM_SAFE REVVAULT_STREAM_SAFE REVVAULT_ALLOW_PRINT
+  . '$LIB'
+  revkit_mode_apply_vault_private >/dev/null
+  printf '%s\n' \"\$(revkit_resolve_mode)\"
+  printf '%s\n' \"\$(revkit_mode_stream_state)\"
+  printf '%s\n' \"\${REVEALUI_MODE}\"
+" >"$ov2" 2>/dev/null
+assert_eq "vault-private keeps resolved mode fleet" "$(sed -n '1p' "$ov2")" "fleet"
+assert_eq "vault-private sets overlay state" "$(sed -n '2p' "$ov2")" "vault-private"
+assert_eq "vault-private does not change REVEALUI_MODE" "$(sed -n '3p' "$ov2")" "fleet"
+
+# CLI overlay must not rewrite ~/.config/revkit/mode
+printf 'fleet\n' > "$HOME/.config/revkit/mode"
+unset REVEALUI_MODE || true
+"$BIN" stream-safe >/dev/null 2>&1 || true
+pref="$(tr -d '[:space:]' < "$HOME/.config/revkit/mode")"
+assert_eq "CLI stream-safe does not rewrite mode preference" "$pref" "fleet"
+
+code=0
+"$BIN" stream >/dev/null 2>"$TMP/err-stream" || code=$?
+if [ "$code" -ne 0 ]; then
+  pass "revkit-mode.sh stream (not stream-safe) is rejected"
+else
+  fail "revkit-mode.sh accepted stream as a workflow mode"
+fi
+
+# RV_STREAM=1 on activate: overlay on, mode unchanged
+actr="$(mktemp "$TMP/actr.XXXXXX")"
+bash --noprofile --norc -c "
+  export HOME='$HOME'
+  export XDG_CONFIG_HOME='$XDG_CONFIG_HOME'
+  export REVEALUI_ROOT='$ROOT'
+  export REVEALUI_MODE=vibe
+  export RV_STREAM=1
+  unset REVEALUI_SHELL_READY STREAM_SAFE REVVAULT_STREAM_SAFE REVVAULT_ALLOW_PRINT
+  . '$LIB'
+  revkit_mode_activate
+  printf 'MODE=%s\n' \"\$REVEALUI_MODE\"
+  printf 'STATE=%s\n' \"\$(revkit_mode_stream_state)\"
+" >"$actr" 2>/dev/null || true
+assert_eq "RV_STREAM activate keeps vibe" "$(grep '^MODE=' "$actr" | cut -d= -f2)" "vibe"
+assert_eq "RV_STREAM activate sets stream-safe overlay" "$(grep '^STATE=' "$actr" | cut -d= -f2)" "stream-safe"
+
+if grep -q 'REVEALUI_MODE=stream' "$ROOT/docs/MASTER_SPEC.md" && grep -q 'There is no' "$ROOT/docs/MASTER_SPEC.md"; then
+  pass "MASTER_SPEC documents no REVEALUI_MODE=stream"
+else
+  fail "MASTER_SPEC should say there is no REVEALUI_MODE=stream"
+fi
 
 # --- bootstrap hook pins ---
 if grep -q 'revkit-mode.sh' "$BOOTSTRAP" && grep -q 'revkit_mode_activate' "$BOOTSTRAP"; then

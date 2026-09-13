@@ -83,13 +83,30 @@ Open a new shell — you should see:
 That is the default engineer/fleet mode (formerly `managed`; `REVEALUI_MODE=managed` still maps to fleet). Switch with `revkit-mode`:
 
 ```
-revkit-mode            # print current (fleet|vibe|bare)
-revkit-mode vibe       # product-first subset; banner ● RevKit: vibe
-revkit-mode bare       # no fragments; banner ● RevKit: bare
-revkit-mode fleet      # full shellrc.d surface
+revkit-mode                 # print workflow mode + stream overlay
+revkit-mode vibe            # product-first subset; banner ● RevKit: vibe
+revkit-mode bare            # no fragments; banner ● RevKit: bare
+revkit-mode fleet           # full shellrc.d surface
+revkit-mode stream-safe     # overlay ON (does not change fleet/vibe/bare)
+revkit-mode vault-private   # overlay vault-private (does not change mode)
 ```
 
-Preference is stored in `~/.config/revkit/mode` and used on the next login when `REVEALUI_MODE` is unset.
+Preference for the **workflow** mode is stored in `~/.config/revkit/mode` and used on the next login when `REVEALUI_MODE` is unset. The stream overlay is per-window (not written to that file).
+
+### Workflow modes vs stream overlay
+
+`bare` / `fleet` / `vibe` are the only workflow modes. Streaming safety is
+orthogonal: `STREAM_SAFE`, `RV_STREAM=1`, `stream-safe`, `vault-private`, or
+`revkit-mode stream-safe` / `revkit-mode vault-private`. There is no
+`REVEALUI_MODE=stream`.
+
+**YouTube / OBS:** capture a **fleet or vibe** terminal with stream-safe ON.
+Keep any vault-private window out of the capture layout. Stream-safe does
+**not** redact IDE chat panes (Claude, Grok, Cursor, Zed) — keep those off
+stream.
+
+Optional Windows Terminal profiles (merge the sample into your settings; RevKit
+does not overwrite them): [`windows-terminal-profiles.sample.json`](./windows-terminal-profiles.sample.json).
 
 On WSL, run `wsl --shutdown` from Windows once to apply the boot optimization.
 

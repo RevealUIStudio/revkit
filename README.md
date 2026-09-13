@@ -51,7 +51,7 @@ Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native; same `boo
 
 > **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap.sh` — the rc hook is self-healing and migrates in place. No manual edit needed.
 
-Open a new shell — you should see a `● RevKit: fleet` banner (default). `revkit-mode vibe` switches to the product-first subset; `revkit-mode bare` is the no-fragment escape hatch. `REVEALUI_MODE=managed` still works (silent alias for fleet). On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.
+Open a new shell — you should see a `● RevKit: fleet` banner (default). `revkit-mode vibe` switches to the product-first subset; `revkit-mode bare` is the no-fragment escape hatch. `REVEALUI_MODE=managed` still works (silent alias for fleet). Streaming safety is an overlay (`revkit-mode stream-safe` / `RV_STREAM=1`), not a fourth mode. On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.
 
 ### Per-machine configuration
 

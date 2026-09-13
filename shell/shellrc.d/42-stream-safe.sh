@@ -1,5 +1,7 @@
 # shellcheck shell=bash
 # Stream-safe vs vault-private secret profiles (OBS / YouTube / shared screen).
+# Overlay on REVEALUI_MODE (fleet/vibe/bare) — not a fourth workflow mode.
+# Apply via stream-safe / vault-private, or: revkit-mode stream-safe|vault-private
 #
 # Stream terminal (default when STREAM_SAFE=1):
 #   - Paths and with-secrets / revvault run only

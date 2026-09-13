@@ -20,6 +20,14 @@ revkit-mode() {
     "")
       revkit_mode_print_current
       ;;
+    stream-safe | stream_safe)
+      revkit_mode_apply_stream_safe
+      revkit_mode_print_current
+      ;;
+    vault-private | vault_private)
+      revkit_mode_apply_vault_private
+      revkit_mode_print_current
+      ;;
     *)
       revkit_mode_set "$1"
       ;;

@@ -105,10 +105,34 @@ full surface). `managed` maps silently to `fleet`.
 | **vibe** | `● RevKit: vibe` (magenta) | curated subset in `shell/modes/vibe.list` (base, tools, local-ai, vibe aliases/prompt). `rfg`/`rfc` stay on PATH; claim/worktree ceremony is not on the happy path |
 | **bare** | `● RevKit: bare` (gray) | none (escape hatch) |
 
-`revkit-mode` (no args) prints the current mode. `revkit-mode fleet|vibe|bare`
-sets it for this shell (when the wrapper function is loaded) and writes
+`revkit-mode` (no args) prints the workflow mode **and** the stream overlay
+(`mode: fleet` / `stream: off`). `revkit-mode fleet|vibe|bare` sets the
+workflow mode for this shell (when the wrapper function is loaded) and writes
 `~/.config/revkit/mode`. Re-run `bootstrap.sh` so existing machines get the
 new hook.
+
+### Stream overlay (orthogonal to workflow mode)
+
+Streaming safety is **not** a fourth `REVEALUI_MODE`. There is no
+`REVEALUI_MODE=stream`. Use fleet, vibe, or bare, then turn the overlay on
+in that window:
+
+| Overlay | How | Effect |
+|---|---|---|
+| **stream-safe** | `revkit-mode stream-safe`, `stream-safe`, `STREAM_SAFE=1`, or `RV_STREAM=1` in the terminal profile | Secrets only via `revvault run` / `with-secrets`; no TTY print/clip. Prompt shows `stream`. |
+| **vault-private** | `revkit-mode vault-private` or `vault-private` | Full get/clip allowed. Prompt shows `VAULT`. Keep this window out of OBS / YouTube capture. |
+| **off** | default | neither |
+
+These commands do **not** change `REVEALUI_MODE` or `~/.config/revkit/mode`.
+
+**YouTube / OBS:** use **fleet or vibe** plus stream-safe ON in the captured
+terminal. Keep any vault-private window out of the capture layout.
+
+**Limit:** stream-safe does not redact IDE chat panes (Claude, Grok, Cursor,
+Zed). Treat those as vault-private surfaces; do not put them in the stream.
+
+Sample Windows Terminal profile fragments (merge into your settings; RevKit
+does not overwrite user WT JSON): [`windows-terminal-profiles.sample.json`](./windows-terminal-profiles.sample.json).
 
 Wiring (done by `bootstrap.sh` step 4):
 
@@ -196,7 +220,9 @@ working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive
 | `REVKIT_OS` | set | set | Detected OS (`wsl`/`linux`/`macos`) |
 | `DEVKIT_TIER` | `T0` | `T1` | Shell-detectable tier signal |
 | `REVEALUI_ROOT` | set | set | RevKit repo root (pinned at bootstrap) |
-| `REVEALUI_MODE` | `fleet`/`vibe`/`bare` | `fleet`/`vibe`/`bare` | Shell fragment set. `managed` is a deprecated silent alias for `fleet`. When unset, `~/.config/revkit/mode` then `fleet`. |
+| `REVEALUI_MODE` | `fleet`/`vibe`/`bare` | `fleet`/`vibe`/`bare` | Workflow fragment set. `managed` is a deprecated silent alias for `fleet`. When unset, `~/.config/revkit/mode` then `fleet`. Not a stream flag. |
+| `STREAM_SAFE` / `REVVAULT_STREAM_SAFE` | overlay | overlay | Stream overlay ON (orthogonal). Also `RV_STREAM=1` from a terminal profile. |
+| `REVVAULT_ALLOW_PRINT` | overlay | overlay | Vault-private overlay (full get/clip; keep window out of capture). |
 | `REVEALUI_SANDBOX` | `/mnt/sandbox` | `/mnt/sandbox` | Sandbox-drive mount point (post-revkit#13) |
 | `REVEALUI_SANDBOX_MOUNTED` | unset | `1` | Boolean signal |
 | `SANDBOX_DATABASE_URL` | set (string) | set (string) | Postgres conn string at port 5433 |
