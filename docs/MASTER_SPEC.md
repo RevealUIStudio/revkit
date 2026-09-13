@@ -1,14 +1,14 @@
 ---
 type: master-spec
 repo: revkit
-last-updated: 2026-08-25
+last-updated: 2026-09-13
 owner: RevealUI Studio
 staleness-status: FRESH
 ---
 
 # RevKit — Master Spec
 
-**Last Updated:** 2026-08-25
+**Last Updated:** 2026-09-13
 **Status:** Pre-1.0 — cross-platform foundation shipped (macOS + Linux + WSL2); surface stable for daily use, external-contributor onboarding is Phase C (see MASTER_PLAN)
 **Repo:** [RevealUIStudio/revkit](https://github.com/RevealUIStudio/revkit) (product name: RevealUI DevKit)
 
@@ -37,9 +37,12 @@ revkit/
 │   └── platform.sh                  # OS detector: sets REVKIT_OS ∈ {wsl,linux,macos}; exports predicates
 ├── shell/
 │   ├── shellrc.d/                   # shell config fragments sourced by .bashrc/.zshrc (00-base.sh, 25-local-ai.sh, 50-rfc.sh, …)
+│   ├── modes/                       # fleet.list / vibe.list + vibe-only fragments
+│   ├── lib/                         # fleet-root, revkit-mode resolver, worktree-env, …
 │   ├── bin/                         # helper scripts → /usr/local/bin (or ~/.local/bin on macOS)
 │   │   ├── rfc.sh                   # WSL-native (and macOS/Linux) Claude launcher
 │   │   ├── rfg.sh                   # Grok launcher (MCP token from revvault)
+│   │   ├── revkit-mode.sh           # print/set shell mode (fleet|vibe|bare)
 │   │   ├── revealui.sh              # GAP-351 retire shim (overwrites ~/.local/bin/revealui)
 │   │   ├── mount-sandbox-drive.sh   # WSL-only sandbox-drive mount helper
 │   │   ├── sandbox-services.sh      # WSL-only sandbox service control
@@ -88,6 +91,48 @@ per-user value machine-local — nothing committed carries personal identity.
 | Tracked configs | `shell/config/` | Yes | Generic, identity-free git/ssh/wsl config |
 | Per-user git identity | `~/.config/revkit/identity.gitconfig` | No (machine-local) | name + email; seeded from existing git identity on bootstrap |
 | Per-user SSH overrides | `~/.config/revkit/ssh.local` | No (machine-local) | host blocks; Included by the tracked `ssh-config` |
+| Shell mode preference | `~/.config/revkit/mode` | No (machine-local) | `fleet` / `vibe` / `bare`; written by `revkit-mode` |
+
+### Shell modes (`REVEALUI_MODE`)
+
+Three modes. Resolution on interactive login: env `REVEALUI_MODE` >
+`~/.config/revkit/mode` > `fleet` (not vibe: existing engineers keep the
+full surface). `managed` maps silently to `fleet`.
+
+| Mode | Banner | Fragments |
+|---|---|---|
+| **fleet** | `● RevKit: fleet` (cyan) | all `shell/shellrc.d/*.sh` via `shell/modes/fleet.list` |
+| **vibe** | `● RevKit: vibe` (magenta) | curated subset in `shell/modes/vibe.list` (base, tools, local-ai, vibe aliases/prompt). `rfg`/`rfc` stay on PATH; claim/worktree ceremony is not on the happy path |
+| **bare** | `● RevKit: bare` (gray) | none (escape hatch) |
+
+`revkit-mode` (no args) prints the workflow mode **and** the stream overlay
+(`mode: fleet` / `stream: off`). `revkit-mode fleet|vibe|bare` sets the
+workflow mode for this shell (when the wrapper function is loaded) and writes
+`~/.config/revkit/mode`. Re-run `bootstrap.sh` so existing machines get the
+new hook.
+
+### Stream overlay (orthogonal to workflow mode)
+
+Streaming safety is **not** a fourth `REVEALUI_MODE`. There is no
+`REVEALUI_MODE=stream`. Use fleet, vibe, or bare, then turn the overlay on
+in that window:
+
+| Overlay | How | Effect |
+|---|---|---|
+| **stream-safe** | `revkit-mode stream-safe`, `stream-safe`, `STREAM_SAFE=1`, or `RV_STREAM=1` in the terminal profile | Secrets only via `revvault run` / `with-secrets`; no TTY print/clip. Prompt shows `stream`. |
+| **vault-private** | `revkit-mode vault-private` or `vault-private` | Full get/clip allowed. Prompt shows `VAULT`. Keep this window out of OBS / YouTube capture. |
+| **off** | default | neither |
+
+These commands do **not** change `REVEALUI_MODE` or `~/.config/revkit/mode`.
+
+**YouTube / OBS:** use **fleet or vibe** plus stream-safe ON in the captured
+terminal. Keep any vault-private window out of the capture layout.
+
+**Limit:** stream-safe does not redact IDE chat panes (Claude, Grok, Cursor,
+Zed). Treat those as vault-private surfaces; do not put them in the stream.
+
+Sample Windows Terminal profile fragments (merge into your settings; RevKit
+does not overwrite user WT JSON): [`windows-terminal-profiles.sample.json`](./windows-terminal-profiles.sample.json).
 
 Wiring (done by `bootstrap.sh` step 4):
 
@@ -133,7 +178,7 @@ wires fleet Claude rules when `revcon` is present.
 | 1b | Overwrite `~/.local/bin/revealui` with the GAP-351 retire shim (no tmux) | all |
 | 1c | Attach Grok vendor hooks from the product manager plus HOME stub `AGENTS.md` (no prose rules in `$HOME/.grok`) | all |
 | 2 | Sudoers for passwordless sandbox mount (pinned to `--mount-only`) | WSL |
-| 3 | Self-healing rc-hook into `.bashrc`/`.zshrc` (sources `shell/shellrc.d/*.sh`; prints `● RevKit: managed`) | all |
+| 3 | Self-healing rc-hook into `.bashrc`/`.zshrc` (resolves mode, sources `shell/modes/*.list`; prints `● RevKit: fleet`/`vibe`/`bare`) | all |
 | 4 | Git + SSH includes (neutral configs + per-user `~/.config/revkit/`) | all |
 | 5 | WSL boot optimization (`shell/setup-wsl-boot.sh`) | WSL |
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL |
@@ -175,7 +220,9 @@ working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive
 | `REVKIT_OS` | set | set | Detected OS (`wsl`/`linux`/`macos`) |
 | `DEVKIT_TIER` | `T0` | `T1` | Shell-detectable tier signal |
 | `REVEALUI_ROOT` | set | set | RevKit repo root (pinned at bootstrap) |
-| `REVEALUI_MODE` | `managed`/`bare` | `managed`/`bare` | Whether the managed shell fragments loaded |
+| `REVEALUI_MODE` | `fleet`/`vibe`/`bare` | `fleet`/`vibe`/`bare` | Workflow fragment set. `managed` is a deprecated silent alias for `fleet`. When unset, `~/.config/revkit/mode` then `fleet`. Not a stream flag. |
+| `STREAM_SAFE` / `REVVAULT_STREAM_SAFE` | overlay | overlay | Stream overlay ON (orthogonal). Also `RV_STREAM=1` from a terminal profile. |
+| `REVVAULT_ALLOW_PRINT` | overlay | overlay | Vault-private overlay (full get/clip; keep window out of capture). |
 | `REVEALUI_SANDBOX` | `/mnt/sandbox` | `/mnt/sandbox` | Sandbox-drive mount point (post-revkit#13) |
 | `REVEALUI_SANDBOX_MOUNTED` | unset | `1` | Boolean signal |
 | `SANDBOX_DATABASE_URL` | set (string) | set (string) | Postgres conn string at port 5433 |

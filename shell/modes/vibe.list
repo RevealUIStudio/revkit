@@ -1,0 +1,10 @@
+# vibe — product-first subset for vibe coders.
+# Paths are relative to shell/. Bare names resolve under shellrc.d/.
+# Missing files are skipped. Claim/worktree ceremony fragments stay out.
+shellrc.d/00-base.sh
+shellrc.d/05-revkit-mode.sh
+modes/vibe/aliases.sh
+shellrc.d/20-tools.sh
+shellrc.d/25-local-ai.sh
+modes/vibe/prompt.sh
+shellrc.d/52-revealui.sh

@@ -102,6 +102,17 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
   fi
   printf '  Installed: %s/%s\n' "$HELPERS_DIR" "$name"
   _installed=$((_installed + 1))
+  # Unsuffixed PATH name so `revkit-mode` works in bare shells too.
+  if [ "$name" = "revkit-mode.sh" ]; then
+    if revkit_is_macos; then
+      run cp "$HELPERS_DIR/$name" "$HELPERS_DIR/revkit-mode"
+      run chmod +x "$HELPERS_DIR/revkit-mode"
+    else
+      run sudo cp "$HELPERS_DIR/$name" "$HELPERS_DIR/revkit-mode"
+      run sudo chmod +x "$HELPERS_DIR/revkit-mode"
+    fi
+    printf '  Installed: %s/revkit-mode\n' "$HELPERS_DIR"
+  fi
 done
 printf '  %d helper(s) installed.\n' "$_installed"
 
@@ -327,19 +338,18 @@ for rcfile in "${_rc_files[@]}"; do
 # Absolute pins captured at bootstrap — not \$HOME/revealfleet at runtime.
 export REVEALUI_ROOT="$SCRIPT_DIR"
 ${_FLEET_PIN:+export REVEALFLEET_ROOT="$_FLEET_PIN"}
-# Guard: detect and print once per terminal session; subshells inherit REVEALUI_MODE.
-if [ -z "\${REVEALUI_MODE:-}" ]; then
-  if [ -f "\${REVEALUI_ROOT}/shell/shellrc.d/00-base.sh" ]; then
-    export REVEALUI_MODE="managed"
-    for _f in "\$REVEALUI_ROOT"/shell/shellrc.d/*.sh; do
-      [ -r "\$_f" ] && . "\$_f"
-    done
-    printf '\033[1;36m● RevKit: managed\033[0m (%s)\n' "\$REVEALUI_ROOT"
+# Guard: apply once per terminal session. Mode resolution (env >
+# ~/.config/revkit/mode > fleet) lives in shell/lib/revkit-mode.sh.
+# managed is a silent alias for fleet. Subshells inherit REVEALUI_SHELL_READY.
+if [ -z "\${REVEALUI_SHELL_READY:-}" ]; then
+  if [ -f "\${REVEALUI_ROOT}/shell/lib/revkit-mode.sh" ]; then
+    . "\${REVEALUI_ROOT}/shell/lib/revkit-mode.sh"
+    revkit_mode_activate
   else
     export REVEALUI_MODE="bare"
+    export REVEALUI_SHELL_READY=1
     printf '\033[0;37m● RevKit: bare\033[0m\n'
   fi
-  unset _f
 fi
 # --- end RevealUI ---
 HOOKEOF

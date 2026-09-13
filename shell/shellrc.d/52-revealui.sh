@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# revealui — retired PATH name (GAP-351). Short command in managed shells.
+# revealui — retired PATH name (GAP-351). Short command in fleet/vibe shells.
 #
 # Implementation: shell/bin/revealui.sh (installed by bootstrap as
 # revealui.sh and as ~/.local/bin/revealui). Prints the rfg/rfc replacement
