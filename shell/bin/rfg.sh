@@ -14,6 +14,7 @@
 #   rfg mint             # interactive device-token mint → revvault
 #   rfg smoke            # auth/MCP health (no secret print)
 #   rfg env              # print non-secret MCP URL + vault path (never the token)
+#   rfg usage-delta <rfg-sid> [bare-sid]  # GAP-496 token delta vs bare grok
 #   rfg bootstrap [path] # Rift-inspired: write .env.worktree (hash ports)
 #   rfg claim …          # claim acquire|release|list|check|sweep
 #   rfg open <repo> <label> [--claim surface] [--no-agent]
@@ -53,6 +54,23 @@ _load_fleet_root_lib || rfg_resolve_fleet_root() {
 FLEET_ROOT="$(rfg_resolve_fleet_root)" || true
 
 die() { echo "rfg: $*" >&2; exit 1; }
+
+# GAP-496: one jsonl row per rfg grok exec. Never the MCP token.
+_rfg_stamp_launch() {
+  local dir="${XDG_DATA_HOME:-$HOME/.local/share}/revealui/usage"
+  mkdir -p "$dir" || return 0
+  local ts cwd grok_path
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  cwd="$PWD"
+  grok_path="${1:-grok}"
+  python3 - "$dir/launches.jsonl" "$ts" "$cwd" "$grok_path" <<'PY' || true
+import json, sys
+path, ts, cwd, grok = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+row = {"ts": ts, "launcher": "rfg", "cwd": cwd, "grok": grok}
+with open(path, "a", encoding="utf-8") as fh:
+    fh.write(json.dumps(row, separators=(",", ":")) + "\n")
+PY
+}
 
 # Fast-forward idle local integration refs (test/main). Never switches branches.
 _sync_integration() {
@@ -340,6 +358,10 @@ case "$cmd" in
     echo "rfg env: token not printed. Load MCP with rfg <repo>, rfg mint, or rfg smoke." >&2
     exit 0
     ;;
+  usage-delta)
+    shift || true
+    exec python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/rfg-usage-delta.py" "$@"
+    ;;
   bootstrap)
     shift || true
     _load_worktree_env_lib || die "worktree-env.sh not found (re-run revkit bootstrap)"
@@ -473,6 +495,7 @@ case "$cmd" in
     # shellcheck disable=SC1090
     . "$envf"
     set +a
+    _rfg_stamp_launch "$grok_bin"
     exec "$grok_bin" "${open_extra[@]}"
     ;;
   -h | --help | help)
@@ -525,4 +548,5 @@ set -- "${RFG_GROK_ARGS[@]}"
 
 cd "$target"
 _load_grok_attach_lib && rfg_attach_grok_constitution && rfg_attach_grok_hooks "$target"
+_rfg_stamp_launch "$grok_bin"
 exec "$grok_bin" "$@"
