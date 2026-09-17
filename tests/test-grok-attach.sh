@@ -136,6 +136,7 @@ EOF
 chmod +x "$TMP/bin/grok"
 export PATH="$TMP/bin:/usr/bin:/bin"
 export REVEALUI_MCP_ENV_SKIP=1
+unset REVEALFLEET_ROOT REVEALUI_ROOT || true
 export REVFLEET_ROOT="$FLEET"
 
 cd "$FLEET"
