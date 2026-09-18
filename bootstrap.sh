@@ -464,7 +464,7 @@ fi
 # Durable replacement for the RETIRED symlink-into-worktree mechanism: ~/.claude
 # is a real-file git clone of claude-config (layer L1); reusable skills come from
 # the revskills plugin (layer L2, declared in claude-config's settings.json).
-# NEVER symlink ~/.claude entries into a revfleet worktree — that outage is what
+# NEVER symlink ~/.claude entries into a revealfleet worktree — that outage is what
 # this step exists to prevent.
 echo "[7] Wiring Claude global config (~/.claude) from claude-config..."
 CC_REMOTE="git@github.com-revealui:RevealUIStudio/claude-config.git"
@@ -518,9 +518,9 @@ else
 fi
 
 # Assertion: the retired anti-pattern must never return. Fail loudly if any
-# ~/.claude entry is a symlink pointing into a revfleet worktree.
+# ~/.claude entry is a symlink pointing into a revealfleet worktree.
 if [ -d "$CC_DIR" ]; then
-  _cc_bad="$(find "$CC_DIR" -maxdepth 2 -type l -lname '*revfleet*' 2>/dev/null || true)"
+  _cc_bad="$(find "$CC_DIR" -maxdepth 2 -type l \( -lname '*revealfleet*' -o -lname '*revfleet*' \) 2>/dev/null || true)"
   if [ -n "$_cc_bad" ]; then
     printf '  ERROR: symlink-into-worktree detected under ~/.claude (retired mechanism):\n' >&2
     printf '%s\n' "$_cc_bad" >&2
@@ -605,13 +605,13 @@ else
   # copy. Copy mode materializes tracked files with a .revcon-manifest.json
   # (revealui gates them via validate:rules-lockstep).
   FLEET_TARGETS=(
-    "revealui:revfleet,revealui:copy"
-    "revdev:revfleet:copy"
-    "revvault:revfleet:copy"
-    "revcon:revfleet:copy"
-    "revforge:revfleet:copy"
-    "revskills:revfleet:copy"
-    "revkit:revfleet:copy"
+    "revealui:revealfleet,revealui:copy"
+    "revdev:revealfleet:copy"
+    "revvault:revealfleet:copy"
+    "revcon:revealfleet:copy"
+    "revforge:revealfleet:copy"
+    "revskills:revealfleet:copy"
+    "revkit:revealfleet:copy"
   )
   for entry in "${FLEET_TARGETS[@]}"; do
     repo="${entry%%:*}"
