@@ -621,7 +621,7 @@ else
     case "$rest" in
       *:*) mode="${rest#*:}" ;;
     esac
-    target_dir="$REVFLEET_ROOT/$repo"
+    target_dir="${REVEALFLEET_ROOT:-$REVFLEET_ROOT}/$repo"
     if [ ! -d "$target_dir" ]; then
       printf '  [skip] %s not found at %s\n' "$repo" "$target_dir"
       continue
