@@ -45,6 +45,7 @@ rfg                   # already *inside* the fleet (root or a repo)
 rfg smoke             # auth + MCP health (no secret print)
 rfg mint              # OTP → revvault
 rfg env               # non-secret URL + vault path only (never the token)
+rfg usage-delta <rfg-sid> [bare-sid]  # GAP-496 token delta vs bare grok
 
 # Worktrees (owner hardline 2026-07-21: never inherit a feature-branch HEAD)
 rfg revealui --worktree=fix-gap-xxx "…"
