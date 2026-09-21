@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# rfc — RevFleet Claude launcher: short command + completion (interactive).
+# rfc — RevealFleet Claude launcher: short command + completion (interactive).
 #
 # The robust implementation lives at /usr/local/bin/rfc.sh (deployed by
 # bootstrap.sh). This file — auto-sourced in fleet interactive

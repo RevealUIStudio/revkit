@@ -1,7 +1,7 @@
 # shellcheck shell=bash
-# RevealUI Studio / RevFleet project aliases and shortcuts
+# RevealUI Studio / RevealFleet project aliases and shortcuts
 #
-# Naming: RevealUI = product monorepo; RevealUI Studio = company; RevFleet = umbrella.
+# Naming: RevealUI = product monorepo; RevealUI Studio = company; RevealFleet = umbrella.
 # Coordination: TRACKER free surfaces, fleet workboard, base origin/test, PR→test.
 #
 # Private planning tree paths are never written as a contiguous public-forbidden
@@ -26,7 +26,7 @@ __rv_planning_root() {
 
 # Quick project navigation
 # cdreveal → primary RevealUI checkout (WSL-native ext4 at ~/revealfleet/revealui).
-# The legacy sandbox-drive Suite path was retired with the Suite→RevFleet rename.
+# The legacy sandbox-drive Suite path was retired with the Suite→RevealFleet rename.
 alias cdreveal='cd "$REVFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVFLEET_ROOT" >&2'
 alias cdjv='cd "$(__rv_planning_root)" 2>/dev/null || echo "cdjv: private planning tree not found (set REVFLEET_PLANNING)" >&2'
 alias cdfleet='cd "$REVFLEET_ROOT" 2>/dev/null || echo "cdfleet: \$REVFLEET_ROOT not found" >&2'

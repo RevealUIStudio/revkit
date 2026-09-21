@@ -1,7 +1,7 @@
-# `rfc` — RevFleet Claude launcher (secure, zero-prompt)
+# `rfc` — RevealFleet Claude launcher (secure, zero-prompt)
 
 `rfc` starts a Claude Code session whose **process runs inside WSL**, rooted in
-a RevFleet repo. That single property — claude running in WSL rather than on
+a RevealFleet repo. That single property — claude running in WSL rather than on
 the Windows host — is what makes a secure, prompt-free session possible.
 
 ## Why this exists

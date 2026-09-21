@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# rfg — RevFleet Grok launcher: short command + completion (interactive).
+# rfg — RevealFleet Grok launcher: short command + completion (interactive).
 #
 # Implementation: shell/bin/rfg.sh (installed by bootstrap to /usr/local/bin
 # or ~/.local/bin). Loads RevealUI MCP token from revvault and execs grok.
