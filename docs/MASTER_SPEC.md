@@ -184,7 +184,7 @@ wires fleet Claude rules when `revcon` is present.
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL |
 | 7 | Clone/wire `claude-config` into `~/.claude` + revskills marketplace | all |
 | 8 | Deploy M-4 Claude Code scanner hook | all |
-| 9 | Wire RevFleet Claude rules via `revcon/link.sh` | all |
+| 9 | Wire RevealFleet Claude rules via `revcon/link.sh` | all |
 | 10 | Fleet-wide M-11 pre-push hook. `core.hooksPath` at `~/.config/revkit/git-hooks` (Linux/WSL, LF-normalized copy) or `<repo>/git-hooks` (Windows, in-repo) | all |
 
 `bootstrap-wsl.sh` is a thin deprecation shim that execs `bootstrap.sh` — it
@@ -301,7 +301,7 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 | **RevealUI** | Independent — RevealUI runs anywhere with Node 24 + pnpm + Postgres; RevKit is one provisioning option |
 | **RevVault** | RevKit sets up the age-identity mount path RevVault expects |
 | **RevDev** | Independent — RevDev's harness daemon runs on whatever workstation RevKit (or any other tool) provisioned |
-| **RevCon** | Pairs cleanly — RevKit wires RevFleet Claude rules via `revcon/link.sh` (bootstrap step 9) |
+| **RevCon** | Pairs cleanly — RevKit wires RevealFleet Claude rules via `revcon/link.sh` (bootstrap step 9) |
 | **RevForge** | Independent — RevForge runs on a workstation; RevKit can provision that workstation |
 | **RevSkills** | Independent — skills are markdown, work in any RevKit-provisioned env |
 

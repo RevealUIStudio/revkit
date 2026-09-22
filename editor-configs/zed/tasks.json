@@ -1,4 +1,4 @@
-// Zed task template — RevFleet Claude launcher.
+// Zed task template — RevealFleet Claude launcher.
 //
 // Deploy to one of:
 //   ~/.config/zed/tasks.json            (WSL-remote Zed, global) — recommended
@@ -10,7 +10,7 @@
 // the project directory if it is under ~/revealfleet. See docs/rfc-launcher.md.
 [
   {
-    "label": "Claude (RevFleet, WSL-native)",
+    "label": "Claude (RevealFleet, WSL-native)",
     "command": "/usr/local/bin/rfc.sh",
     "args": [],
     "use_new_terminal": false,

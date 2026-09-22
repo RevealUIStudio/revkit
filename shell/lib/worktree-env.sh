@@ -91,7 +91,7 @@ rfg_write_worktree_env() {
     label="$(basename "$wt_path")"
   fi
   project="$(basename "$(dirname "$wt_path")")"
-  # Prefer repo name when path is …/revfleet/.wt/<label>
+  # Prefer repo name when path is …/revealfleet/.wt/<label>
   if [ "$(basename "$(dirname "$wt_path")")" = ".wt" ]; then
     project="fleet"
   fi

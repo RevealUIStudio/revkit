@@ -85,7 +85,7 @@ See [`docs/MASTER_SPEC.md`](docs/MASTER_SPEC.md) for the full surface area + con
 
 MIT
 
-## RevFleet Claude launcher (`rfc`)
+## RevealFleet Claude launcher (`rfc`)
 
 `rfc <repo>` starts a Claude Code session whose process runs **inside WSL**,
 rooted in a `~/revealfleet/*` repo — the configuration that makes a secure,
