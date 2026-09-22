@@ -5,6 +5,14 @@ This is **not** a customer runtime, product SDK, or end-user installer.
 
 `bootstrap.sh` provisions the machine that runs the fleet: helper scripts, sudoers, global git hooks, and Claude/Grok launchers. Do not treat a clone of this repo as something to ship to a customer host.
 
+## Version
+
+`VERSION` is `0.3.0`. This is the first recorded field for this repo. It is
+not a scaffold stamp: bootstrap, shell modes (fleet/vibe/bare), and the
+fleet-root `rfg`/`rfc` launcher have all shipped. Still `0.x` — there is no
+stable external contract. Not aligned to any other repo's number.
+
+
 ## Privilege warning
 
 A default `bootstrap.sh` run is a privileged install. Preview first (`--dry-run`). It will:
