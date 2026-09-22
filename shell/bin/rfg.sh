@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# rfg — RevFleet Grok launcher (WSL / native Linux / macOS)
+# rfg — RevealFleet Grok launcher (WSL / native Linux / macOS)
 #
-# Starts a Grok session rooted in a RevFleet repo with Level 1 RevealUI MCP
+# Starts a Grok session rooted in a RevealFleet repo with Level 1 RevealUI MCP
 # env preloaded from revvault (REVEALUI_MCP_TOKEN + URL). Same fleet-root
 # resolution as rfc. See docs/rfg-launcher.md.
 #

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# rfc — RevFleet Claude launcher (WSL / native Linux / macOS)
+# rfc — RevealFleet Claude launcher (WSL / native Linux / macOS)
 #
-# Starts a `claude` session rooted in a RevFleet repo, running in the current
+# Starts a `claude` session rooted in a RevealFleet repo, running in the current
 # POSIX shell. On WSL this is the entire point: claude's Bash tool-calls run
 # native (`git status`, not `wsl.exe -d Ubuntu -- bash -lc '... git status'`) —
 # the wsl.exe wrapper is (a) un-allowlistable (the payload is an opaque string,

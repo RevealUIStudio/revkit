@@ -20,7 +20,7 @@ API_BASE="${API_BASE%/}"
 
 HOST_SLUG="$(hostname -s 2>/dev/null || hostname | cut -d. -f1)"
 DEVICE_ID="${REVEALUI_MCP_DEVICE_ID:-fleet-${HOST_SLUG}-cli}"
-DEVICE_NAME="${REVEALUI_MCP_DEVICE_NAME:-RevFleet CLI (${HOST_SLUG})}"
+DEVICE_NAME="${REVEALUI_MCP_DEVICE_NAME:-RevealFleet CLI (${HOST_SLUG})}"
 DEVICE_TYPE="cli"
 
 die() { echo "revealui-mcp-mint: $*" >&2; exit 1; }

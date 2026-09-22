@@ -54,7 +54,7 @@ bash bootstrap.sh               # apply
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL only |
 | 7 | Clone/wire `claude-config` into `~/.claude` + revskills marketplace | all |
 | 8 | Deploy the M-4 Claude Code scanner hook | all |
-| 9 | Wire RevFleet Claude rules via `revcon/link.sh` (skipped if absent) | all |
+| 9 | Wire RevealFleet Claude rules via `revcon/link.sh` (skipped if absent) | all |
 | 10 | Fleet-wide M-11 pre-push hook (`git config --global core.hooksPath`) | all |
 
 ## 4. Configuration model — neutral configs, machine-local identity

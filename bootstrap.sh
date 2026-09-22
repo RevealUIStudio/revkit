@@ -520,7 +520,7 @@ fi
 # Assertion: the retired anti-pattern must never return. Fail loudly if any
 # ~/.claude entry is a symlink pointing into a revealfleet worktree.
 if [ -d "$CC_DIR" ]; then
-  _cc_bad="$(find "$CC_DIR" -maxdepth 2 -type l \( -lname '*revealfleet*' -o -lname '*revfleet*' \) 2>/dev/null || true)"
+  _cc_bad="$(find "$CC_DIR" -maxdepth 2 -type l \( -lname '*revealfleet*' -o -lname '*revealfleet*' \) 2>/dev/null || true)"
   if [ -n "$_cc_bad" ]; then
     printf '  ERROR: symlink-into-worktree detected under ~/.claude (retired mechanism):\n' >&2
     printf '%s\n' "$_cc_bad" >&2
@@ -580,9 +580,9 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 9: RevFleet Claude rules via revcon/link.sh
+# Step 9: RevealFleet Claude rules via revcon/link.sh
 # ---------------------------------------------------------------------------
-echo "[9] Wiring RevFleet Claude rules via revcon/link.sh..."
+echo "[9] Wiring RevealFleet Claude rules via revcon/link.sh..."
 if [ -f "$SCRIPT_DIR/shell/lib/fleet-root.sh" ]; then
   # shellcheck disable=SC1091
   . "$SCRIPT_DIR/shell/lib/fleet-root.sh"
