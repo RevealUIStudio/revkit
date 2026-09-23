@@ -109,6 +109,82 @@ rfg_install_grok_budget_scripts() {
   fi
 }
 
+# Merge token-budget.json into config.toml when the revskills sync script
+# is not installed. Percent is round(compactionAtTokens / contextWindowTokens).
+# Other lines (including load_envrc) stay. No-op on an unusable budget file.
+rfg_apply_grok_token_budget() {
+  local budget="$1"
+  local dest="$2"
+  python3 - "$budget" "$dest" <<'PY'
+import json, math, os, re, sys
+
+budget_path, dest = sys.argv[1], sys.argv[2]
+try:
+    with open(budget_path, encoding="utf-8") as fh:
+        parsed = json.load(fh)
+    tokens = int(parsed.get("compactionAtTokens") or 0)
+    window = int(parsed.get("contextWindowTokens") or 0)
+except (OSError, ValueError, TypeError):
+    sys.exit(0)
+models = [m for m in (parsed.get("models") or []) if isinstance(m, str) and m]
+if tokens <= 0 or window <= 0 or not models:
+    sys.exit(0)
+for model in models:
+    if re.fullmatch(r"[\w.-]+", model) is None:
+        sys.exit(0)
+percent = int(math.floor((tokens / float(window)) * 100 + 0.5))
+
+def upsert_percent(text, percent):
+    cre = re.compile(r"auto_compact_threshold_percent\s*=\s*\d+")
+    if cre.search(text):
+        return cre.sub("auto_compact_threshold_percent = %d" % percent, text, count=1)
+    if re.search(r"^\[session\]\s*$", text, re.M):
+        return re.sub(
+            r"^\[session\]\s*$",
+            "[session]\nauto_compact_threshold_percent = %d" % percent,
+            text,
+            count=1,
+            flags=re.M,
+        )
+    return text.rstrip() + "\n\n[session]\nauto_compact_threshold_percent = %d\n" % percent
+
+def upsert_model(text, model_id, tokens):
+    header = '[model."%s"]' % model_id
+    lines = text.split("\n")
+    start = -1
+    for i, line in enumerate(lines):
+        if line.strip() == header:
+            start = i
+            break
+    if start == -1:
+        return text.rstrip() + "\n\n%s\ncompaction_at_tokens = %d\n" % (header, tokens)
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        if lines[i].startswith("["):
+            end = i
+            break
+    for i in range(start + 1, end):
+        if re.match(r"^\s*compaction_at_tokens\s*=", lines[i]):
+            lines[i] = "compaction_at_tokens = %d" % tokens
+            return "\n".join(lines)
+    lines.insert(end, "compaction_at_tokens = %d" % tokens)
+    return "\n".join(lines)
+
+text = ""
+if os.path.isfile(dest):
+    with open(dest, encoding="utf-8") as fh:
+        text = fh.read()
+text = upsert_percent(text, percent)
+for model in models:
+    text = upsert_model(text, model, tokens)
+if text and not text.endswith("\n"):
+    text += "\n"
+os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+with open(dest, "w", encoding="utf-8") as fh:
+    fh.write(text)
+PY
+}
+
 # Apply token-budget.json onto the Grok user config. No-op without the file.
 rfg_sync_grok_token_budget() {
   local root="${1:-}"
@@ -116,6 +192,8 @@ rfg_sync_grok_token_budget() {
   [ -n "$root" ] || return 0
   budget="$root/.revealui/adapters/grok/token-budget.json"
   [ -f "$budget" ] || return 0
+  dest="$(rfg_grok_home)/config.toml"
+  mkdir -p "$(dirname "$dest")"
   sync="$HOME/.local/share/revealui/hooks/sync-grok-token-budget.js"
   if [ ! -f "$sync" ]; then
     local fleet
@@ -124,10 +202,11 @@ rfg_sync_grok_token_budget() {
       sync="$fleet/revskills/scripts/sync-grok-token-budget.js"
     fi
   fi
-  [ -f "$sync" ] || return 0
-  dest="$(rfg_grok_home)/config.toml"
-  mkdir -p "$(dirname "$dest")"
-  node "$sync" "$budget" "$dest"
+  if [ -f "$sync" ]; then
+    node "$sync" "$budget" "$dest"
+    return
+  fi
+  rfg_apply_grok_token_budget "$budget" "$dest"
 }
 
 # Copy allowlisted hook JSON from a product checkout into the Grok attach dir.
