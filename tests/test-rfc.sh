@@ -35,8 +35,8 @@ EOF
 chmod +x "$TMP/bin/claude"
 
 export PATH="$TMP/bin:/usr/bin:/bin"
-unset REVEALFLEET_ROOT REVFLEET_ROOT REVEALUI_ROOT || true
-export REVFLEET_ROOT="$TMP/fleet"
+unset REVEALFLEET_ROOT REVEALUI_ROOT || true
+export REVEALFLEET_ROOT="$TMP/fleet"
 export REVEALUI_MCP_ENV_SKIP=1
 unset REVEALUI_MCP_TOKEN || true
 export GIT_AUTHOR_NAME='rfc-test'
