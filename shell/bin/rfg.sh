@@ -21,7 +21,7 @@
 #                        # create ~/revealfleet/.wt/<label> from integration ref,
 #                        # bootstrap env, optional claim, optional grok
 #
-# Override fleet root: REVEALFLEET_ROOT (REVFLEET_ROOT still accepted)
+# Override fleet root: REVEALFLEET_ROOT
 # Skip MCP load: REVEALUI_MCP_ENV_SKIP=1
 # Non-strict (launch even if token missing): REVEALUI_MCP_ENV_STRICT=0
 # Skip worktree-ref inject: RFG_WORKTREE_REF_SKIP=1
@@ -48,7 +48,6 @@ _load_fleet_root_lib() {
 }
 _load_fleet_root_lib || rfg_resolve_fleet_root() {
   if [ -n "${REVEALFLEET_ROOT:-}" ]; then printf '%s\n' "$REVEALFLEET_ROOT"; return 0; fi
-  if [ -n "${REVFLEET_ROOT:-}" ]; then printf '%s\n' "$REVFLEET_ROOT"; return 0; fi
   return 1
 }
 FLEET_ROOT="$(rfg_resolve_fleet_root)" || true

@@ -72,7 +72,7 @@ else
 fi
 unset REVEALFLEET_ROOT
 export REVFLEET_ROOT="$TMP/alias"
-got="$(rfg_resolve_fleet_root)"
+got="$(rfg_resolve_fleet_root)" && true || got=""
 if [ "$got" = "$TMP/alias" ]; then
   fail "old root alias must not win: got $got"
 else
