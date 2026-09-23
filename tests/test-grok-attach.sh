@@ -66,6 +66,41 @@ else
   pass "allowlist skips extra.json"
 fi
 
+printf '%s\n' '{"hooks":{"PostToolUse":[{"matcher":"grep|run_terminal_command","hooks":[{"type":"command","command":"node cap-tool-output.js"}]}]}}' \
+  >"$SRC/.revealui/adapters/grok/hooks/cap-tool-output.json"
+printf '%s\n' '{"contextWindowTokens":500000,"compactionAtTokens":160000,"models":["grok-4.7","grok-4.7-build"]}' \
+  >"$SRC/.revealui/adapters/grok/token-budget.json"
+mkdir -p "$HOME/.grok"
+printf '%s\n' '[session]
+load_envrc = true
+auto_compact_threshold_percent = 85
+' >"$HOME/.grok/config.toml"
+FLEET_ROOT="$(cd "$ROOT/.." && pwd)"
+if [ -d "$FLEET_ROOT/revskills/scripts" ]; then
+  REVEALFLEET_ROOT="$FLEET_ROOT" rfg_attach_grok_hooks "$SRC"
+else
+  rfg_attach_grok_hooks "$SRC"
+fi
+if cmp -s "$SRC/.revealui/adapters/grok/hooks/cap-tool-output.json" "$dest/cap-tool-output.json"; then
+  pass "cap-tool-output.json deployed"
+else
+  fail "cap-tool-output.json missing or different"
+fi
+if cmp -s "$SRC/.revealui/adapters/grok/token-budget.json" \
+  "$HOME/.local/share/revealui/hooks/token-budget.json"; then
+  pass "token-budget.json deployed to XDG hooks"
+else
+  fail "token-budget.json missing from XDG hooks"
+fi
+SYNC="$ROOT/../revskills/scripts/sync-grok-token-budget.js"
+if [ -f "$SYNC" ] && grep -q 'auto_compact_threshold_percent = 32' "$HOME/.grok/config.toml" \
+  && grep -q 'compaction_at_tokens = 160000' "$HOME/.grok/config.toml" \
+  && grep -q 'load_envrc = true' "$HOME/.grok/config.toml"; then
+  pass "token budget merged into grok config.toml"
+else
+  fail "token budget did not merge into grok config.toml"
+fi
+
 mkdir -p "$SRC/packages/harnesses/scripts"
 printf '%s\n' 'module.exports = {};' >"$SRC/packages/harnesses/scripts/public-security-comment-pretool.cjs"
 rfg_attach_grok_hooks "$SRC"
@@ -136,8 +171,8 @@ EOF
 chmod +x "$TMP/bin/grok"
 export PATH="$TMP/bin:/usr/bin:/bin"
 export REVEALUI_MCP_ENV_SKIP=1
-unset REVEALFLEET_ROOT REVEALUI_ROOT || true
-export REVFLEET_ROOT="$FLEET"
+unset REVEALUI_ROOT || true
+export REVEALFLEET_ROOT="$FLEET"
 
 cd "$FLEET"
 out="$(bash "$RFG" 2>&1)" && rc=0 || rc=$?
