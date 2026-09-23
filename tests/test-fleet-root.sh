@@ -74,20 +74,20 @@ unset REVEALFLEET_ROOT
 export REVFLEET_ROOT="$TMP/alias"
 got="$(rfg_resolve_fleet_root)"
 if [ "$got" = "$TMP/alias" ]; then
-  pass "REVFLEET_ROOT alias still works"
+  fail "old root alias must not win: got $got"
 else
-  fail "alias: got $got"
+  pass "old root alias is ignored"
 fi
 export REVEALFLEET_ROOT="$TMP/canonical"
 export REVFLEET_ROOT="$TMP/alias"
 got="$(rfg_resolve_fleet_root)"
 if [ "$got" = "$TMP/canonical" ]; then
-  pass "REVEALFLEET_ROOT beats REVFLEET_ROOT"
+  pass "REVEALFLEET_ROOT is the only env root"
 else
-  fail "canonical vs alias: got $got"
+  fail "explicit root: got $got"
 fi
 unset REVEALFLEET_ROOT
-export REVFLEET_ROOT="$TMP/fleet"
+export REVEALFLEET_ROOT="$TMP/fleet"
 
 mkdir -p "$TMP/fleet/revealui"
 if rfg_path_is_in_fleet "$TMP/fleet" "$TMP/fleet" && rfg_path_is_in_fleet "$TMP/fleet" "$TMP/fleet/revealui"; then
@@ -102,7 +102,7 @@ else
 fi
 
 unset RFG_WT_ROOT
-export REVFLEET_ROOT="$TMP/fleet"
+export REVEALFLEET_ROOT="$TMP/fleet"
 got="$(rfg_wt_root)"
 if [ "$got" = "$TMP/fleet/.wt" ]; then
   pass "wt root follows resolved fleet"

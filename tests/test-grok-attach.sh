@@ -92,8 +92,7 @@ if cmp -s "$SRC/.revealui/adapters/grok/token-budget.json" \
 else
   fail "token-budget.json missing from XDG hooks"
 fi
-SYNC="$ROOT/../revskills/scripts/sync-grok-token-budget.js"
-if [ -f "$SYNC" ] && grep -q 'auto_compact_threshold_percent = 32' "$HOME/.grok/config.toml" \
+if grep -q 'auto_compact_threshold_percent = 32' "$HOME/.grok/config.toml" \
   && grep -q 'compaction_at_tokens = 160000' "$HOME/.grok/config.toml" \
   && grep -q 'load_envrc = true' "$HOME/.grok/config.toml"; then
   pass "token budget merged into grok config.toml"
