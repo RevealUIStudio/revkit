@@ -13,6 +13,9 @@ secrets/
 id_ed25519*
 !*.pub
 
+# Operator-local client-name watchlist (Layer B). Never commit real terms.
+.client-name-watchlist.local
+
 # Passage store (its own git repo)
 passage-store/
 
