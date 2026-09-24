@@ -139,7 +139,7 @@ Future Level 2 (`GrokAdapter` in `@revealui/harnesses`) extends the same data pl
 
 | Variable | Default |
 |----------|---------|
-| `REVEALFLEET_ROOT` | bootstrap pin (absolute). `REVFLEET_ROOT` alias still accepted. Never `$HOME/revealfleet` at runtime. |
+| `REVEALFLEET_ROOT` | bootstrap pin (absolute). Never `$HOME/revealfleet` at runtime. |
 | `REVEALUI_MCP_URL` | `https://api.revealui.com/api/mcp` |
 | `REVEALUI_MCP_TOKEN_VAULT_PATH` | `revealui/dev/mcp/cli-token` |
 | `REVEALUI_MCP_ENV_SKIP=1` | skip vault (debug) |

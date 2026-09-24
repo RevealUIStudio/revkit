@@ -2,11 +2,10 @@
 # fleet-root.sh — resolve the RevealFleet root without using $HOME as a code root.
 #
 # Trust order (first hit wins):
-#   1. REVEALFLEET_ROOT (explicit)
-#   2. REVFLEET_ROOT (alias)
-#   3. Walk from this file if it still lives in a revkit checkout or worktree
-#   4. Matched install pin next to this file (…/lib/revkit/pin.env)
-#   5. Walk from REVEALUI_ROOT (bootstrap pin)
+#   1. REVEALFLEET_ROOT (explicit). Home default is ~/revealfleet only.
+#   2. Walk from this file if it still lives in a revkit checkout or worktree
+#   3. Matched install pin next to this file (…/lib/revkit/pin.env)
+#   4. Walk from REVEALUI_ROOT (bootstrap pin)
 # Fail closed if none resolve. Never default to $HOME/revealfleet.
 
 rfg_infer_fleet_from_path() {
@@ -67,10 +66,6 @@ rfg_resolve_fleet_root() {
   local got
   if [ -n "${REVEALFLEET_ROOT:-}" ]; then
     printf '%s\n' "$REVEALFLEET_ROOT"
-    return 0
-  fi
-  if [ -n "${REVFLEET_ROOT:-}" ]; then
-    printf '%s\n' "$REVFLEET_ROOT"
     return 0
   fi
   got="$(rfg_infer_fleet_from_path "${BASH_SOURCE[0]}")" && {
