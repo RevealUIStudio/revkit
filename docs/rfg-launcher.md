@@ -64,8 +64,11 @@ Before that sync, before MCP load, and before `exec grok` (including
 `rfg open`), `rfg` runs an audit-storm preflight. Leftover home-wide
 `du` and audit `find` processes wedge WSL disk I/O and hang the launch.
 The preflight signals only known orphan patterns older than
-`RFG_STORM_MIN_AGE_SEC` (default 120 seconds). If a matching process is
-still in uninterruptible disk sleep, it warns on stderr and continues.
+`RFG_STORM_MIN_AGE_SEC` (default 120 seconds). A process already in
+uninterruptible disk sleep is included at that same age when its cmdline
+is one of those patterns, any `du -sh`, or a relative `find .`. rfg and
+grok are not signaled. If a matching process is still in disk sleep
+afterward, `rfg` warns on stderr and continues.
 Skip with `RFG_STORM_PREFLIGHT_SKIP=1`. Run `kill-audit-storms` alone to
 sweep with `AUDIT_STORM_MIN_AGE_SEC` (default 600).
 

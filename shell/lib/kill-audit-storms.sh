@@ -37,9 +37,10 @@ audit_storm_etime_to_sec() {
 }
 
 # True when this pid/cmdline must not be signaled.
-# grok and rfg are matched on the executable name, so a find of ~/.grok still qualifies.
+# Case arms stay separate. A combined pattern with a quoted grok* glob is a bash syntax error.
+# find of ~/.grok does not contain bin/grok, so those audits still qualify.
 audit_storm_pid_protected() {
-  local pid="$1" cmd="$2" base p
+  local pid="$1" cmd="$2" base p home_rfg
   local -a extra=()
   [ "$pid" = "$$" ] && return 0
   if [ -n "${PPID:-}" ] && [ "$pid" = "$PPID" ]; then
@@ -53,15 +54,22 @@ audit_storm_pid_protected() {
     done
   fi
   case "$cmd" in
-    *kill-audit-storms*|*rfg.sh*) return 0 ;;
+    *kill-audit-storms*) return 0 ;;
+    *rfg.sh*) return 0 ;;
+    */usr/local/bin/rfg*) return 0 ;;
+    *bin/grok*) return 0 ;;
   esac
+  if [ -n "${HOME:-}" ] && [ "$HOME" != "/" ]; then
+    home_rfg="${HOME}/.local/bin/rfg"
+    case "$cmd" in
+      *"$home_rfg"*) return 0 ;;
+    esac
+  fi
+  # Bare argv0 (grok on PATH, rfg with no path) still must not be signaled.
   base="${cmd%% *}"
   base="${base##*/}"
   case "$base" in
     grok|rfg|rfg.sh|kill-audit-storms|kill-audit-storms.sh) return 0 ;;
-  esac
-  case "$cmd" in
-    *'exec grok'*|*'exec rfg'*) return 0 ;;
   esac
   return 1
 }
@@ -80,6 +88,27 @@ audit_storm_cmd_match() {
   if [ -n "$home" ] && [ "$home" != "/" ]; then
     case "$cmd" in
       *"du -sh ${home}"*|*"find ${home}"*) return 0 ;;
+    esac
+    marker="$(basename "$home")-audit"
+    case "$cmd" in
+      *"$marker"*) return 0 ;;
+    esac
+  fi
+  return 1
+}
+
+# D-state leftovers use the wider corrected filter: any du -sh, find of $HOME,
+# a relative find ., and the home audit marker. Age and rfg/grok skips still apply.
+audit_storm_dstate_cmd_match() {
+  local cmd="$1" home marker
+  case "$cmd" in
+    *'du -sh'*) return 0 ;;
+    *'find .'*) return 0 ;;
+  esac
+  home="${HOME:-}"
+  if [ -n "$home" ] && [ "$home" != "/" ]; then
+    case "$cmd" in
+      *"find ${home}"*) return 0 ;;
     esac
     marker="$(basename "$home")-audit"
     case "$cmd" in
@@ -133,7 +162,7 @@ audit_storm_dstate_lines() {
   while IFS=$'\t' read -r pid stat et cmd; do
     [ -n "${pid:-}" ] || continue
     [[ "${stat:-}" == *D* ]] || continue
-    audit_storm_cmd_match "${cmd:-}" || continue
+    audit_storm_dstate_cmd_match "${cmd:-}" || continue
     printf '%s %s %s %s\n' "$pid" "$stat" "$et" "$cmd"
   done < <(audit_storm_rows_d)
   return 0
@@ -175,7 +204,7 @@ audit_storm_main() {
     age="$(audit_storm_etime_to_sec "${et:-}")"
     [ "$age" -lt "$min" ] && continue
     audit_storm_pid_protected "$pid" "${cmd:-}" && continue
-    if audit_storm_cmd_match "${cmd:-}"; then
+    if audit_storm_dstate_cmd_match "${cmd:-}"; then
       candidates+=("$pid|$et|$cmd")
     else
       warned_d=$((warned_d + 1))

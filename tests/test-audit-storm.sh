@@ -103,9 +103,19 @@ match_yes "fleet-identity scan"
 match_yes "runner $marker once"
 match_no "du -sh /tmp"
 match_no "find /tmp/.grok"
+match_no "find ."
 match_no "sleep 1"
 match_no "grok"
 match_no "bash /usr/local/bin/rfg.sh revealui"
+if audit_storm_dstate_cmd_match "du -sh /tmp" \
+  && audit_storm_dstate_cmd_match "find ." \
+  && audit_storm_dstate_cmd_match "find $home/.grok" \
+  && audit_storm_dstate_cmd_match "$marker" \
+  && ! audit_storm_dstate_cmd_match "sleep 9"; then
+  pass "D-state matcher keeps du -sh, find ., and home audits"
+else
+  fail "D-state matcher drifted from the corrected filter"
+fi
 
 echo "--- protection ---"
 if audit_storm_pid_protected "$$" "du -sh $home"; then
@@ -128,6 +138,16 @@ if audit_storm_pid_protected 999999 "bash /usr/local/bin/rfg.sh revealui"; then
 else
   fail "rfg.sh cmdline should be protected"
 fi
+if audit_storm_pid_protected 999999 "/usr/local/bin/rfg revealui"; then
+  pass "/usr/local/bin/rfg is protected"
+else
+  fail "/usr/local/bin/rfg should be protected"
+fi
+if audit_storm_pid_protected 999999 "$home/.local/bin/rfg revealui"; then
+  pass "HOME local rfg is protected"
+else
+  fail "HOME local rfg should be protected"
+fi
 if audit_storm_pid_protected 999999 "find $home/.grok -type d"; then
   fail "find of .grok must not be treated as grok"
 else
@@ -139,10 +159,13 @@ audit_storm_ps_d() {
   printf '  4242 D 01:00 du -sh %s\n' "$home"
   printf '  4243 S 01:00 du -sh %s\n' "$home"
   printf '  4244 D 01:00 sleep 9\n'
+  printf '  4245 D 02:00 find .\n'
+  printf '  4246 D 02:00 du -sh /tmp\n'
 }
 dlines="$(audit_storm_dstate_lines)"
-if [[ "$dlines" == *4242* ]] && [[ "$dlines" != *4243* ]] && [[ "$dlines" != *4244* ]]; then
-  pass "D-state lines keep only matching disk-sleep audits"
+if [[ "$dlines" == *4242* ]] && [[ "$dlines" == *4245* ]] && [[ "$dlines" == *4246* ]] \
+  && [[ "$dlines" != *4243* ]] && [[ "$dlines" != *4244* ]]; then
+  pass "D-state lines keep du -sh and find . disk-sleep only"
 else
   fail "D-state filter got: $dlines"
 fi
@@ -341,6 +364,14 @@ if grep -F 'shell/lib/"*.sh' "$BOOT" >/dev/null; then
   pass "bootstrap still installs every shell/lib script"
 else
   fail "bootstrap lib glob missing"
+fi
+
+if bash -n "$SWEEP" && grep -F '*bin/grok*)' "$SWEEP" >/dev/null \
+  && grep -F '*/usr/local/bin/rfg*)' "$SWEEP" >/dev/null \
+  && ! grep -F 'exec grok' "$SWEEP" >/dev/null; then
+  pass "rfg/grok skips are separate case arms and bash -n clean"
+else
+  fail "grok case pattern is not the corrected form"
 fi
 
 if grep -q 'RFG_STORM_PREFLIGHT_SKIP' "$DOCS" && grep -q 'RFG_STORM_MIN_AGE_SEC' "$DOCS" \
