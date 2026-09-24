@@ -176,16 +176,35 @@ audit_storm_min_age() {
   printf '%s\n' "$min"
 }
 
+# Plain pid list. No associative arrays: WSL bash reports "bad array subscript"
+# for those, and also for "${array[@]:-}" when the list is still empty.
+audit_storm_already_listed() {
+  local want="$1" x
+  [ "${#audit_storm_uniq_pids[@]}" -eq 0 ] && return 1
+  for x in "${audit_storm_uniq_pids[@]}"; do
+    [ "$x" = "$want" ] && return 0
+  done
+  return 1
+}
+
+audit_storm_add_cand() {
+  local pid="$1" et="$2" cmd="$3"
+  [ -n "$pid" ] || return 0
+  audit_storm_already_listed "$pid" && return 0
+  audit_storm_uniq_pids+=("$pid")
+  audit_storm_uniq_lines+=("$pid|$et|$cmd")
+}
+
 audit_storm_main() {
   local min dry report killed warned_d
-  local pid et cmd age stat rest
-  local -a candidates=() uniq=()
-  local c p u found
+  local pid et cmd age stat rest c
   min="$(audit_storm_min_age)"
   dry="${AUDIT_STORM_DRY_RUN:-0}"
   report="${AUDIT_STORM_REPORT_ONLY:-0}"
   killed=0
   warned_d=0
+  audit_storm_uniq_pids=()
+  audit_storm_uniq_lines=()
 
   while IFS=$'\t' read -r pid et cmd; do
     [ -n "${pid:-}" ] || continue
@@ -194,7 +213,7 @@ audit_storm_main() {
     [ "$age" -lt "$min" ] && continue
     audit_storm_pid_protected "$pid" "${cmd:-}" && continue
     audit_storm_cmd_match "${cmd:-}" || continue
-    candidates+=("$pid|$et|$cmd")
+    audit_storm_add_cand "$pid" "$et" "$cmd"
   done < <(audit_storm_rows_etime)
 
   while IFS=$'\t' read -r pid stat et cmd; do
@@ -205,36 +224,19 @@ audit_storm_main() {
     [ "$age" -lt "$min" ] && continue
     audit_storm_pid_protected "$pid" "${cmd:-}" && continue
     if audit_storm_dstate_cmd_match "${cmd:-}"; then
-      candidates+=("$pid|$et|$cmd")
+      audit_storm_add_cand "$pid" "$et" "$cmd"
     else
       warned_d=$((warned_d + 1))
     fi
   done < <(audit_storm_rows_d)
 
-  if [ "${#candidates[@]}" -gt 0 ]; then
-    for c in "${candidates[@]}"; do
-      p="${c%%|*}"
-      found=0
-      if [ "${#uniq[@]}" -gt 0 ]; then
-        for u in "${uniq[@]}"; do
-          if [ "${u%%|*}" = "$p" ]; then
-            found=1
-            break
-          fi
-        done
-      fi
-      [ "$found" -eq 1 ] && continue
-      uniq+=("$c")
-    done
-  fi
-
-  if [ "${#uniq[@]}" -eq 0 ]; then
+  if [ "${#audit_storm_uniq_lines[@]}" -eq 0 ]; then
     echo "kill-audit-storms: none (min_age=${min}s)"
     return 0
   fi
 
-  echo "kill-audit-storms: ${#uniq[@]} candidate(s) older than ${min}s"
-  for c in "${uniq[@]}"; do
+  echo "kill-audit-storms: ${#audit_storm_uniq_lines[@]} candidate(s) older than ${min}s"
+  for c in "${audit_storm_uniq_lines[@]}"; do
     pid="${c%%|*}"
     rest="${c#*|}"
     et="${rest%%|*}"

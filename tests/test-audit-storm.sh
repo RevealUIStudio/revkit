@@ -170,6 +170,23 @@ else
   fail "D-state filter got: $dlines"
 fi
 
+echo "--- plain pid dedupe ---"
+audit_storm_uniq_pids=()
+audit_storm_uniq_lines=()
+audit_storm_add_cand 10 "01:00" "du -sh $home"
+audit_storm_add_cand 10 "01:00" "du -sh $home"
+audit_storm_add_cand 11 "01:00" "find $home"
+if [ "${#audit_storm_uniq_pids[@]}" -eq 2 ] && [ "${#audit_storm_uniq_lines[@]}" -eq 2 ]; then
+  pass "duplicate pids collapse to a plain list"
+else
+  fail "dedupe count pids=${#audit_storm_uniq_pids[@]} lines=${#audit_storm_uniq_lines[@]}"
+fi
+if grep -n 'declare -A' "$SWEEP"; then
+  fail "sweeper still uses associative arrays"
+else
+  pass "sweeper has no associative arrays"
+fi
+
 echo "--- standalone none ---"
 none_out="$(AUDIT_STORM_MIN_AGE_SEC=99999 bash "$SWEEP")" && none_rc=0 || none_rc=$?
 if [ "$none_rc" -eq 0 ] && [[ "$none_out" == *"kill-audit-storms: none (min_age=99999s)"* ]]; then
