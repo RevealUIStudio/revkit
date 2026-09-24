@@ -1,7 +1,7 @@
 ---
 type: repo-doc-index
 repo: revkit
-updated: 2026-09-13
+updated: 2026-09-24
 ---
 
 # RevKit — Documentation Index
@@ -21,6 +21,7 @@ optimization, editor configs.
 
 ## Reference
 
+- [`client-name-public-github.md`](./client-name-public-github.md). Public client-name defense: hardcoded scanner plus watchlist gate.
 - [`rfc-launcher.md`](./rfc-launcher.md) — the `rfc` secure Claude launcher
 - [`tier-capabilities.md`](./tier-capabilities.md) — T0/T1 (sandbox-drive) capabilities
 - [`WSL-QuickReference.md`](./WSL-QuickReference.md) + [`WSL-CheatSheet.txt`](./WSL-CheatSheet.txt) — WSL ops
