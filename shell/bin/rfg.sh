@@ -27,6 +27,9 @@
 # Skip worktree-ref inject: RFG_WORKTREE_REF_SKIP=1
 # Force worktree base ref: RFG_WORKTREE_REF=test
 # Skip Grok vendor-hook attach: RFG_GROK_ATTACH_SKIP=1
+# Skip audit-storm preflight: RFG_STORM_PREFLIGHT_SKIP=1
+# Preflight min age seconds (default 120): RFG_STORM_MIN_AGE_SEC
+# Standalone sweeper min age seconds (default 600): AUDIT_STORM_MIN_AGE_SEC
 
 set -euo pipefail
 
@@ -308,6 +311,28 @@ _load_grok_attach_lib() {
   return 1
 }
 
+# Clear leftover audit du/find storms before disk-heavy launch work.
+# Missing script or a sweeper error must not block grok.
+_rfg_storm_preflight() {
+  if [ "${RFG_STORM_PREFLIGHT_SKIP:-0}" = 1 ]; then
+    return 0
+  fi
+  local here f
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  for f in \
+    "$here/../lib/rfg-storm-preflight.sh" \
+    "$(dirname "$here")/lib/revkit/rfg-storm-preflight.sh" \
+    "/usr/local/lib/revkit/rfg-storm-preflight.sh" \
+    "${REVEALUI_ROOT:-}/shell/lib/rfg-storm-preflight.sh"
+  do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      RFG_STORM_PROTECT_PIDS="$$" bash "$f" || true
+      return 0
+    fi
+  done
+  return 0
+}
+
 _load_worktree_env_lib() {
   local here candidates f
   here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
@@ -444,6 +469,7 @@ case "$cmd" in
 
     source_repo="$FLEET_ROOT/$open_repo"
     [ -d "$source_repo" ] || die "no such fleet repo: $open_repo"
+    _rfg_storm_preflight
     wt_root="$(rfg_wt_root)"
     wt_path="$wt_root/$open_label"
     ref="$(_resolve_integration_ref "$source_repo")"
@@ -498,7 +524,7 @@ case "$cmd" in
     exec "$grok_bin" "${open_extra[@]}"
     ;;
   -h | --help | help)
-    sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
 esac
@@ -532,6 +558,8 @@ case "$rc" in
     die "could not resolve launch target"
     ;;
 esac
+
+_rfg_storm_preflight
 
 _load_grok_attach_lib || die "grok-attach.sh not found (re-run revkit bootstrap)"
 
