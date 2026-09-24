@@ -4,11 +4,10 @@
 # No tracker / workboard / sync-test / claim completion. rfg and rfc stay
 # available as thin PATH wrappers when the helpers are installed.
 
-: "${REVEALFLEET_ROOT:=${REVFLEET_ROOT:-}}"
-: "${REVFLEET_ROOT:=${REVEALFLEET_ROOT:-}}"
+# REVEALFLEET_ROOT only. The legacy root variable is not read.
 
-alias cdreveal='cd "$REVFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVFLEET_ROOT" >&2'
-alias cdfleet='cd "$REVFLEET_ROOT" 2>/dev/null || echo "cdfleet: \$REVFLEET_ROOT not found" >&2'
+alias cdreveal='cd "$REVEALFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVEALFLEET_ROOT" >&2'
+alias cdfleet='cd "$REVEALFLEET_ROOT" 2>/dev/null || echo "cdfleet: \$REVEALFLEET_ROOT not found" >&2'
 
 _revkit_vibe_helper() {
   local name="$1"

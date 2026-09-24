@@ -18,6 +18,9 @@
 _fr="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/fleet-root.sh"
 # shellcheck disable=SC1090
 [ -f "$_fr" ] && . "$_fr"
+if [ -n "${RFG_WT_ROOT:-}" ] && type rfg_reject_banned_fleet_path >/dev/null 2>&1; then
+  rfg_reject_banned_fleet_path "$RFG_WT_ROOT" "RFG_WT_ROOT"
+fi
 if [ -z "${RFG_WT_ROOT:-}" ]; then
   if type rfg_wt_root >/dev/null 2>&1; then
     RFG_WT_ROOT="$(rfg_wt_root)"
