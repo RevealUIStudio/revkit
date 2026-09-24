@@ -162,5 +162,128 @@ else
   fail "outside: rc=$rc"
 fi
 
+# Legacy ~/revfleet is fail-closed (exit 78). Child process so a ban cannot
+# signal this test runner.
+expect_banned() {
+  local desc="$1"
+  shift
+  local out err rc
+  rc=0
+  out="$(
+    bash --noprofile --norc -c '
+      set -euo pipefail
+      # shellcheck disable=SC1090
+      . "$1"
+      shift
+      "$@"
+    ' bash "$ROOT/shell/lib/fleet-root.sh" "$@" 2>"$TMP/ban.err"
+  )" || rc=$?
+  err="$(cat "$TMP/ban.err" 2>/dev/null || true)"
+  if [ "$rc" -eq 0 ]; then
+    fail "$desc (expected die, out=$out err=$err)"
+    return
+  fi
+  if [ -n "$out" ]; then
+    fail "$desc (stdout leaked: $out)"
+    return
+  fi
+  case "$err" in
+    *"REVEALFLEET_ROOT=~/revealfleet"*) pass "$desc" ;;
+    *) fail "$desc (missing REVEALFLEET_ROOT=~/revealfleet hint: $err)" ;;
+  esac
+}
+
+unset RFG_WT_ROOT REVEALUI_ROOT
+export HOME="$TMP/home"
+mkdir -p "$HOME/revfleet/.wt/label" "$HOME/revealfleet/.wt/label" "$TMP/opt/revfleet/.wt" "$TMP/opt/revealfleet"
+
+export REVEALFLEET_ROOT="$HOME/revfleet"
+expect_banned "HOME/revfleet fleet root dies" rfg_resolve_fleet_root
+expect_banned "HOME/revfleet wt root dies" rfg_wt_root
+
+export REVEALFLEET_ROOT="$TMP/opt/revfleet"
+expect_banned "*/revfleet fleet root dies" rfg_resolve_fleet_root
+
+tilde_prefix="$(printf '\176')"
+export REVEALFLEET_ROOT="${tilde_prefix}/revfleet"
+expect_banned "tilde ~/revfleet fleet root dies" rfg_resolve_fleet_root
+
+unset REVEALFLEET_ROOT
+export RFG_WT_ROOT="$HOME/revfleet/.wt"
+expect_banned "RFG_WT_ROOT under HOME/revfleet dies" rfg_wt_root
+export RFG_WT_ROOT="$TMP/opt/revfleet/.wt"
+expect_banned "RFG_WT_ROOT under */revfleet dies" rfg_wt_root
+unset RFG_WT_ROOT
+
+expect_banned "infer from legacy .wt dies" rfg_infer_fleet_from_path "$HOME/revfleet/.wt/label"
+
+mkdir -p "$HOME/revfleet"
+ln -sfn "$HOME/revfleet" "$TMP/via-legacy"
+export REVEALFLEET_ROOT="$TMP/via-legacy"
+expect_banned "symlink to legacy fleet root dies" rfg_resolve_fleet_root
+unset REVEALFLEET_ROOT
+
+rc=0
+out="$(
+  REVEALFLEET_ROOT="$HOME/revfleet" bash --noprofile --norc -c '
+    set -euo pipefail
+    # shellcheck disable=SC1090
+    . "$1"
+    got="$(rfg_resolve_fleet_root)" || true
+    printf "SWALLOWED:%s\n" "$got"
+  ' bash "$ROOT/shell/lib/fleet-root.sh" 2>"$TMP/ban.err"
+)" || rc=$?
+err="$(cat "$TMP/ban.err" 2>/dev/null || true)"
+if [ "$rc" -eq 0 ] || printf '%s' "$out" | grep -q 'SWALLOWED'; then
+  fail "swallowed resolve must still die (rc=$rc out=$out err=$err)"
+else
+  case "$err" in
+    *"REVEALFLEET_ROOT=~/revealfleet"*) pass "command substitution cannot swallow the ban" ;;
+    *) fail "swallow die missing hint (rc=$rc err=$err)" ;;
+  esac
+fi
+
+export REVEALFLEET_ROOT="$HOME/revealfleet"
+got="$(rfg_resolve_fleet_root)"
+if [ "$got" = "$HOME/revealfleet" ]; then
+  pass "revealfleet segment is allowed"
+else
+  fail "revealfleet segment: got $got"
+fi
+export REVEALFLEET_ROOT="$TMP/opt/revfleet-backup"
+got="$(rfg_resolve_fleet_root)"
+if [ "$got" = "$TMP/opt/revfleet-backup" ]; then
+  pass "revfleet-backup segment is allowed"
+else
+  fail "revfleet-backup: got $got"
+fi
+unset RFG_WT_ROOT
+export REVEALFLEET_ROOT="$HOME/revealfleet"
+got="$(rfg_wt_root)"
+if [ "$got" = "$HOME/revealfleet/.wt" ]; then
+  pass "wt root under revealfleet is allowed"
+else
+  fail "revealfleet wt: got $got"
+fi
+got="$(rfg_infer_fleet_from_path "$HOME/revealfleet/.wt/label")"
+if [ "$got" = "$HOME/revealfleet" ]; then
+  pass "infer from revealfleet .wt is allowed"
+else
+  fail "infer revealfleet wt: got $got"
+fi
+
+alias_hits="$(grep -n 'REVFLEET_ROOT' \
+  "$ROOT/shell/shellrc.d/"*.sh \
+  "$ROOT/shell/modes/vibe/aliases.sh" \
+  "$ROOT/shell/lib/fleet-root.sh" \
+  "$ROOT/shell/bin/rfg.sh" \
+  "$ROOT/shell/bin/rfc.sh" \
+  "$ROOT/bootstrap.sh" || true)"
+if [ -n "$alias_hits" ]; then
+  fail "REVFLEET_ROOT still accepted: $alias_hits"
+else
+  pass "REVFLEET_ROOT alias is gone from shell rc, vibe, launchers, bootstrap"
+fi
+
 echo "--- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]

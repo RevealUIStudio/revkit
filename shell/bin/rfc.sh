@@ -49,10 +49,38 @@ _load_fleet_root_lib() {
   return 1
 }
 _load_fleet_root_lib || rfg_resolve_fleet_root() {
-  if [ -n "${REVEALFLEET_ROOT:-}" ]; then printf '%s\n' "$REVEALFLEET_ROOT"; return 0; fi
-  return 1
+  local root="${REVEALFLEET_ROOT:-}" expanded rest seg tilde_prefix
+  [ -n "$root" ] || return 1
+  expanded="$root"
+  tilde_prefix="$(printf '\176')/"
+  case "$expanded" in
+    "$tilde_prefix"*) expanded="${HOME-}/${expanded#"$tilde_prefix"}" ;;
+  esac
+  rest="${expanded%/}"
+  while [ -n "$rest" ]; do
+    seg="${rest%%/*}"
+    if [ "$seg" = "revfleet" ]; then
+      printf 'revkit: fleet root resolves to banned legacy path (segment revfleet). Set REVEALFLEET_ROOT=~/revealfleet\n' >&2
+      if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then
+        kill -s KILL "$$" 2>/dev/null || true
+      fi
+      exit 78
+    fi
+    case "$rest" in
+      */*) rest="${rest#*/}" ;;
+      *) break ;;
+    esac
+  done
+  printf '%s\n' "$root"
+  return 0
 }
-FLEET_ROOT="$(rfg_resolve_fleet_root)" || true
+_rfc_root_rc=0
+FLEET_ROOT="$(rfg_resolve_fleet_root)" || _rfc_root_rc=$?
+# 78 is the legacy ~/revfleet ban. Do not continue into worktree create.
+if [ "$_rfc_root_rc" -eq 78 ]; then
+  exit 78
+fi
+unset _rfc_root_rc
 
 die() { echo "rfc: $*" >&2; exit 1; }
 
