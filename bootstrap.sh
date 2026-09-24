@@ -113,6 +113,17 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
     fi
     printf '  Installed: %s/revkit-mode\n' "$HELPERS_DIR"
   fi
+  # Unsuffixed PATH name so `kill-audit-storms` matches the rfg warning.
+  if [ "$name" = "kill-audit-storms.sh" ]; then
+    if revkit_is_macos; then
+      run cp "$HELPERS_DIR/$name" "$HELPERS_DIR/kill-audit-storms"
+      run chmod +x "$HELPERS_DIR/kill-audit-storms"
+    else
+      run sudo cp "$HELPERS_DIR/$name" "$HELPERS_DIR/kill-audit-storms"
+      run sudo chmod +x "$HELPERS_DIR/kill-audit-storms"
+    fi
+    printf '  Installed: %s/kill-audit-storms\n' "$HELPERS_DIR"
+  fi
 done
 printf '  %d helper(s) installed.\n' "$_installed"
 

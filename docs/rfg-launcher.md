@@ -22,6 +22,7 @@ No manual `eval`, no home-directory scripts as source of truth.
 | Global Grok prefs | User home | `~/.grok/config.toml` (permissions/UI only) |
 | Grok HOME stub | **RevKit `rfg` / bootstrap** | Copies `shell/grok-home/AGENTS.md` onto `$GROK_HOME`. No prose rules in HOME. |
 | Grok vendor hooks | **RevKit `rfg` / bootstrap** | Copies `<repo>/.revealui/adapters/grok/hooks/*.json` onto `$GROK_HOME/hooks`. Mechanical deny. |
+| Audit-storm sweeper | **RevKit** | `shell/lib/kill-audit-storms.sh` and `shell/lib/rfg-storm-preflight.sh`. Bootstrap installs both under the matched lib prefix (`/usr/local/lib/revkit/` on Linux/WSL) and a PATH wrapper `kill-audit-storms`. |
 | Product Grok constitution | **Repo** | `<repo>/.grok/rules/` (harnesses materialize). Loaded when cwd is the product. |
 
 **Not durable:** one-off eval lines, secrets in chat, home-only mint scripts, operator `cp` of policy into `$HOME/.grok`, hand-edits of `$HOME/.grok/AGENTS.md` or `$HOME/.grok/rules/`.
@@ -58,6 +59,18 @@ sync (`sync-test` / `fleet-sync-integration --auto`) so the local
 integration branch (`test` or `main`) is not left behind origin. That
 script never switches the current branch. SessionStart (Claude + Grok)
 runs the same tool across the fleet.
+
+Before that sync, before MCP load, and before `exec grok` (including
+`rfg open`), `rfg` runs an audit-storm preflight. Leftover home-wide
+`du` and audit `find` processes wedge WSL disk I/O and hang the launch.
+The preflight signals only known orphan patterns older than
+`RFG_STORM_MIN_AGE_SEC` (default 120 seconds). A process already in
+uninterruptible disk sleep is included at that same age when its cmdline
+is one of those patterns, any `du -sh`, or a relative `find .`. rfg and
+grok are not signaled. If a matching process is still in disk sleep
+afterward, `rfg` warns on stderr and continues.
+Skip with `RFG_STORM_PREFLIGHT_SKIP=1`. Run `kill-audit-storms` alone to
+sweep with `AUDIT_STORM_MIN_AGE_SEC` (default 600).
 
 # Rift-inspired isolation (runtime ports + claim registry)
 rfg open revealui ves-fo-managed --claim marketing/ves-fo-managed
@@ -150,3 +163,6 @@ Future Level 2 (`GrokAdapter` in `@revealui/harnesses`) extends the same data pl
 | `REVEALUI_WT_ENV_DIR` | `$HOME/.local/share/revealui/worktree-env` |
 | `RFG_CLAIM_FORCE=1` | steal an active claim |
 | `RFG_CLAIM_AGENT` | agent label written into claim JSON |
+| `RFG_STORM_PREFLIGHT_SKIP=1` | do not clear audit du/find storms before launch |
+| `RFG_STORM_MIN_AGE_SEC` | preflight min age in seconds (default 120) |
+| `AUDIT_STORM_MIN_AGE_SEC` | standalone `kill-audit-storms` min age in seconds (default 600) |
