@@ -1,0 +1,35 @@
+name: Client-name watchlist gate
+
+# Layer B companion to check-client-leaks.yml. Does not replace it.
+#
+# This job runs with no watchlist mounted, so scripts/check-no-client-names.sh
+# warns and exits 0 (gate inactive). Public CI must not embed real terms.
+#
+# To activate later, without committing terms:
+#   1. Store the watchlist in a GitHub Actions secret. Do not invent a value here.
+#   2. Write that secret to a file outside the checkout (for example
+#      $RUNNER_TEMP/client-name-watchlist) with mode 0600.
+#   3. Export CLIENT_NAME_WATCHLIST_FILE to that path.
+#   4. Optionally export CLIENT_NAME_WATCHLIST_REQUIRED=1 so a missing file
+#      fails the job (exit 2) instead of staying inactive.
+
+on:
+  push:
+    branches: [test, main]
+  pull_request:
+    branches: [test, main]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Watchlist gate (inactive without a secret)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run watchlist gate with no watchlist
+        run: bash scripts/check-no-client-names.sh

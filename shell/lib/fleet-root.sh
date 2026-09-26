@@ -7,6 +7,69 @@
 #   3. Matched install pin next to this file (…/lib/revkit/pin.env)
 #   4. Walk from REVEALUI_ROOT (bootstrap pin)
 # Fail closed if none resolve. Never default to $HOME/revealfleet.
+# Fail closed if the resolved fleet root or RFG_WT_ROOT has a path segment
+# named revfleet (legacy ~/revfleet). Use REVEALFLEET_ROOT=~/revealfleet.
+# Banned paths exit 78. From a command substitution, also signal the caller
+# so `$(...) || true` cannot keep the legacy parent.
+
+# True when any path segment is exactly revfleet. revealfleet is a different segment.
+rfg_path_has_revfleet_segment() {
+  local path="${1:-}"
+  local rest seg tilde_prefix
+  [ -n "$path" ] || return 1
+  # Literal tilde-slash prefix (unexpanded env values). Not a shell tilde expansion.
+  tilde_prefix="$(printf '\176')/"
+  case "$path" in
+    "$tilde_prefix"*) path="${HOME-}/${path#"$tilde_prefix"}" ;;
+  esac
+  while [ "$path" != "/" ] && [ "${path%/}" != "$path" ]; do
+    path="${path%/}"
+  done
+  rest="$path"
+  while [ -n "$rest" ]; do
+    seg="${rest%%/*}"
+    [ "$seg" = "revfleet" ] && return 0
+    case "$rest" in
+      */*) rest="${rest#*/}" ;;
+      *) break ;;
+    esac
+  done
+  return 1
+}
+
+rfg_die_banned_fleet_path() {
+  local what="${1:-fleet root}"
+  printf 'revkit: %s resolves to banned legacy path (segment revfleet). Set REVEALFLEET_ROOT=~/revealfleet\n' "$what" >&2
+  # SIGKILL: a trapped SIGTERM, or `$(...) || true`, must not reuse this path.
+  if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then
+    kill -s KILL "$$" 2>/dev/null || true
+  fi
+  exit 78
+}
+
+# Die when path, or its physical path when it is a directory, is under revfleet.
+rfg_reject_banned_fleet_path() {
+  local path="${1:-}"
+  local what="${2:-fleet root}"
+  local expanded physical tilde_prefix
+  [ -n "$path" ] || return 0
+  expanded="$path"
+  # Literal tilde-slash prefix (unexpanded env values).
+  tilde_prefix="$(printf '\176')/"
+  case "$expanded" in
+    "$tilde_prefix"*) expanded="${HOME-}/${expanded#"$tilde_prefix"}" ;;
+  esac
+  if rfg_path_has_revfleet_segment "$expanded"; then
+    rfg_die_banned_fleet_path "$what"
+  fi
+  if [ -d "$expanded" ]; then
+    physical="$(cd "$expanded" 2>/dev/null && pwd -P)" || physical=""
+    if [ -n "$physical" ] && rfg_path_has_revfleet_segment "$physical"; then
+      rfg_die_banned_fleet_path "$what"
+    fi
+  fi
+  return 0
+}
 
 rfg_infer_fleet_from_path() {
   local start="${1:-}" cur n=0 base parent
@@ -23,6 +86,7 @@ rfg_infer_fleet_from_path() {
       */.wt | */.wt/*)
         parent="${cur%%/.wt*}"
         if [ -n "$parent" ] && [ -d "$parent" ]; then
+          rfg_reject_banned_fleet_path "$parent" "fleet root"
           printf '%s\n' "$parent"
           return 0
         fi
@@ -31,10 +95,12 @@ rfg_infer_fleet_from_path() {
     base="${cur##*/}"
     parent="$(dirname "$cur")"
     if [ "$base" = "revkit" ] && [ -f "$cur/shell/lib/fleet-root.sh" ]; then
+      rfg_reject_banned_fleet_path "$parent" "fleet root"
       printf '%s\n' "$parent"
       return 0
     fi
     if [ -d "$cur/revkit" ] && [ -f "$cur/revkit/shell/lib/fleet-root.sh" ]; then
+      rfg_reject_banned_fleet_path "$cur" "fleet root"
       printf '%s\n' "$cur"
       return 0
     fi
@@ -59,28 +125,48 @@ rfg_read_install_pin() {
     printf '%s\n' "${REVEALFLEET_ROOT:-}"
   )"
   [ -n "$got" ] || return 1
+  rfg_reject_banned_fleet_path "$got" "fleet root"
   printf '%s\n' "$got"
 }
 
 rfg_resolve_fleet_root() {
-  local got
+  local got rc
   if [ -n "${REVEALFLEET_ROOT:-}" ]; then
+    rfg_reject_banned_fleet_path "$REVEALFLEET_ROOT" "fleet root"
     printf '%s\n' "$REVEALFLEET_ROOT"
     return 0
   fi
-  got="$(rfg_infer_fleet_from_path "${BASH_SOURCE[0]}")" && {
+  rc=0
+  got="$(rfg_infer_fleet_from_path "${BASH_SOURCE[0]}")" || rc=$?
+  if [ "$rc" -eq 78 ]; then
+    rfg_die_banned_fleet_path "fleet root"
+  fi
+  if [ "$rc" -eq 0 ]; then
+    rfg_reject_banned_fleet_path "$got" "fleet root"
     printf '%s\n' "$got"
     return 0
-  }
-  got="$(rfg_read_install_pin)" && {
+  fi
+  rc=0
+  got="$(rfg_read_install_pin)" || rc=$?
+  if [ "$rc" -eq 78 ]; then
+    rfg_die_banned_fleet_path "fleet root"
+  fi
+  if [ "$rc" -eq 0 ]; then
+    rfg_reject_banned_fleet_path "$got" "fleet root"
     printf '%s\n' "$got"
     return 0
-  }
+  fi
   if [ -n "${REVEALUI_ROOT:-}" ]; then
-    got="$(rfg_infer_fleet_from_path "$REVEALUI_ROOT")" && {
+    rc=0
+    got="$(rfg_infer_fleet_from_path "$REVEALUI_ROOT")" || rc=$?
+    if [ "$rc" -eq 78 ]; then
+      rfg_die_banned_fleet_path "fleet root"
+    fi
+    if [ "$rc" -eq 0 ]; then
+      rfg_reject_banned_fleet_path "$got" "fleet root"
       printf '%s\n' "$got"
       return 0
-    }
+    fi
   fi
   return 1
 }
@@ -103,12 +189,20 @@ rfg_path_is_in_fleet() {
 
 # Default worktree parent: <resolved fleet root>/.wt (override with RFG_WT_ROOT).
 rfg_wt_root() {
-  local fleet
+  local fleet rc
   if [ -n "${RFG_WT_ROOT:-}" ]; then
+    rfg_reject_banned_fleet_path "$RFG_WT_ROOT" "RFG_WT_ROOT"
     printf '%s\n' "$RFG_WT_ROOT"
     return 0
   fi
-  fleet="$(rfg_resolve_fleet_root)" || return 1
+  rc=0
+  fleet="$(rfg_resolve_fleet_root)" || rc=$?
+  if [ "$rc" -eq 78 ]; then
+    rfg_die_banned_fleet_path "fleet root"
+  fi
+  [ "$rc" -eq 0 ] || return 1
+  rfg_reject_banned_fleet_path "$fleet" "fleet root"
+  rfg_reject_banned_fleet_path "$fleet/.wt" "RFG_WT_ROOT"
   printf '%s/.wt\n' "$fleet"
 }
 

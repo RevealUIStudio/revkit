@@ -12,7 +12,7 @@
 # Safe no-op if .jv isn't cloned (e.g. on a machine without the private repo).
 
 _rv_activate=""
-_rv_root="${REVEALFLEET_ROOT:-${REVFLEET_ROOT:-}}"
+_rv_root="${REVEALFLEET_ROOT:-}"
 if [ -n "$_rv_root" ]; then
   # Split so the private dirname is never a contiguous public-forbidden literal.
   _rv_planning="$(printf '%s/%s\n' "$_rv_root" ".$(printf '%s' 'jv')")"

@@ -7,11 +7,9 @@
 # Private planning tree paths are never written as a contiguous public-forbidden
 # literal. Override with REVEALFLEET_ROOT / REVFLEET_PLANNING / REVEALUI_TRACKER /
 # REVEALUI_WORKBOARD when the default layout does not apply.
-# REVFLEET_ROOT remains an alias for REVEALFLEET_ROOT.
 
 # Fleet root comes from the rc pin / install pin. Do not guess $HOME.
-: "${REVEALFLEET_ROOT:=${REVFLEET_ROOT:-}}"
-: "${REVFLEET_ROOT:=${REVEALFLEET_ROOT:-}}"
+# REVEALFLEET_ROOT only. The legacy root variable is not read.
 
 # Private planning checkout under the fleet root (basename built at runtime).
 __rv_planning_root() {
@@ -27,9 +25,9 @@ __rv_planning_root() {
 # Quick project navigation
 # cdreveal → primary RevealUI checkout (WSL-native ext4 at ~/revealfleet/revealui).
 # The legacy sandbox-drive Suite path was retired with the Suite→RevealFleet rename.
-alias cdreveal='cd "$REVFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVFLEET_ROOT" >&2'
+alias cdreveal='cd "$REVEALFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVEALFLEET_ROOT" >&2'
 alias cdjv='cd "$(__rv_planning_root)" 2>/dev/null || echo "cdjv: private planning tree not found (set REVFLEET_PLANNING)" >&2'
-alias cdfleet='cd "$REVFLEET_ROOT" 2>/dev/null || echo "cdfleet: \$REVFLEET_ROOT not found" >&2'
+alias cdfleet='cd "$REVEALFLEET_ROOT" 2>/dev/null || echo "cdfleet: \$REVEALFLEET_ROOT not found" >&2'
 alias cdprojects='cd ~/projects'
 
 # Day-to-day free surfaces (fleet methodology). Same idea as Nix shell `tracker`.
@@ -74,7 +72,7 @@ wb() {
 #   sync-test --status         # report revealui
 #   sync-test --all --fix      # every fleet repo
 sync-test() {
-  local script="${REVFLEET_ROOT}/.jv/scripts/fleet-sync-integration.js"
+  local script="${REVEALFLEET_ROOT}/.jv/scripts/fleet-sync-integration.js"
   if [ ! -f "$script" ]; then
     echo "sync-test: missing $script (pull .jv origin/test)" >&2
     return 1

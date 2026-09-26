@@ -226,6 +226,18 @@ jobs:
       - name: Prove rfg env never prints the MCP token
         run: bash tests/test-rfg-env.sh
 
+  test-audit-storm:
+    # Leftover home-wide du/find audits wedge WSL I/O and hang rfg.
+    # Preflight must run before sync/MCP/grok and must not hard-fail launch.
+    name: tests/test-audit-storm.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run audit-storm preflight tests
+        run: bash tests/test-audit-storm.sh
+
   test-rfc:
     name: tests/test-rfc.sh
     runs-on: ubuntu-latest
@@ -276,6 +288,16 @@ jobs:
           persist-credentials: false
       - name: Run Grok manager-attach tests
         run: bash tests/test-grok-attach.sh
+
+  test-fleet-root:
+    name: tests/test-fleet-root.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run fleet-root resolve tests
+        run: bash tests/test-fleet-root.sh
 
   test-fleet-workflow-health:
     # GAP-420 — regression guard for the consecutive-failure predicate that
@@ -440,6 +462,9 @@ jobs:
           }
           grep -qF '# --- RevealUI environment mode ---' "$HOME/.bashrc"; assert "rc hook installed in ~/.bashrc" $?
           test -x /usr/local/bin/rfc.sh; assert "helper rfc.sh installed + executable" $?
+          test -f /usr/local/lib/revkit/kill-audit-storms.sh; assert "audit sweeper lib installed" $?
+          test -f /usr/local/lib/revkit/rfg-storm-preflight.sh; assert "rfg storm preflight lib installed" $?
+          test -x /usr/local/bin/kill-audit-storms; assert "kill-audit-storms wrapper installed + executable" $?
           git config --global --get-all include.path | grep -qF 'shell/config/gitconfig'; assert "git include.path -> shell/config/gitconfig" $?
           test -f "$HOME/.config/revkit/identity.gitconfig"; assert "per-user identity.gitconfig seeded" $?
           git config --global --get core.hooksPath | grep -qF 'git-hooks'; assert "M-11 core.hooksPath -> repo git-hooks" $?
