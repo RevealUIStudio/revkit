@@ -5,7 +5,7 @@
 # Coordination: TRACKER free surfaces, fleet workboard, base origin/test, PR→test.
 #
 # Private planning tree paths are never written as a contiguous public-forbidden
-# literal. Override with REVEALFLEET_ROOT / REVFLEET_PLANNING / REVEALUI_TRACKER /
+# literal. Override with REVEALFLEET_ROOT / REVEALFLEET_PLANNING / REVEALUI_TRACKER /
 # REVEALUI_WORKBOARD when the default layout does not apply.
 
 # Fleet root comes from the rc pin / install pin. Do not guess $HOME.
@@ -13,8 +13,8 @@
 
 # Private planning checkout under the fleet root (basename built at runtime).
 __rv_planning_root() {
-  if [ -n "${REVFLEET_PLANNING:-}" ]; then
-    printf '%s\n' "$REVFLEET_PLANNING"
+  if [ -n "${REVEALFLEET_PLANNING:-}" ]; then
+    printf '%s\n' "$REVEALFLEET_PLANNING"
     return
   fi
   [ -n "${REVEALFLEET_ROOT:-}" ] || return 1
@@ -26,7 +26,7 @@ __rv_planning_root() {
 # cdreveal → primary RevealUI checkout (WSL-native ext4 at ~/revealfleet/revealui).
 # The legacy sandbox-drive Suite path was retired with the Suite→RevealFleet rename.
 alias cdreveal='cd "$REVEALFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVEALFLEET_ROOT" >&2'
-alias cdjv='cd "$(__rv_planning_root)" 2>/dev/null || echo "cdjv: private planning tree not found (set REVFLEET_PLANNING)" >&2'
+alias cdjv='cd "$(__rv_planning_root)" 2>/dev/null || echo "cdjv: private planning tree not found (set REVEALFLEET_PLANNING)" >&2'
 alias cdfleet='cd "$REVEALFLEET_ROOT" 2>/dev/null || echo "cdfleet: \$REVEALFLEET_ROOT not found" >&2'
 alias cdprojects='cd ~/projects'
 

@@ -285,5 +285,30 @@ else
   pass "REVFLEET_ROOT alias is gone from shell rc, vibe, launchers, bootstrap"
 fi
 
+# Navigation uses the same canonical configuration contract as the root resolver.
+planning_got="$(
+  export REVEALFLEET_ROOT="$TMP/canonical-root"
+  unset REVEALFLEET_PLANNING
+  export REVFLEET_PLANNING="$TMP/obsolete-planning"
+  . "$ROOT/shell/shellrc.d/10-aliases.sh"
+  __rv_planning_root
+)"
+if [ "$planning_got" = "$TMP/canonical-root/.jv" ]; then
+  pass "obsolete planning setting is ignored"
+else
+  fail "planning fallback: got $planning_got"
+fi
+planning_got="$(
+  export REVEALFLEET_ROOT="$TMP/canonical-root"
+  export REVEALFLEET_PLANNING="$TMP/configured-planning"
+  . "$ROOT/shell/shellrc.d/10-aliases.sh"
+  __rv_planning_root
+)"
+if [ "$planning_got" = "$TMP/configured-planning" ]; then
+  pass "canonical planning setting wins"
+else
+  fail "planning setting: got $planning_got"
+fi
+
 echo "--- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]

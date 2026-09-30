@@ -15,7 +15,7 @@ SRC="${1:-}"
 BUCKET="${2:-}"
 SLUG="${3:-}"
 
-ARCHIVE_ROOT="${REVFLEET_ARCHIVE:-$HOME/revealfleet/archive/cold}"
+ARCHIVE_ROOT="${REVEALFLEET_ARCHIVE:-$HOME/revealfleet/archive/cold}"
 
 usage() {
   echo "Usage: $0 <source-path> <bucket> [slug]" >&2
