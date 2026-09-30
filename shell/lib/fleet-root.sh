@@ -12,6 +12,20 @@
 # Banned paths exit 78. From a command substitution, also signal the caller
 # so `$(...) || true` cannot keep the legacy parent.
 
+# Resolve the configured planning checkout without assuming a directory name.
+__rv_planning_root() {
+  if [ -z "${REVEALFLEET_PLANNING:-}" ]; then
+    echo "revkit: planning checkout is not configured (set REVEALFLEET_PLANNING)" >&2
+    return 1
+  fi
+  case "$REVEALFLEET_PLANNING" in
+    /*) ;;
+    *) echo "revkit: REVEALFLEET_PLANNING must be an absolute path" >&2; return 1 ;;
+  esac
+  rfg_reject_banned_fleet_path "$REVEALFLEET_PLANNING" "planning checkout"
+  printf '%s\n' "$REVEALFLEET_PLANNING"
+}
+
 # True when any path segment is exactly revfleet. revealfleet is a different segment.
 rfg_path_has_revfleet_segment() {
   local path="${1:-}"

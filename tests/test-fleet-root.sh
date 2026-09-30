@@ -118,7 +118,7 @@ else
 fi
 unset RFG_WT_ROOT
 
-mkdir -p "$TMP/fleet/.jv"
+mkdir -p "$REVEALFLEET_ROOT/.planning"
 rfg_resolve_launch_target "$TMP/fleet" "" "$TMP/fleet" && rc=0 || rc=$?
 if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$TMP/fleet" ]; then
   pass "empty arg at fleet root → fleet root"
@@ -131,11 +131,11 @@ if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$TMP/fleet/revealui" ]; then
 else
   fail ". in product: rc=$rc target=$RFG_LAUNCH_TARGET"
 fi
-rfg_resolve_launch_target "$TMP/fleet" ".jv" "$TMP/fleet" && rc=0 || rc=$?
-if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$TMP/fleet/.jv" ]; then
-  pass "dotted checkout .jv is a named repo"
+rfg_resolve_launch_target "$TMP/fleet" ".planning" "$TMP/fleet" && rc=0 || rc=$?
+if [ "$rc" -eq 0 ] && [ "$RFG_LAUNCH_TARGET" = "$REVEALFLEET_ROOT/.planning" ]; then
+  pass "dotted checkout is a named repo"
 else
-  fail ".jv: rc=$rc target=$RFG_LAUNCH_TARGET"
+  fail "dotted checkout: rc=$rc target=$RFG_LAUNCH_TARGET"
 fi
 rfg_resolve_launch_target "$TMP/fleet" ".." "$TMP/fleet" && rc=0 || rc=$?
 if [ "$rc" -eq 1 ]; then
@@ -286,29 +286,80 @@ else
 fi
 
 # Navigation uses the same canonical configuration contract as the root resolver.
+canonical_root="$TMP/canonical-root"
+planning_rc=0
 planning_got="$(
-  export REVEALFLEET_ROOT="$TMP/canonical-root"
+  export REVEALFLEET_ROOT="$canonical_root"
   unset REVEALFLEET_PLANNING
   export REVFLEET_PLANNING="$TMP/obsolete-planning"
   . "$ROOT/shell/shellrc.d/10-aliases.sh"
-  __rv_planning_root
-)"
-if [ "$planning_got" = "$TMP/canonical-root/.jv" ]; then
-  pass "obsolete planning setting is ignored"
+  __rv_planning_root 2>/dev/null
+)" || planning_rc=$?
+if [ "$planning_rc" -eq 1 ] && [ -z "$planning_got" ]; then
+  pass "unset planning does not infer a personal folder or read the obsolete setting"
 else
   fail "planning fallback: got $planning_got"
 fi
 planning_got="$(
   export REVEALFLEET_ROOT="$TMP/canonical-root"
-  export REVEALFLEET_PLANNING="$TMP/configured-planning"
+  export REVEALFLEET_PLANNING="$TMP/custom planning"
   . "$ROOT/shell/shellrc.d/10-aliases.sh"
   __rv_planning_root
 )"
-if [ "$planning_got" = "$TMP/configured-planning" ]; then
-  pass "canonical planning setting wins"
+if [ "$planning_got" = "$TMP/custom planning" ]; then
+  pass "canonical planning setting accepts any absolute folder name, including spaces"
 else
   fail "planning setting: got $planning_got"
 fi
+
+planning_rc=0
+planning_got="$(REVEALFLEET_PLANNING=relative/path __rv_planning_root 2>/dev/null)" || planning_rc=$?
+if [ "$planning_rc" -eq 1 ] && [ -z "$planning_got" ]; then
+  pass "relative planning configuration is rejected"
+else
+  fail "relative planning configuration: rc=$planning_rc got=$planning_got"
+fi
+
+planning="$TMP/custom planning"
+mkdir -p "$planning/scripts" "$planning/revcon-profiles"
+touch "$planning/scripts/fleet-sync-integration.js"
+sync_got="$(
+  export REVEALFLEET_PLANNING="$planning"
+  . "$ROOT/shell/shellrc.d/10-aliases.sh"
+  node() { printf '%s\n' "$@"; }
+  sync-test --status
+)"
+if [ "$sync_got" = "$(printf '%s\n' "$planning/scripts/fleet-sync-integration.js" --status revealui)" ]; then
+  pass "sync-test uses the configured planning checkout"
+else
+  fail "configured sync-test: $sync_got"
+fi
+printf 'export PLANNING_ACTIVATED=yes\n' > "$planning/revcon-profiles/activate.sh"
+activation="$(
+  export REVEALFLEET_PLANNING="$planning"
+  . "$ROOT/shell/shellrc.d/70-revcon-personal.sh"
+  printf '%s' "${PLANNING_ACTIVATED:-}"
+)"
+if [ "$activation" = yes ]; then
+  pass "private profile activation uses the configured planning checkout"
+else
+  fail "configured activation: $activation"
+fi
+
+mkdir -p "$TMP/isolated-bin"
+for launcher in rfg rfc; do
+  cp "$ROOT/shell/bin/$launcher.sh" "$TMP/isolated-bin/$launcher"
+  launcher_rc=0
+  launcher_out="$(
+    unset REVEALUI_ROOT
+    bash "$TMP/isolated-bin/$launcher" env 2>&1
+  )" || launcher_rc=$?
+  if [ "$launcher_rc" -eq 1 ] && [[ "$launcher_out" == *"fleet-root.sh is missing"* ]]; then
+    pass "$launcher requires the shared root resolver"
+  else
+    fail "$launcher used a parallel resolver: rc=$launcher_rc output=$launcher_out"
+  fi
+done
 
 echo "--- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]
