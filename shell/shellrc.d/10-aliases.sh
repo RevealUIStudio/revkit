@@ -4,37 +4,32 @@
 # Naming: RevealUI = product monorepo; RevealUI Studio = company; RevealFleet = umbrella.
 # Coordination: TRACKER free surfaces, fleet workboard, base origin/test, PR→test.
 #
-# Private planning tree paths are never written as a contiguous public-forbidden
-# literal. Override with REVEALFLEET_ROOT / REVFLEET_PLANNING / REVEALUI_TRACKER /
-# REVEALUI_WORKBOARD when the default layout does not apply.
+# Configure the planning checkout with REVEALFLEET_PLANNING. Its folder name
+# is independent of REVEALFLEET_ROOT. TRACKER and workboard can be configured
+# separately with REVEALUI_TRACKER and REVEALUI_WORKBOARD.
 
 # Fleet root comes from the rc pin / install pin. Do not guess $HOME.
 # REVEALFLEET_ROOT only. The legacy root variable is not read.
 
-# Private planning checkout under the fleet root (basename built at runtime).
-__rv_planning_root() {
-  if [ -n "${REVFLEET_PLANNING:-}" ]; then
-    printf '%s\n' "$REVFLEET_PLANNING"
-    return
-  fi
-  [ -n "${REVEALFLEET_ROOT:-}" ] || return 1
-  # printf keeps the private dirname from appearing next to "revealfleet/" in source
-  printf '%s/%s\n' "$REVEALFLEET_ROOT" ".$(printf '%s' 'jv')"
-}
+# Use the same maintained resolver as the launchers.
+if ! declare -F __rv_planning_root >/dev/null; then
+  # shellcheck source=../lib/fleet-root.sh
+  . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)/fleet-root.sh"
+fi
 
 # Quick project navigation
 # cdreveal → primary RevealUI checkout (WSL-native ext4 at ~/revealfleet/revealui).
-# The legacy sandbox-drive Suite path was retired with the Suite→RevealFleet rename.
 alias cdreveal='cd "$REVEALFLEET_ROOT/revealui" 2>/dev/null || echo "cdreveal: RevealUI checkout not found under \$REVEALFLEET_ROOT" >&2'
-alias cdjv='cd "$(__rv_planning_root)" 2>/dev/null || echo "cdjv: private planning tree not found (set REVFLEET_PLANNING)" >&2'
+alias cdjv='cd "$(__rv_planning_root)" 2>/dev/null || echo "cdjv: private planning tree not found (set REVEALFLEET_PLANNING)" >&2'
 alias cdfleet='cd "$REVEALFLEET_ROOT" 2>/dev/null || echo "cdfleet: \$REVEALFLEET_ROOT not found" >&2'
 alias cdprojects='cd ~/projects'
 
 # Day-to-day free surfaces (fleet methodology). Same idea as Nix shell `tracker`.
 tracker() {
-  local t="${REVEALUI_TRACKER:-}"
+  local t="${REVEALUI_TRACKER:-}" planning
   if [ -z "$t" ]; then
-    t="$(__rv_planning_root)/docs/TRACKER.md"
+    planning="$(__rv_planning_root)" || return 1
+    t="$planning/docs/TRACKER.md"
   fi
   if [ ! -f "$t" ]; then
     echo "tracker: not found (set REVEALUI_TRACKER or open the private planning checkout)" >&2
@@ -49,9 +44,10 @@ tracker() {
 
 # Canonical fleet workboard (not the revealui in-repo stub)
 wb() {
-  local _wb="${REVEALUI_WORKBOARD:-}"
+  local _wb="${REVEALUI_WORKBOARD:-}" planning
   if [ -z "$_wb" ]; then
-    _wb="$(__rv_planning_root)/.claude/workboard.md"
+    planning="$(__rv_planning_root)" || return 1
+    _wb="$planning/.claude/workboard.md"
   fi
   if [ ! -f "$_wb" ]; then
     echo "wb: workboard not found (set REVEALUI_WORKBOARD)" >&2
@@ -65,16 +61,19 @@ wb() {
 }
 
 # Keep local integration refs (test/main) at origin tip. Thin wrapper onto
-# .jv/scripts/fleet-sync-integration.js. Never switches the current branch.
+# the configured planning checkout's fleet-sync-integration.js.
+# Never switches the current branch.
 # Usage:
 #   sync-test                  # --fix revealui
 #   sync-test revkit           # --fix revkit
 #   sync-test --status         # report revealui
 #   sync-test --all --fix      # every fleet repo
 sync-test() {
-  local script="${REVEALFLEET_ROOT}/.jv/scripts/fleet-sync-integration.js"
+  local planning script
+  planning="$(__rv_planning_root)" || return 1
+  script="$planning/scripts/fleet-sync-integration.js"
   if [ ! -f "$script" ]; then
-    echo "sync-test: missing $script (pull .jv origin/test)" >&2
+    echo "sync-test: missing $script in the configured planning checkout" >&2
     return 1
   fi
   if [ "$#" -eq 0 ]; then

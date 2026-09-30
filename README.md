@@ -72,6 +72,12 @@ Edit those files directly; the tracked `gitconfig` / `ssh-config` Include them. 
 
 ## Structure
 
+Planning tools use `REVEALFLEET_PLANNING`, an absolute path to your planning
+checkout, independent of the fleet root and folder name. Configure it in your
+shell configuration when using `tracker`, `wb`, `sync-test`, or private profiles.
+These tools do not assume a personal planning folder. Launcher integration sync
+is optional when no planning checkout is configured.
+
 ```
 revkit/
   bootstrap.sh         # Universal entry point (macOS + Linux + WSL2)

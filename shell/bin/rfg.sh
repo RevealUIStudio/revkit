@@ -49,31 +49,9 @@ _load_fleet_root_lib() {
   done
   return 1
 }
-_load_fleet_root_lib || rfg_resolve_fleet_root() {
-  local root="${REVEALFLEET_ROOT:-}" expanded rest seg tilde_prefix
-  [ -n "$root" ] || return 1
-  expanded="$root"
-  tilde_prefix="$(printf '\176')/"
-  case "$expanded" in
-    "$tilde_prefix"*) expanded="${HOME-}/${expanded#"$tilde_prefix"}" ;;
-  esac
-  rest="${expanded%/}"
-  while [ -n "$rest" ]; do
-    seg="${rest%%/*}"
-    if [ "$seg" = "revfleet" ]; then
-      printf 'revkit: fleet root resolves to banned legacy path (segment revfleet). Set REVEALFLEET_ROOT=~/revealfleet\n' >&2
-      if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then
-        kill -s KILL "$$" 2>/dev/null || true
-      fi
-      exit 78
-    fi
-    case "$rest" in
-      */*) rest="${rest#*/}" ;;
-      *) break ;;
-    esac
-  done
-  printf '%s\n' "$root"
-  return 0
+_load_fleet_root_lib || {
+  echo "revkit: fleet-root.sh is missing; reinstall revkit with bootstrap.sh" >&2
+  exit 1
 }
 _rfg_root_rc=0
 FLEET_ROOT="$(rfg_resolve_fleet_root)" || _rfg_root_rc=$?
@@ -105,7 +83,10 @@ PY
 # Fast-forward idle local integration refs (test/main). Never switches branches.
 _sync_integration() {
   local repo="${1:-}"
-  local script="$FLEET_ROOT/.jv/scripts/fleet-sync-integration.js"
+  local planning script
+  [ -n "${REVEALFLEET_PLANNING:-}" ] || return 0
+  planning="$(__rv_planning_root)" || return 1
+  script="$planning/scripts/fleet-sync-integration.js"
   [ -f "$script" ] || return 0
   if [ -n "$repo" ]; then
     node "$script" --auto "$repo" >/dev/null || true
