@@ -7,18 +7,33 @@
 # gated by revkit_is_wsl; macOS-specific paths are chosen by revkit_is_macos.
 #
 # Usage:
-#   bash bootstrap.sh           # install
-#   bash bootstrap.sh --dry-run # preview steps, make no changes
+#   bash bootstrap.sh                  # install (claude adapter off)
+#   bash bootstrap.sh --dry-run        # preview steps, make no changes
+#   bash bootstrap.sh --claude-adapter # also project ~/.claude from ~/.revealui
+#
+# REVKIT_CLAUDE_ADAPTER=1 is the same opt-in as --claude-adapter.
+# REVKIT_BOOTSTRAP_ONLY=control runs only the native control layer (tests).
 
 set -euo pipefail
 
 DRY_RUN=0
+CLAUDE_ADAPTER=0
+if [ "${REVKIT_CLAUDE_ADAPTER:-0}" = "1" ]; then
+  CLAUDE_ADAPTER=1
+fi
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
+    --claude-adapter) CLAUDE_ADAPTER=1 ;;
     *) printf 'Unknown argument: %s\n' "$arg" >&2; exit 1 ;;
   esac
 done
+if [ "$CLAUDE_ADAPTER" -eq 1 ]; then
+  REVKIT_CLAUDE_ADAPTER=1
+else
+  REVKIT_CLAUDE_ADAPTER=0
+fi
+export REVKIT_CLAUDE_ADAPTER
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -26,6 +41,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/lib/platform.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/shell/lib/fleet-root.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/shell/lib/native-home.sh"
 
 echo ""
 echo "=== RevKit Bootstrap ==="
@@ -33,6 +50,12 @@ echo "Source:   $SCRIPT_DIR"
 echo "Platform: $REVKIT_OS"
 [ "$DRY_RUN" -eq 1 ] && echo "Mode:     dry-run (no changes)"
 echo ""
+
+# Test harness: prove the control layer without sudo, rc, or git-config writes.
+if [ "${REVKIT_BOOTSTRAP_ONLY:-}" = "control" ]; then
+  revkit_bootstrap_control_layer
+  exit 0
+fi
 
 run() {
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -480,191 +503,13 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 7: Claude global config (~/.claude) via the claude-config repo
+# Steps 7-9: native control home, then vendor projections
 # ---------------------------------------------------------------------------
-# Durable replacement for the RETIRED symlink-into-worktree mechanism: ~/.claude
-# is a real-file git clone of claude-config (layer L1); reusable skills come from
-# the revskills plugin (layer L2, declared in claude-config's settings.json).
-# NEVER symlink ~/.claude entries into a revealfleet worktree — that outage is what
-# this step exists to prevent.
-echo "[7] Wiring Claude global config (~/.claude) from claude-config..."
-CC_REMOTE="git@github.com-revealui:RevealUIStudio/claude-config.git"
-CC_DIR="$HOME/.claude"
-
-if ! command -v git >/dev/null 2>&1; then
-  echo "  WARNING: git not in PATH — skipping claude-config" >&2
-elif [ -d "$CC_DIR/.git" ]; then
-  _cc_origin="$(git -C "$CC_DIR" remote get-url origin 2>/dev/null || true)"
-  case "$_cc_origin" in
-    *claude-config*)
-      # Already our repo — fast-forward only. Never resets/clobbers: machine-local
-      # runtime state (projects/, sessions/, history.jsonl, settings.local.json)
-      # is untracked + gitignored and is left exactly as-is.
-      if [ "$DRY_RUN" -eq 0 ]; then
-        git -C "$CC_DIR" fetch --quiet origin main || true
-        if git -C "$CC_DIR" merge --ff-only origin/main >/dev/null 2>&1; then
-          echo "  claude-config: fast-forwarded ~/.claude to origin/main"
-        else
-          echo "  claude-config: local main diverged from origin/main; left as-is (reconcile manually)"
-        fi
-      else
-        printf '  [dry-run] would fetch + ff-only merge %s\n' "$CC_REMOTE"
-      fi
-      ;;
-    *)
-      printf '  WARNING: %s is a git repo with a different origin (%s); left untouched\n' \
-        "$CC_DIR" "${_cc_origin:-none}" >&2
-      ;;
-  esac
-else
-  # Fresh machine: initialize ~/.claude as a claude-config clone IN PLACE so any
-  # pre-existing runtime state is preserved. checkout WITHOUT -f aborts rather
-  # than overwrite an existing real config file — non-clobbering by construction.
-  if [ "$DRY_RUN" -eq 0 ]; then
-    mkdir -p "$CC_DIR"
-    git -C "$CC_DIR" init --quiet
-    git -C "$CC_DIR" remote add origin "$CC_REMOTE" 2>/dev/null || \
-      git -C "$CC_DIR" remote set-url origin "$CC_REMOTE"
-    if git -C "$CC_DIR" fetch --quiet origin main && \
-       git -C "$CC_DIR" checkout -B main origin/main >/dev/null 2>&1; then
-      git -C "$CC_DIR" branch --set-upstream-to=origin/main main >/dev/null 2>&1 || true
-      echo "  claude-config: initialized ~/.claude from origin/main (real files, no symlinks)"
-    else
-      echo "  WARNING: could not populate ~/.claude from claude-config" >&2
-      echo "           (pre-existing config files or fetch failed); left untouched — reconcile manually" >&2
-    fi
-  else
-    printf '  [dry-run] would git init %s + fetch/checkout %s\n' "$CC_DIR" "$CC_REMOTE"
-  fi
-fi
-
-# Assertion: the retired anti-pattern must never return. Fail loudly if any
-# ~/.claude entry is a symlink pointing into a revealfleet worktree.
-if [ -d "$CC_DIR" ]; then
-  _cc_bad="$(find "$CC_DIR" -maxdepth 2 -type l \( -lname '*revealfleet*' -o -lname '*revealfleet*' \) 2>/dev/null || true)"
-  if [ -n "$_cc_bad" ]; then
-    printf '  ERROR: symlink-into-worktree detected under ~/.claude (retired mechanism):\n' >&2
-    printf '%s\n' "$_cc_bad" >&2
-    exit 1
-  fi
-fi
-
-# revskills skills plugin (L2): declare the marketplace so `claude` can resolve
-# the enabledPlugins entry already present in claude-config's settings.json.
-# Idempotent — only adds when absent.
-if command -v claude >/dev/null 2>&1; then
-  if claude plugin marketplace list 2>/dev/null | grep -q "revskills"; then
-    echo "  revskills marketplace already present"
-  elif [ "$DRY_RUN" -eq 0 ]; then
-    if claude plugin marketplace add RevealUIStudio/revskills >/dev/null 2>&1; then
-      echo "  revskills marketplace added"
-    else
-      echo "  WARNING: could not add revskills marketplace (add manually if needed)" >&2
-    fi
-  else
-    printf '  [dry-run] would run: claude plugin marketplace add RevealUIStudio/revskills\n'
-  fi
-else
-  echo "  claude CLI not in PATH — skipping revskills marketplace add (settings.json still declares it)"
-fi
-
-# ---------------------------------------------------------------------------
-# Step 8: Claude Code M-4 scanner hook
-# ---------------------------------------------------------------------------
-echo "[8] Deploying Claude Code M-4 scanner hook..."
-CLAUDE_HOOKS_DIR="$HOME/.claude/hooks"
-M4_SRC="$SCRIPT_DIR/shell/bin/m4-sudoers-fs-scanner.js"
-M4_DEST="$CLAUDE_HOOKS_DIR/m4-sudoers-fs-scanner.js"
-
-if [ ! -f "$M4_SRC" ]; then
-  printf '  WARNING: %s not found — M-4 scanner not deployed\n' "$M4_SRC" >&2
-elif ! command -v node >/dev/null 2>&1; then
-  echo "  WARNING: node not in PATH — skipping M-4 scanner deploy" >&2
-else
-  if ! node --check "$M4_SRC" >/dev/null 2>&1; then
-    printf '  ERROR: %s failed node --check; refusing to deploy\n' "$M4_SRC" >&2
-    exit 1
-  fi
-  if [ "$DRY_RUN" -eq 0 ]; then
-    mkdir -p "$CLAUDE_HOOKS_DIR"
-    if [ -f "$M4_DEST" ] && cmp -s "$M4_SRC" "$M4_DEST"; then
-      echo "  $M4_DEST already up to date"
-    else
-      sed 's/\r$//' "$M4_SRC" > "$M4_DEST"
-      chmod 0644 "$M4_DEST"
-      printf '  Deployed: %s\n' "$M4_DEST"
-    fi
-  else
-    printf '  [dry-run] would deploy to %s\n' "$M4_DEST"
-  fi
-  echo "  Note: wire M-4 into ~/.claude/hooks/session-start.js (one-time edit)"
-fi
-
-# ---------------------------------------------------------------------------
-# Step 9: RevealFleet Claude rules via revcon/link.sh
-# ---------------------------------------------------------------------------
-echo "[9] Wiring RevealFleet Claude rules via revcon/link.sh..."
-if [ -f "$SCRIPT_DIR/shell/lib/fleet-root.sh" ]; then
-  # shellcheck disable=SC1091
-  . "$SCRIPT_DIR/shell/lib/fleet-root.sh"
-fi
-if [ -z "${REVEALFLEET_ROOT:-}" ] && [ -n "${_FLEET_PIN:-}" ]; then
-  REVEALFLEET_ROOT="$_FLEET_PIN"
-fi
-if [ -z "${REVEALFLEET_ROOT:-}" ] && type rfg_resolve_fleet_root >/dev/null 2>&1; then
-  _resolve_rc=0
-  REVEALFLEET_ROOT="$(rfg_resolve_fleet_root)" || _resolve_rc=$?
-  if [ "$_resolve_rc" -eq 78 ]; then
-    exit 78
-  fi
-  unset _resolve_rc
-fi
-REVCON_LINK_SH="${REVEALFLEET_ROOT:-}/revcon/link.sh"
-
-if [ ! -f "$REVCON_LINK_SH" ]; then
-  echo "  WARNING: $REVCON_LINK_SH not found — skipping (clone RevealUIStudio/revcon first)" >&2
-else
-  # Fleet repos to wire (operator-editable). These are this org's public repos;
-  # edit the list for your own fleet. Cancelled/retired products are omitted.
-  # Entry format: repo:profiles_csv[:mode] — mode is symlink (default) or
-  # copy. Copy mode materializes tracked files with a .revcon-manifest.json
-  # (revealui gates them via validate:rules-lockstep).
-  FLEET_TARGETS=(
-    "revealui:revealfleet,revealui:copy"
-    "revdev:revealfleet:copy"
-    "revvault:revealfleet:copy"
-    "revcon:revealfleet:copy"
-    "revforge:revealfleet:copy"
-    "revskills:revealfleet:copy"
-    "revkit:revealfleet:copy"
-  )
-  for entry in "${FLEET_TARGETS[@]}"; do
-    repo="${entry%%:*}"
-    rest="${entry#*:}"
-    profiles_csv="${rest%%:*}"
-    mode="symlink"
-    case "$rest" in
-      *:*) mode="${rest#*:}" ;;
-    esac
-    target_dir="${REVEALFLEET_ROOT:-}/$repo"
-    if [ ! -d "$target_dir" ]; then
-      printf '  [skip] %s not found at %s\n' "$repo" "$target_dir"
-      continue
-    fi
-    profile_args=()
-    IFS=',' read -ra _profiles <<< "$profiles_csv"
-    for p in "${_profiles[@]}"; do
-      profile_args+=("--profile" "$p")
-    done
-    printf '  [%s] profiles: %s (mode: %s)\n' "$repo" "$profiles_csv" "$mode"
-    if [ "$DRY_RUN" -eq 0 ]; then
-      bash "$REVCON_LINK_SH" --target "$target_dir" --editor claude --mode "$mode" "${profile_args[@]}" 2>&1 | sed 's/^/    /'
-    else
-      printf '  [dry-run] would run revcon/link.sh for %s\n' "$repo"
-    fi
-  done
-  echo "  Done."
-fi
+# ~/.revealui is written first. The claude adapter is off unless
+# --claude-adapter or REVKIT_CLAUDE_ADAPTER=1. When on, it projects pointers
+# from that native home. It does not clone a vendor config repo and it does
+# not run the claude CLI. Fleet link uses --editor revealui before vendors.
+revkit_bootstrap_control_layer
 
 # ---------------------------------------------------------------------------
 # Step 10: Fleet-wide pre-push hook (M-11)

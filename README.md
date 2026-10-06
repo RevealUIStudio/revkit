@@ -20,7 +20,7 @@ A default `bootstrap.sh` run is a privileged install. Preview first (`--dry-run`
 - install helpers to `/usr/local/bin` on Linux/WSL (uses `sudo`; `~/.local/bin` on macOS)
 - write WSL sudoers for passwordless sandbox-drive mounting (`/etc/sudoers.d/wsl-revealui`)
 - set `git config --global core.hooksPath` to the fleet pre-push hook
-- wire fleet Claude rules when `revcon` is present
+- wire fleet rules into `.revealui` first when `revcon` is present, then project vendor dirs
 
 Do not run this on a customer machine or any host you do not want those changes on.
 
@@ -53,7 +53,7 @@ bash /mnt/c/Users/$USER/.revealui/bootstrap.sh
 
 > `bootstrap-wsl.sh` still works as a backward-compatible alias. It is now a thin shim that execs `bootstrap.sh` (which auto-detects WSL).
 
-In more detail, the bootstrap also adds a `~/.bashrc`/`~/.zshrc` hook that resolves the shell mode (`fleet` / `vibe` / `bare`; `managed` is a silent alias for `fleet`) and sources the matching fragments from `shell/modes/*.list`, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), deploys the M-4 sudoers/filesystem security scanner to `~/.claude/hooks/`, and clones/wires `claude-config` into `~/.claude`.
+In more detail, the bootstrap also adds a `~/.bashrc`/`~/.zshrc` hook that resolves the shell mode (`fleet` / `vibe` / `bare`; `managed` is a silent alias for `fleet`) and sources the matching fragments from `shell/modes/*.list`, links git and SSH configs via `include.path` (per-user identity stays machine-local in `~/.config/revkit/`), applies WSL boot optimization (WSL), initializes Sandbox drive directories (if `/mnt/sandbox` is mounted), and deploys the M-4 sudoers/filesystem security scanner to `~/.revealui/hooks/`. A default run does not write `~/.claude` and does not run the `claude` CLI. `--claude-adapter` (or `REVKIT_CLAUDE_ADAPTER=1`) projects `~/.claude` from `~/.revealui`.
 
 Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native; same `bootstrap` / `claim` / `open` isolation as `rfg`); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md) and [`docs/rfc-launcher.md`](docs/rfc-launcher.md)). The old `revealui` tmux workspace launcher is **retired** (GAP-351 / ADR 2026-06-23); `bootstrap.sh` overwrites `~/.local/bin/revealui` with a shim that prints `rfg` / `rfc`.
 
