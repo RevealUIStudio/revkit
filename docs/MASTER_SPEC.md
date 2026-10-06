@@ -49,7 +49,7 @@ revkit/
 │   │   ├── sandbox-services.sh      # WSL-only sandbox service control
 │   │   ├── sandbox-validate.sh      # WSL-only tier consistency check
 │   │   ├── wsl-status.sh            # WSL-only status banner
-│   │   └── m4-sudoers-fs-scanner.js # M-4 Claude Code PreToolUse scanner
+│   │   └── m4-sudoers-fs-scanner.js # M-4 scanner; bootstrap installs it to ~/.revealui/hooks
 │   ├── config/                      # neutral tracked configs (no per-user identity)
 │   │   ├── wsl.conf                 # WSL distro config
 │   │   ├── wslconfig                # Windows-host WSL global config (.wslconfig)
@@ -171,7 +171,8 @@ writing.
 
 A default run is privileged. It writes WSL sudoers, installs helpers to
 `/usr/local/bin` on Linux/WSL, sets `git config --global core.hooksPath`, and
-wires fleet Claude rules when `revcon` is present.
+wires fleet rules into `.revealui` when `revcon` is present. The Claude
+adapter is off unless `--claude-adapter` or `REVKIT_CLAUDE_ADAPTER=1`.
 
 | Step | What | Platform |
 |---|---|---|
@@ -183,9 +184,9 @@ wires fleet Claude rules when `revcon` is present.
 | 4 | Git + SSH includes (neutral configs + per-user `~/.config/revkit/`) | all |
 | 5 | WSL boot optimization (`shell/setup-wsl-boot.sh`) | WSL |
 | 6 | Sandbox directory init (if `/mnt/sandbox` mounted) | WSL |
-| 7 | Clone/wire `claude-config` into `~/.claude` + revskills marketplace | all |
-| 8 | Deploy M-4 Claude Code scanner hook | all |
-| 9 | Wire RevealFleet Claude rules via `revcon/link.sh` | all |
+| 7 | Write the native control home `~/.revealui`. Claude adapter off by default (`--claude-adapter` or `REVKIT_CLAUDE_ADAPTER=1` projects `~/.claude` from that home; no vendor config repo, no `claude` CLI) | all |
+| 8 | Deploy the M-4 scanner to `~/.revealui/hooks` and attach it per enabled adapter | all |
+| 9 | Wire fleet rules via `revcon/link.sh`: `--editor revealui` first, then vendor projections | all |
 | 10 | Fleet-wide M-11 pre-push hook. `core.hooksPath` at `~/.config/revkit/git-hooks` (Linux/WSL, LF-normalized copy) or `<repo>/git-hooks` (Windows, in-repo) | all |
 
 `bootstrap-wsl.sh` is a thin deprecation shim that execs `bootstrap.sh`. It
@@ -221,6 +222,7 @@ working trees should stay on the primary WSL ext4 vhdx, not the sandbox drive
 | `REVKIT_OS` | set | set | Detected OS (`wsl`/`linux`/`macos`) |
 | `DEVKIT_TIER` | `T0` | `T1` | Shell-detectable tier signal |
 | `REVEALUI_ROOT` | set | set | RevKit repo root (pinned at bootstrap) |
+| `REVKIT_CLAUDE_ADAPTER` | unset | unset | Set to `1` to project `~/.claude` from `~/.revealui`. Default off. |
 | `REVEALUI_MODE` | `fleet`/`vibe`/`bare` | `fleet`/`vibe`/`bare` | Workflow fragment set. `managed` is a deprecated silent alias for `fleet`. When unset, `~/.config/revkit/mode` then `fleet`. Not a stream flag. |
 | `STREAM_SAFE` / `REVVAULT_STREAM_SAFE` | overlay | overlay | Stream overlay ON (orthogonal). Also `RV_STREAM=1` from a terminal profile. |
 | `REVVAULT_ALLOW_PRINT` | overlay | overlay | Vault-private overlay (full get/clip; keep window out of capture). |
@@ -302,7 +304,7 @@ Pre-1.0. RevKit is a config/shell repo (no `package.json`, no changeset). See
 | **RevealUI** | Independent. RevealUI runs anywhere with Node 24 + pnpm + Postgres; RevKit is one provisioning option |
 | **RevVault** | RevKit sets up the age-identity mount path RevVault expects |
 | **RevDev** | Independent. RevDev's harness daemon runs on whatever workstation RevKit (or any other tool) provisioned |
-| **RevCon** | Pairs cleanly. RevKit wires RevealFleet Claude rules via `revcon/link.sh` (bootstrap step 9) |
+| **RevCon** | Pairs cleanly. RevKit wires fleet rules via `revcon/link.sh` native mode first, then vendor projections (bootstrap step 9) |
 | **RevForge** | Independent. RevForge runs on a workstation; RevKit can provision that workstation |
 | **RevSkills** | Independent. Skills are markdown, work in any RevKit-provisioned env |
 
