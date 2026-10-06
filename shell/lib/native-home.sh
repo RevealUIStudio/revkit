@@ -37,7 +37,93 @@ revkit_claude_adapter_on() {
   [ "${REVKIT_CLAUDE_ADAPTER:-0}" = "1" ]
 }
 
-# Copy a text file, stripping CR, without clobbering an identical dest.
+# Marker written into every file this installer creates. A later run may
+# replace a file in place only when this string is already present.
+REVKIT_PROJECTION_MARKER='generated-by-revkit'
+
+revkit_has_projection_marker() {
+  local f="$1"
+  [ -f "$f" ] && [ ! -L "$f" ] && grep -q -F "$REVKIT_PROJECTION_MARKER" "$f"
+}
+
+# True when ~/.revealui is a revkit checkout. Writing adapters/ or hooks/
+# there would leave untracked files in that clone.
+revkit_native_home_is_revkit_checkout() {
+  local native
+  native="$(revkit_native_home)"
+  [ -e "$native/.git" ] || return 1
+  [ -f "$native/bootstrap.sh" ] || return 1
+  [ -f "$native/shell/lib/native-home.sh" ] || return 1
+  return 0
+}
+
+revkit_warn_revkit_checkout_once() {
+  if [ "${REVKIT_NATIVE_CHECKOUT_WARNED:-0}" = "1" ]; then
+    return 0
+  fi
+  REVKIT_NATIVE_CHECKOUT_WARNED=1
+  printf '  WARNING: %s is a revkit checkout. Not writing adapters/ or hooks/ into it.\n' \
+    "$(revkit_native_home)" >&2
+}
+
+# Move a user-owned file aside. The caller then writes the projection.
+revkit_backup_user_file() {
+  local dest="$1"
+  local stamp bak n
+  stamp="$(date -u +%Y%m%d%H%M%S)"
+  bak="${dest}.revkit-bak-${stamp}"
+  n=0
+  while [ -e "$bak" ]; do
+    n=$((n + 1))
+    bak="${dest}.revkit-bak-${stamp}-${n}"
+  done
+  mv "$dest" "$bak"
+  printf '  WARNING: %s differs and has no generated-by-revkit marker. Moved it to %s\n' \
+    "$dest" "$bak" >&2
+}
+
+# Stamp a projection marker into tmp. Idempotent when the marker is present.
+revkit_stamp_projection() {
+  local src="$1"
+  local tmp="$2"
+  local stamped
+  sed 's/\r$//' "$src" > "$tmp"
+  if grep -q -F "$REVKIT_PROJECTION_MARKER" "$tmp"; then
+    return 0
+  fi
+  stamped="$(mktemp)"
+  case "$src" in
+    *.json)
+      awk '
+        BEGIN { done = 0 }
+        {
+          if (!done && $0 ~ /^\{/) {
+            print "{"
+            print "  \"generated-by-revkit\": true,"
+            sub(/^\{/, "")
+            if (length($0) > 0) print $0
+            done = 1
+            next
+          }
+          print
+        }
+      ' "$tmp" > "$stamped"
+      ;;
+    *.js)
+      { printf '%s\n' '// generated-by-revkit'; cat "$tmp"; } > "$stamped"
+      ;;
+    *.md)
+      { printf '%s\n' '<!-- generated-by-revkit -->'; cat "$tmp"; } > "$stamped"
+      ;;
+    *)
+      { printf '%s\n' '# generated-by-revkit'; cat "$tmp"; } > "$stamped"
+      ;;
+  esac
+  mv "$stamped" "$tmp"
+}
+
+# Copy a text file. An existing target with no projection marker is backed
+# up before a different body is written. A marked target may be replaced.
 revkit_copy_file() {
   local src="$1"
   local dest="$2"
@@ -47,15 +133,29 @@ revkit_copy_file() {
     return 0
   fi
   if [ "${DRY_RUN:-0}" -eq 1 ]; then
-    printf '  [dry-run] would copy %s -> %s\n' "$src" "$dest"
+    if [ -e "$dest" ]; then
+      printf '  [dry-run] would copy %s -> %s (unmarked existing file is backed up first)\n' \
+        "$src" "$dest"
+    else
+      printf '  [dry-run] would copy %s -> %s\n' "$src" "$dest"
+    fi
     return 0
   fi
   mkdir -p "$(dirname "$dest")"
   tmp="$(mktemp)"
-  sed 's/\r$//' "$src" > "$tmp"
-  if [ -f "$dest" ] && cmp -s "$tmp" "$dest"; then
-    rm -f "$tmp"
-    return 0
+  revkit_stamp_projection "$src" "$tmp"
+  if [ -L "$dest" ]; then
+    revkit_backup_user_file "$dest"
+  elif [ -e "$dest" ]; then
+    if [ -f "$dest" ] && cmp -s "$tmp" "$dest"; then
+      rm -f "$tmp"
+      return 0
+    fi
+    if revkit_has_projection_marker "$dest"; then
+      :
+    else
+      revkit_backup_user_file "$dest"
+    fi
   fi
   mv "$tmp" "$dest"
   chmod 0644 "$dest"
@@ -75,6 +175,10 @@ revkit_sync_tree() {
 
 revkit_install_native_templates() {
   local repo native
+  if revkit_native_home_is_revkit_checkout; then
+    revkit_warn_revkit_checkout_once
+    return 0
+  fi
   repo="$(revkit_repo_root)" || return 1
   native="$(revkit_native_home)"
   revkit_sync_tree "$repo/templates/adapters/grok" "$native/adapters/grok"
@@ -86,6 +190,10 @@ revkit_install_native_templates() {
 
 revkit_install_m4() {
   local repo src session dest_root
+  if revkit_native_home_is_revkit_checkout; then
+    revkit_warn_revkit_checkout_once
+    return 0
+  fi
   repo="$(revkit_repo_root)" || return 1
   src="$repo/shell/bin/m4-sudoers-fs-scanner.js"
   session="$repo/templates/hooks/session-start.js"
@@ -114,6 +222,47 @@ revkit_install_m4() {
   echo "  Adapters invoke that path. The script is not copied into a vendor home."
 }
 
+revkit_grok_hook_src() {
+  local installed repo
+  installed="$(revkit_native_home)/adapters/grok/hooks/m4-sudoers-fs-scan.json"
+  if [ -f "$installed" ] && ! revkit_native_home_is_revkit_checkout; then
+    printf '%s\n' "$installed"
+    return 0
+  fi
+  repo="$(revkit_repo_root)" || return 1
+  if [ -f "$repo/templates/adapters/grok/hooks/m4-sudoers-fs-scan.json" ]; then
+    printf '%s\n' "$repo/templates/adapters/grok/hooks/m4-sudoers-fs-scan.json"
+    return 0
+  fi
+  return 1
+}
+
+revkit_grok_config_src() {
+  local installed repo
+  installed="$(revkit_native_home)/adapters/grok/config.toml"
+  if [ -f "$installed" ] && ! revkit_native_home_is_revkit_checkout; then
+    printf '%s\n' "$installed"
+    return 0
+  fi
+  repo="$(revkit_repo_root)" || return 1
+  if [ -f "$repo/templates/grok/config.toml" ]; then
+    printf '%s\n' "$repo/templates/grok/config.toml"
+    return 0
+  fi
+  return 1
+}
+
+revkit_claude_projection_root() {
+  local installed repo
+  installed="$(revkit_native_home)/adapters/claude"
+  if [ -d "$installed" ] && ! revkit_native_home_is_revkit_checkout; then
+    printf '%s\n' "$installed"
+    return 0
+  fi
+  repo="$(revkit_repo_root)" || return 1
+  printf '%s\n' "$repo/templates/adapters/claude"
+}
+
 revkit_project_grok_adapter() {
   local native dest hook tmpl
   native="$(revkit_native_home)"
@@ -123,12 +272,12 @@ revkit_project_grok_adapter() {
     printf '  [dry-run] would seed Grok [compat.claude] defaults into %s/config.toml\n' "$dest"
     return 0
   fi
-  hook="$native/adapters/grok/hooks/m4-sudoers-fs-scan.json"
-  if [ -f "$hook" ]; then
+  hook="$(revkit_grok_hook_src)" || hook=""
+  if [ -n "$hook" ] && [ -f "$hook" ]; then
     revkit_copy_file "$hook" "$dest/hooks/m4-sudoers-fs-scan.json"
   fi
-  tmpl="$native/adapters/grok/config.toml"
-  if [ ! -f "$tmpl" ]; then
+  tmpl="$(revkit_grok_config_src)" || tmpl=""
+  if [ -z "$tmpl" ] || [ ! -f "$tmpl" ]; then
     return 0
   fi
   # shellcheck disable=SC1091
@@ -143,7 +292,7 @@ revkit_project_claude_adapter() {
     echo "  Claude adapter: off (pass --claude-adapter or set REVKIT_CLAUDE_ADAPTER=1)"
     return 0
   fi
-  native="$(revkit_native_home)/adapters/claude"
+  native="$(revkit_claude_projection_root)"
   dest="${REVKIT_CLAUDE_HOME:-$HOME/.claude}"
   if [ "${DRY_RUN:-0}" -eq 1 ]; then
     printf '  [dry-run] would project %s from %s\n' "$dest" "$native"
@@ -180,9 +329,8 @@ revkit_link_fleet() {
     return 0
   fi
 
-  # Native editor first. Vendor editors are projections of that tree.
-  # link.sh already defaults to revealui; the flag is explicit so a vendor
-  # editor cannot become the first write.
+  # Native editor first. revcon copy mode replaces a differing file, so
+  # vendor editors run only when REVKIT_LINK_EDITORS names them.
   local -a fleet_targets=(
     "revealui:revealfleet,revealui:copy"
     "revdev:revealfleet:copy"
@@ -192,7 +340,17 @@ revkit_link_fleet() {
     "revskills:revealfleet:copy"
     "revkit:revealfleet:copy"
   )
-  editors=(revealui cursor zed vscode claude agents)
+  local extra
+  local -a _link_editors
+  editors=(revealui)
+  if [ -n "${REVKIT_LINK_EDITORS:-}" ]; then
+    IFS=',' read -ra _link_editors <<< "$REVKIT_LINK_EDITORS"
+    for extra in "${_link_editors[@]}"; do
+      [ -n "$extra" ] || continue
+      [ "$extra" = "revealui" ] && continue
+      editors+=("$extra")
+    done
+  fi
 
   for entry in "${fleet_targets[@]}"; do
     repo="${entry%%:*}"
@@ -241,6 +399,6 @@ revkit_bootstrap_control_layer() {
   revkit_project_grok_adapter
   revkit_project_claude_adapter
 
-  echo "[9] Wiring fleet rules via revcon (native first, then vendor projections)..."
+  echo "[9] Wiring fleet rules via revcon (editor revealui; extra editors from REVKIT_LINK_EDITORS)..."
   revkit_link_fleet
 }

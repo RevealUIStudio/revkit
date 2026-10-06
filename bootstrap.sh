@@ -508,7 +508,8 @@ fi
 # ~/.revealui is written first. The claude adapter is off unless
 # --claude-adapter or REVKIT_CLAUDE_ADAPTER=1. When on, it projects pointers
 # from that native home. It does not clone a vendor config repo and it does
-# not run the claude CLI. Fleet link uses --editor revealui before vendors.
+# not run the claude CLI. Fleet link uses --editor revealui. Extra editors
+# come from REVKIT_LINK_EDITORS because revcon copy mode replaces files.
 revkit_bootstrap_control_layer
 
 # ---------------------------------------------------------------------------
