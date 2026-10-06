@@ -9,7 +9,7 @@ This is **not** a customer runtime, product SDK, or end-user installer.
 
 `VERSION` is `0.3.0`. This is the first recorded field for this repo. It is
 not a scaffold stamp: bootstrap, shell modes (fleet/vibe/bare), and the
-fleet-root `rfg`/`rfc` launcher have all shipped. Still `0.x` — there is no
+fleet-root `rfg`/`rfc` launcher have all shipped. Still `0.x`. There is no
 stable external contract. Not aligned to any other repo's number.
 
 
@@ -57,18 +57,18 @@ In more detail, the bootstrap also adds a `~/.bashrc`/`~/.zshrc` hook that resol
 
 Launchers: **`rfc <repo>`** starts Claude in a fleet repo (WSL-native; same `bootstrap` / `claim` / `open` isolation as `rfg`); **`rfg <repo>`** starts Grok with RevealUI MCP token loaded from revvault (see [`docs/rfg-launcher.md`](docs/rfg-launcher.md) and [`docs/rfc-launcher.md`](docs/rfc-launcher.md)). The old `revealui` tmux workspace launcher is **retired** (GAP-351 / ADR 2026-06-23); `bootstrap.sh` overwrites `~/.local/bin/revealui` with a shim that prints `rfg` / `rfc`.
 
-> **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap.sh` — the rc hook is self-healing and migrates in place. No manual edit needed.
+> **Upgrading from an older install:** the runtime tree moved from `wsl/` to `shell/` (and `bashrc.d/` to `shellrc.d/`). Just re-run `bootstrap.sh`. The rc hook is self-healing and migrates in place. No manual edit needed.
 
-Open a new shell — you should see a `● RevKit: fleet` banner (default). `revkit-mode vibe` switches to the product-first subset; `revkit-mode bare` is the no-fragment escape hatch. `REVEALUI_MODE=managed` still works (silent alias for fleet). Streaming safety is an overlay (`revkit-mode stream-safe` / `RV_STREAM=1`), not a fourth mode. On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.
+Open a new shell. You should see a `● RevKit: fleet` banner (default). `revkit-mode vibe` switches to the product-first subset; `revkit-mode bare` is the no-fragment escape hatch. `REVEALUI_MODE=managed` still works (silent alias for fleet). Streaming safety is an overlay (`revkit-mode stream-safe` / `RV_STREAM=1`), not a fourth mode. On WSL, run `wsl --shutdown` from Windows to apply the boot optimization.
 
 ### Per-machine configuration
 
-RevKit ships **neutral, identity-free configs** under `shell/config/`. Per-user values are kept machine-local and are **not** committed — on bootstrap they are seeded into `~/.config/revkit/`:
+RevKit ships **neutral, identity-free configs** under `shell/config/`. Per-user values are kept machine-local and are **not** committed. On bootstrap they are seeded into `~/.config/revkit/`:
 
-- `~/.config/revkit/identity.gitconfig` — your git name + email (seeded from your existing git identity if present)
-- `~/.config/revkit/ssh.local` — your SSH host blocks
+- `~/.config/revkit/identity.gitconfig`. Your git name + email (seeded from your existing git identity if present)
+- `~/.config/revkit/ssh.local`. Your SSH host blocks
 
-Edit those files directly; the tracked `gitconfig` / `ssh-config` Include them. There is no profile/render step — that subsystem was removed in favor of this model.
+Edit those files directly; the tracked `gitconfig` / `ssh-config` Include them. There is no profile/render step. That subsystem was removed in favor of this model.
 
 ## Structure
 
@@ -102,7 +102,7 @@ MIT
 ## RevealFleet Claude launcher (`rfc`)
 
 `rfc <repo>` starts a Claude Code session whose process runs **inside WSL**,
-rooted in a `~/revealfleet/*` repo — the configuration that makes a secure,
+rooted in a `~/revealfleet/*` repo. The configuration that makes a secure,
 prompt-free session possible (commands stay native instead of being wrapped in
 `wsl.exe`, so they allowlist by real prefix and the deny-list hooks fire). On
 macOS and native Linux `rfc` runs the session locally in the target repo.
@@ -111,3 +111,22 @@ Deployed automatically by `bootstrap.sh` (`/usr/local/bin/rfc.sh` +
 `shell/shellrc.d/50-rfc.sh`). Per-surface wiring (WSL terminal, Zed terminal, Zed
 `claude-acp` extension) and the Claude Desktop limitation are documented in
 [`docs/rfc-launcher.md`](docs/rfc-launcher.md).
+
+## RevealFleet Codex launcher (`rfx`)
+
+`rfx <repo>` starts Codex in a fleet repo with the same fleet root, worktree
+env, storm preflight, and RevealUI MCP env as `rfg`. It does not auto-continue
+a session. Resume with `rfx -- resume --last`.
+
+```bash
+rfx revealui
+rfx open revealui my-label
+rfx --dry-run revealui
+rfx revealui -- --search "triage the failing test"
+```
+
+`bootstrap.sh` installs `rfx.sh` next to `rfg.sh` and symlinks the unsuffixed
+PATH name `rfx` to that script. It does not write a Codex vendor home. The
+audit-storm sweeper skips processes whose ancestor chain includes codex, rfx,
+grok, rfg, rfc, claude, or cursor-agent. Details are in
+[`docs/rfx-launcher.md`](docs/rfx-launcher.md).
