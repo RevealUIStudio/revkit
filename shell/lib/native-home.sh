@@ -38,12 +38,81 @@ revkit_claude_adapter_on() {
 }
 
 # Marker written into every file this installer creates. A later run may
-# replace a file in place only when this string is already present.
+# replace a file in place only when the marker is in the header: the first
+# 5 lines, or the first JSON key for JSON. A mention later in the file is
+# not ownership.
 REVKIT_PROJECTION_MARKER='generated-by-revkit'
+
+revkit_is_revkit_backup() {
+  local base
+  base="$(basename -- "$1")"
+  case "$base" in
+    *.revkit-bak-*) return 0 ;;
+  esac
+  return 1
+}
+
+# True when the first JSON key is the projection marker.
+revkit_json_first_key_is_marker() {
+  local f="$1"
+  awk -v marker="$REVKIT_PROJECTION_MARKER" '
+    BEGIN { key = ""; stage = 0; done = 0 }
+    {
+      s = $0
+      while (length(s) > 0 && !done) {
+        if (stage == 0 || stage == 1) {
+          if (s ~ /^[[:space:]]/) {
+            sub(/^[[:space:]]+/, "", s)
+            continue
+          }
+          c = substr(s, 1, 1)
+          if (stage == 0 && c != "{") exit 1
+          if (stage == 1 && c != "\"") exit 1
+          s = substr(s, 2)
+          stage++
+          continue
+        }
+        c = substr(s, 1, 1)
+        if (c == "\\") {
+          s = substr(s, 3)
+          continue
+        }
+        if (c == "\"") {
+          done = 1
+          break
+        }
+        key = key c
+        s = substr(s, 2)
+      }
+    }
+    END {
+      if (!done) exit 1
+      if (key != marker) exit 1
+    }
+  ' "$f"
+}
 
 revkit_has_projection_marker() {
   local f="$1"
-  [ -f "$f" ] && [ ! -L "$f" ] && grep -q -F "$REVKIT_PROJECTION_MARKER" "$f"
+  local kind="${2:-}"
+  [ -f "$f" ] || return 1
+  [ -L "$f" ] && return 1
+  if [ -z "$kind" ]; then
+    case "$f" in
+      *.json) kind=json ;;
+      *) kind=text ;;
+    esac
+  fi
+  if [ "$kind" = "json" ]; then
+    revkit_json_first_key_is_marker "$f"
+    return
+  fi
+  local header
+  header="$(head -n 5 -- "$f")"
+  case "$header" in
+    *"$REVKIT_PROJECTION_MARKER"*) return 0 ;;
+  esac
+  return 1
 }
 
 # True when ~/.revealui is a revkit checkout. Writing adapters/ or hooks/
@@ -73,22 +142,27 @@ revkit_backup_user_file() {
   stamp="$(date -u +%Y%m%d%H%M%S)"
   bak="${dest}.revkit-bak-${stamp}"
   n=0
-  while [ -e "$bak" ]; do
+  while [ -e "$bak" ] || [ -L "$bak" ]; do
     n=$((n + 1))
     bak="${dest}.revkit-bak-${stamp}-${n}"
   done
   mv "$dest" "$bak"
-  printf '  WARNING: %s differs and has no generated-by-revkit marker. Moved it to %s\n' \
+  printf '  WARNING: %s differs and has no generated-by-revkit header marker. Moved it to %s\n' \
     "$dest" "$bak" >&2
 }
 
-# Stamp a projection marker into tmp. Idempotent when the marker is present.
+# Stamp a projection marker into tmp. Idempotent when the header already
+# carries the marker.
 revkit_stamp_projection() {
   local src="$1"
   local tmp="$2"
-  local stamped
+  local stamped kind
   sed 's/\r$//' "$src" > "$tmp"
-  if grep -q -F "$REVKIT_PROJECTION_MARKER" "$tmp"; then
+  case "$src" in
+    *.json) kind=json ;;
+    *) kind=text ;;
+  esac
+  if revkit_has_projection_marker "$tmp" "$kind"; then
     return 0
   fi
   stamped="$(mktemp)"
@@ -128,6 +202,9 @@ revkit_copy_file() {
   local src="$1"
   local dest="$2"
   local tmp
+  if revkit_is_revkit_backup "$src" || revkit_is_revkit_backup "$dest"; then
+    return 0
+  fi
   if [ ! -f "$src" ]; then
     printf '  WARNING: missing %s\n' "$src" >&2
     return 0
@@ -168,9 +245,12 @@ revkit_sync_tree() {
   local f rel
   [ -d "$src" ] || return 0
   while IFS= read -r -d '' f; do
+    if revkit_is_revkit_backup "$f"; then
+      continue
+    fi
     rel="${f#"$src"/}"
     revkit_copy_file "$f" "$dest/$rel"
-  done < <(find "$src" -type f -print0)
+  done < <(find "$src" -type f ! -name '*.revkit-bak-*' -print0)
 }
 
 revkit_install_native_templates() {

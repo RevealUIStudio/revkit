@@ -11,6 +11,7 @@
 #   3. Every file under .revealui/content/{rules,agents,skills} is in the manifest
 #   4. When a vendor projection dir exists, its rules/agents/skills files match
 #      the native bytes, and every native file in that subdir is projected
+#   Backup files named *.revkit-bak-* are not projections and are ignored.
 #
 # Usage:
 #   bash scripts/verify-copy-lockstep.sh --target /path/to/repo
@@ -137,8 +138,8 @@ if [[ -d "$REF_ROOT" ]]; then
       echo "  $rel is under .revealui/content but not in the native manifest." >&2
       problems=$((problems + 1))
     fi
-  done < <(find "$REF_ROOT" -type f -print0)
-  if find "$REF_ROOT" -type l -print -quit | grep -q .; then
+  done < <(find "$REF_ROOT" -type f ! -name '*.revkit-bak-*' -print0)
+  if find "$REF_ROOT" -type l ! -name '*.revkit-bak-*' -print -quit | grep -q .; then
     echo "  .revealui/content contains a symlink; native policy must be real files" >&2
     problems=$((problems + 1))
   fi
@@ -171,15 +172,18 @@ check_vendor() {
           echo "  $dot/$sub/$rel differs from .revealui/content/$sub/$rel" >&2
           problems=$((problems + 1))
         fi
-      done < <(find "$native_dir" -type f -print0)
+      done < <(find "$native_dir" -type f ! -name '*.revkit-bak-*' -print0)
     fi
     while IFS= read -r -d '' vendor_file; do
       rel="${vendor_file#"$vendor_dir"/}"
+      case "$(basename "$vendor_file")" in
+        *.revkit-bak-*) continue ;;
+      esac
       if [[ -z "${native_rels[$rel]+x}" ]]; then
         echo "  $dot/$sub/$rel has no native reference at .revealui/content/$sub/$rel" >&2
         problems=$((problems + 1))
       fi
-    done < <(find "$vendor_dir" -type f -print0)
+    done < <(find "$vendor_dir" -type f ! -name '*.revkit-bak-*' -print0)
   done
 }
 

@@ -474,6 +474,140 @@ else
   fail "checkout re-run dirty rc=$rc status=$(git -C "$native" status --porcelain)"
 fi
 
+# --- header marker, not a mid-file mention ---
+HEADER="$(new_home)"
+export CLAUDE_LOG="$HEADER/claude.log"
+export SUDO_LOG="$HEADER/sudo.log"
+export BIN="$HEADER/bin"
+: > "$CLAUDE_LOG"
+: > "$SUDO_LOG"
+export REVKIT_CLAUDE_ADAPTER=0
+export REVKIT_BOOTSTRAP_ONLY=control
+unset REVEALFLEET_ROOT || true
+unset REVKIT_LINK_EDITORS || true
+h="$HEADER/home"
+mkdir -p "$h/.grok/hooks" "$h/.revealui/hooks" "$h/.revealui/adapters/claude" "$h/.claude"
+cat > "$h/.grok/hooks/m4-sudoers-fs-scan.json" << 'EOF'
+{
+  "user": "keep-me",
+  "note": "generated-by-revkit"
+}
+EOF
+cat > "$h/.revealui/hooks/session-start.js" << 'EOF'
+const a = 1;
+const b = 2;
+const c = 3;
+const d = 4;
+const e = 5;
+// generated-by-revkit
+EOF
+cat > "$h/.revealui/adapters/claude/CLAUDE.md" << 'EOF'
+line1
+line2
+line3
+line4
+<!-- generated-by-revkit -->
+USER-LINE5
+EOF
+cat > "$h/.claude/CLAUDE.md" << 'EOF'
+line1
+line2
+line3
+line4
+line5
+generated-by-revkit in the body
+EOF
+cp "$h/.grok/hooks/m4-sudoers-fs-scan.json" "$HEADER/user-grok.json"
+cp "$h/.revealui/hooks/session-start.js" "$HEADER/user-session.js"
+cp "$h/.claude/CLAUDE.md" "$HEADER/user-claude.md"
+out="$(run_boot "$h" --claude-adapter)"
+rc="${out%%$'\n'*}"
+grok_bak="$(find "$h/.grok/hooks" -maxdepth 1 -name 'm4-sudoers-fs-scan.json.revkit-bak-*' -type f -print)"
+session_bak="$(find "$h/.revealui/hooks" -maxdepth 1 -name 'session-start.js.revkit-bak-*' -type f -print)"
+claude_bak="$(find "$h/.claude" -maxdepth 1 -name 'CLAUDE.md.revkit-bak-*' -type f -print)"
+if [ "$rc" = "0" ] \
+  && [ -n "$grok_bak" ] && [ "$(echo "$grok_bak" | wc -l)" -eq 1 ] \
+  && cmp -s "$grok_bak" "$HEADER/user-grok.json" \
+  && ! grep -q 'keep-me' "$h/.grok/hooks/m4-sudoers-fs-scan.json" \
+  && [ -n "$session_bak" ] && cmp -s "$session_bak" "$HEADER/user-session.js" \
+  && [ -n "$claude_bak" ] && cmp -s "$claude_bak" "$HEADER/user-claude.md" \
+  && ! grep -q 'in the body' "$h/.claude/CLAUDE.md" \
+  && [ -z "$(find "$h/.revealui/adapters/claude" -name 'CLAUDE.md.revkit-bak-*' -print)" ] \
+  && ! grep -q 'USER-LINE5' "$h/.revealui/adapters/claude/CLAUDE.md" \
+  && grep -q 'generated-by-revkit' "$h/.revealui/adapters/claude/CLAUDE.md"; then
+  pass "only a header marker is ownership; a later mention is backed up"
+else
+  fail "header marker rc=$rc grok_bak=$grok_bak session_bak=$session_bak claude_bak=$claude_bak"
+fi
+
+# --- backups are not projected or stamped ---
+BAKSYNC="$(new_home)"
+export CLAUDE_LOG="$BAKSYNC/claude.log"
+export SUDO_LOG="$BAKSYNC/sudo.log"
+export BIN="$BAKSYNC/bin"
+: > "$CLAUDE_LOG"
+: > "$SUDO_LOG"
+export REVKIT_CLAUDE_ADAPTER=0
+export REVKIT_BOOTSTRAP_ONLY=control
+unset REVEALFLEET_ROOT || true
+b="$BAKSYNC/home"
+mkdir -p "$b/.revealui/adapters/claude/hooks" "$b/.claude"
+printf 'NATIVE-BAK-KEEP\n' > "$b/.revealui/adapters/claude/CLAUDE.md.revkit-bak-19990101010101"
+printf 'NATIVE-HOOK-BAK\n' > "$b/.revealui/adapters/claude/hooks/m4-sudoers-fs-scan.json.revkit-bak-19990101010101"
+printf 'USER claude md\n' > "$b/.claude/CLAUDE.md"
+out="$(run_boot "$b" --claude-adapter)"
+rc="${out%%$'\n'*}"
+if [ "$rc" = "0" ] \
+  && [ "$(cat "$b/.revealui/adapters/claude/CLAUDE.md.revkit-bak-19990101010101")" = "NATIVE-BAK-KEEP" ] \
+  && [ "$(cat "$b/.revealui/adapters/claude/hooks/m4-sudoers-fs-scan.json.revkit-bak-19990101010101")" = "NATIVE-HOOK-BAK" ] \
+  && [ ! -e "$b/.claude/CLAUDE.md.revkit-bak-19990101010101" ] \
+  && [ ! -e "$b/.claude/hooks/m4-sudoers-fs-scan.json.revkit-bak-19990101010101" ] \
+  && ! grep -R -q 'NATIVE-BAK-KEEP' "$b/.claude" \
+  && ! grep -R -q 'NATIVE-HOOK-BAK' "$b/.claude"; then
+  pass "revkit-bak files are not projected into ~/.claude or stamped"
+else
+  fail "backup projection rc=$rc"
+fi
+
+# --- a broken symlink occupies a backup name ---
+SYMLINK="$(new_home)"
+export CLAUDE_LOG="$SYMLINK/claude.log"
+export SUDO_LOG="$SYMLINK/sudo.log"
+export BIN="$SYMLINK/bin"
+: > "$CLAUDE_LOG"
+: > "$SUDO_LOG"
+cat > "$SYMLINK/bin/date" << 'EOF'
+#!/bin/sh
+if [ "$1" = "-u" ] && [ "$2" = "+%Y%m%d%H%M%S" ]; then
+  printf '20000101010101\n'
+  exit 0
+fi
+if [ -x /usr/bin/date ]; then
+  exec /usr/bin/date "$@"
+fi
+exec /bin/date "$@"
+EOF
+chmod +x "$SYMLINK/bin/date"
+export REVKIT_CLAUDE_ADAPTER=0
+export REVKIT_BOOTSTRAP_ONLY=control
+unset REVEALFLEET_ROOT || true
+s="$SYMLINK/home"
+mkdir -p "$s/.grok/hooks"
+printf 'USER grok hook\n' > "$s/.grok/hooks/m4-sudoers-fs-scan.json"
+ln -s /nonexistent/revkit-broken "$s/.grok/hooks/m4-sudoers-fs-scan.json.revkit-bak-20000101010101"
+out="$(run_boot "$s")"
+rc="${out%%$'\n'*}"
+taken="$s/.grok/hooks/m4-sudoers-fs-scan.json.revkit-bak-20000101010101"
+alt="$s/.grok/hooks/m4-sudoers-fs-scan.json.revkit-bak-20000101010101-1"
+if [ "$rc" = "0" ] \
+  && [ -L "$taken" ] && [ ! -e "$taken" ] \
+  && [ "$(readlink "$taken")" = "/nonexistent/revkit-broken" ] \
+  && [ -f "$alt" ] && [ "$(cat "$alt")" = "USER grok hook" ]; then
+  pass "a broken symlink counts as a taken backup name"
+else
+  fail "symlink backup rc=$rc taken_link=$(readlink "$taken" 2>/dev/null || echo missing) alt=$(cat "$alt" 2>/dev/null || echo missing)"
+fi
+
 # --- lockstep: native reference, vendor projection ---
 if bash "$ROOT/scripts/verify-copy-lockstep.sh" --target "$ROOT" >/dev/null; then
   pass "repo lockstep accepts .revealui/content as the reference"
@@ -506,6 +640,13 @@ if bash "$ROOT/scripts/verify-copy-lockstep.sh" --target "$FIX" --dot .claude >/
 else
   fail "matching projection should pass"
 fi
+printf 'native bak\n' > "$FIX/.revealui/content/rules/a.md.revkit-bak-20000101010101"
+printf 'vendor bak\n' > "$FIX/.claude/rules/a.md.revkit-bak-20000101010101"
+if bash "$ROOT/scripts/verify-copy-lockstep.sh" --target "$FIX" --dot .claude >/dev/null; then
+  pass "lockstep ignores revkit-bak files in the native tree and the projection"
+else
+  fail "lockstep treated a revkit-bak file as a projection"
+fi
 printf 'drift\n' > "$FIX/.claude/rules/a.md"
 if bash "$ROOT/scripts/verify-copy-lockstep.sh" --target "$FIX" --dot .claude >/dev/null 2>&1; then
   fail "drifted vendor projection should fail lockstep"
@@ -513,7 +654,7 @@ else
   pass "drifted vendor projection fails against .revealui/content"
 fi
 
-rm -rf "$BASE" "$OPT" "$DRY" "$LINK" "$FIX" "$PRESERVE" "$PRESERVE_OPT" "$CHECKOUT"
+rm -rf "$BASE" "$OPT" "$DRY" "$LINK" "$FIX" "$PRESERVE" "$PRESERVE_OPT" "$CHECKOUT" "$HEADER" "$BAKSYNC" "$SYMLINK"
 unset CLAUDE_LOG SUDO_LOG BIN LINK_LOG REVKIT_BOOTSTRAP_ONLY REVKIT_CLAUDE_ADAPTER GROK_HOME || true
 
 echo
