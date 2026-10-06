@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # GAP-372: materialized .claude rules must match .revcon-manifest.json
+  # Native .revealui/content is the reference. Vendor trees are projections.
   copy-lockstep:
     name: Copy lockstep
     runs-on: ubuntu-latest
@@ -455,8 +455,8 @@ jobs:
     # helpers, git/ssh includes, M-4 scanner, M-11 hooksPath). The ephemeral
     # runner is the safe sandbox — these steps mutate $HOME + /usr/local/bin +
     # global git config. WSL-only steps (sudoers, boot-opt, sandbox init) are
-    # skipped (REVKIT_OS auto-detects as linux here). revcon/link.sh (step 8) is
-    # absent on the runner and warns-and-skips by design.
+    # skipped (REVKIT_OS auto-detects as linux here). revcon/link.sh (step 9)
+    # is absent on the runner and warns-and-skips by design.
     name: bootstrap real-run smoke (linux)
     runs-on: ubuntu-latest
     steps:
@@ -480,7 +480,11 @@ jobs:
           git config --global --get-all include.path | grep -qF 'shell/config/gitconfig'; assert "git include.path -> shell/config/gitconfig" $?
           test -f "$HOME/.config/revkit/identity.gitconfig"; assert "per-user identity.gitconfig seeded" $?
           git config --global --get core.hooksPath | grep -qF 'git-hooks'; assert "M-11 core.hooksPath -> repo git-hooks" $?
-          test -f "$HOME/.claude/hooks/m4-sudoers-fs-scanner.js"; assert "M-4 scanner deployed" $?
+          test -f "$HOME/.revealui/hooks/m4-sudoers-fs-scanner.js"; assert "M-4 scanner deployed to ~/.revealui/hooks" $?
+          test ! -e "$HOME/.claude"; assert "default run does not create ~/.claude" $?
+          grep -q 'hooks = false' "$HOME/.grok/config.toml"; assert "grok compat.claude hooks off by default" $?
+          grep -q 'mcps = false' "$HOME/.grok/config.toml"; assert "grok compat.claude mcps off by default" $?
+          grep -q 'sessions = false' "$HOME/.grok/config.toml"; assert "grok compat.claude sessions off by default" $?
           exit "$fail"
       - name: Re-run is idempotent (self-healing hook, no duplicate)
         run: |
@@ -489,3 +493,15 @@ jobs:
           count="$(grep -cF '# --- RevealUI environment mode ---' "$HOME/.bashrc")"
           test "$count" -eq 1 || { echo "::error::rc hook duplicated on re-run (count=$count)"; exit 1; }
           echo "ok   idempotent re-run (single rc hook block)"
+          test ! -e "$HOME/.claude"
+          test -f "$HOME/.revealui/hooks/m4-sudoers-fs-scanner.js"
+
+  test-bootstrap-native:
+    name: tests/test-bootstrap-native.sh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Run native-home bootstrap tests
+        run: bash tests/test-bootstrap-native.sh
