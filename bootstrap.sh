@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap.sh — cross-platform RevKit bootstrap (macOS + Linux + WSL2).
+# bootstrap.sh - cross-platform RevKit bootstrap (macOS + Linux + WSL2).
 # Operator machine kit (not a customer runtime): writes sudoers (WSL), sets git config --global core.hooksPath, installs to /usr/local/bin, wires fleet hooks.
 #
 # Replaces bootstrap-wsl.sh as the universal entry point. Detect-then-dispatch:
@@ -147,6 +147,16 @@ for script in "$SCRIPT_DIR/shell/bin/"*.sh; do
     fi
     printf '  Installed: %s/kill-audit-storms\n' "$HELPERS_DIR"
   fi
+  # Unsuffixed PATH name next to rfg.sh. Symlink, not a second copy.
+  # Does not write a vendor home.
+  if [ "$name" = "rfx.sh" ]; then
+    if revkit_is_macos; then
+      run ln -sfn "$name" "$HELPERS_DIR/rfx"
+    else
+      run sudo ln -sfn "$name" "$HELPERS_DIR/rfx"
+    fi
+    printf '  Installed: %s/rfx -> %s\n' "$HELPERS_DIR" "$name"
+  fi
 done
 printf '  %d helper(s) installed.\n' "$_installed"
 
@@ -169,7 +179,7 @@ else
 fi
 
 # Matched lib prefix: rfg/rfc copies in <prefix>/bin load <prefix>/lib/revkit.
-# This is the portable install unit (Linux /usr/local, macOS ~/.local) — not $HOME/revealfleet.
+# This is the portable install unit (Linux /usr/local, macOS ~/.local). Not $HOME/revealfleet.
 echo "[1d] Installing matched libs to $LIBS_DIR..."
 if [ "$DRY_RUN" -eq 0 ] && ! revkit_is_macos; then
   sudo mkdir -p "$LIBS_DIR"
@@ -305,7 +315,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 2: Sudoers — WSL only (passwordless mount for sandbox drive)
+# Step 2: Sudoers. WSL only (passwordless mount for sandbox drive)
 # ---------------------------------------------------------------------------
 if revkit_is_wsl; then
   echo "[2] Configuring sudoers for passwordless mount..."
@@ -313,7 +323,7 @@ if revkit_is_wsl; then
   CURRENT_USER="$(whoami)"
   if [ "$DRY_RUN" -eq 0 ]; then
     sudo tee "$SUDOERS_FILE" > /dev/null << EOF
-# RevKit — passwordless mount (pinned to --mount-only; --init requires interactive sudo).
+# RevKit. Passwordless mount (pinned to --mount-only; --init requires interactive sudo).
 $CURRENT_USER ALL=(ALL) NOPASSWD: /usr/local/bin/mount-sandbox-drive.sh --mount-only
 EOF
     sudo chmod 0440 "$SUDOERS_FILE"
@@ -328,7 +338,7 @@ EOF
     printf '  [dry-run] would write %s\n' "$SUDOERS_FILE"
   fi
 else
-  echo "[2] Sudoers — skipped (not WSL)"
+  echo "[2] Sudoers. Skipped (not WSL)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -346,7 +356,7 @@ for rcfile in "${_rc_files[@]}"; do
   fi
 
   # Self-healing: remove any stale RevKit block before re-adding. Strip only
-  # when BOTH markers are present — a lone OPEN marker (truncated/hand-edited
+  # when BOTH markers are present. A lone OPEN marker (truncated/hand-edited
   # rc) would otherwise make awk drop everything to EOF.
   if grep -qF "$MARKER" "$rcfile" 2>/dev/null && grep -qF "$END_MARKER" "$rcfile" 2>/dev/null; then
     if [ "$DRY_RUN" -eq 0 ]; then
@@ -379,7 +389,7 @@ for rcfile in "${_rc_files[@]}"; do
     cat >> "$_tmp" << HOOKEOF
 
 # --- RevealUI environment mode ---
-# Absolute pins captured at bootstrap — not \$HOME/revealfleet at runtime.
+# Absolute pins captured at bootstrap. Not \$HOME/revealfleet at runtime.
 export REVEALUI_ROOT="$SCRIPT_DIR"
 ${_FLEET_PIN:+export REVEALFLEET_ROOT="$_FLEET_PIN"}
 # Guard: apply once per terminal session. Mode resolution (env >
@@ -417,7 +427,7 @@ if [ "$DRY_RUN" -eq 0 ]; then
     _gn="$(git config --global user.name 2>/dev/null || true)"
     _ge="$(git config --global user.email 2>/dev/null || true)"
     {
-      echo "# RevKit per-user git identity — machine-local, never committed."
+      echo "# RevKit per-user git identity. Machine-local, never committed."
       echo "[user]"
       printf '\tname = %s\n' "$_gn"
       printf '\temail = %s\n' "$_ge"
@@ -425,7 +435,7 @@ if [ "$DRY_RUN" -eq 0 ]; then
     if [ -n "$_gn" ] && [ -n "$_ge" ]; then
       echo "  Seeded $LOCAL_CFG/identity.gitconfig from existing git identity"
     else
-      echo "  Created $LOCAL_CFG/identity.gitconfig — set your git name + email there"
+      echo "  Created $LOCAL_CFG/identity.gitconfig. Set your git name + email there"
     fi
   else
     echo "  $LOCAL_CFG/identity.gitconfig already exists"
@@ -433,7 +443,7 @@ if [ "$DRY_RUN" -eq 0 ]; then
 
   if [ ! -f "$LOCAL_CFG/ssh.local" ]; then
     {
-      echo "# RevKit per-user SSH overrides — machine-local, never committed."
+      echo "# RevKit per-user SSH overrides. Machine-local, never committed."
       echo "# Add Host blocks here; the tracked ssh-config includes this file."
     } > "$LOCAL_CFG/ssh.local"
     echo "  Created $LOCAL_CFG/ssh.local"
@@ -467,7 +477,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 5: WSL boot optimization — WSL only
+# Step 5: WSL boot optimization. WSL only
 # ---------------------------------------------------------------------------
 if revkit_is_wsl; then
   echo "[5] Running WSL boot optimization..."
@@ -482,11 +492,11 @@ if revkit_is_wsl; then
     printf '  WARNING: %s not found, skipping\n' "$BOOT_SCRIPT" >&2
   fi
 else
-  echo "[5] WSL boot optimization — skipped (not WSL)"
+  echo "[5] WSL boot optimization. Skipped (not WSL)"
 fi
 
 # ---------------------------------------------------------------------------
-# Step 6: Sandbox directory init — WSL only
+# Step 6: Sandbox directory init. WSL only
 # ---------------------------------------------------------------------------
 if revkit_is_wsl; then
   if mountpoint -q /mnt/sandbox 2>/dev/null; then
@@ -499,7 +509,7 @@ if revkit_is_wsl; then
     echo "[6] Sandbox drive not mounted, skipping directory init"
   fi
 else
-  echo "[6] Sandbox directories — skipped (not WSL)"
+  echo "[6] Sandbox directories. Skipped (not WSL)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -525,7 +535,7 @@ PRE_PUSH_HOOK="$HOOKS_SRC_DIR/pre-push"
 HOOKS_DIR="$HOME/.config/revkit/git-hooks"
 
 if [ ! -f "$PRE_PUSH_HOOK" ]; then
-  printf '  WARNING: %s not found — skipping M-11\n' "$PRE_PUSH_HOOK" >&2
+  printf '  WARNING: %s not found. Skipping M-11\n' "$PRE_PUSH_HOOK" >&2
 elif ! bash -n "$PRE_PUSH_HOOK" >/dev/null 2>&1; then
   printf '  ERROR: %s failed bash -n; refusing to wire M-11\n' "$PRE_PUSH_HOOK" >&2
   exit 1
