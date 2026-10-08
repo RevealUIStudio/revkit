@@ -555,7 +555,8 @@ case "$cmd" in
     exec "$grok_bin" "${open_extra[@]}"
     ;;
   -h | --help | help)
-    sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
+    # Print the complete leading help block as new options are added.
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } /^[[:space:]]*$/ { print; next } { exit }' "$0"
     exit 0
     ;;
 esac
